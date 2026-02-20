@@ -77,49 +77,53 @@ export const Gym: React.FC = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="p-8 min-h-screen bg-gradient-to-br from-dark-bg via-dark-secondary/30 to-dark-bg"
+      className="p-8 min-h-screen"
     >
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-12">
-          <div className="flex items-center gap-3 mb-2">
-            <Dumbbell size={32} className="text-neon-green" />
-            <h1 className="text-5xl font-black text-neon-green tracking-tight">Gym - Training</h1>
+        <motion.div className="mb-12" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="flex items-center gap-4 mb-4">
+            <motion.div animate={{ rotate: [0, 5, -5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+              <Dumbbell size={36} className="text-neon-green glow-electric" />
+            </motion.div>
+            <h1 className="page-header text-neon-green glow-electric text-5xl">Gym</h1>
           </div>
-          <p className="text-gray-400 text-lg">
+          <p className="text-gray-400 text-lg uppercase tracking-widest font-light">
             {canTrain
               ? `Welcome ${fighter?.name}! Choose a training drill to improve your stats.`
               : 'Create a fighter first to start training!'}
           </p>
-        </div>
+        </motion.div>
 
         {/* No Fighter Message */}
         {!canTrain && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-dark-secondary border-2 border-dashed border-neon-green/50 rounded-lg p-12 text-center"
+            className="glass-card-premium rounded-2xl p-12 text-center border-2 border-dashed border-neon-green/40"
           >
-            <div className="text-6xl mb-4">🥋</div>
-            <h3 className="text-2xl font-bold text-neon-green mb-2">No Fighter Yet</h3>
-            <p className="text-gray-400">Create your first fighter on the Dashboard to start training!</p>
+            <motion.div className="text-6xl mb-6" animate={{ y: [0, -10, 0] }} transition={{ duration: 3, repeat: Infinity }}>
+              🥋
+            </motion.div>
+            <h3 className="section-header text-neon-green mb-3 text-3xl">No Fighter Yet</h3>
+            <p className="text-gray-400 uppercase tracking-widest text-sm">Create your first fighter on the Dashboard to start training!</p>
           </motion.div>
         )}
 
         {/* Training Grid */}
         {canTrain && (
           <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            transition={{ delay: 0.2, staggerChildren: 0.1 }}
           >
             {TRAINING_DRILLS.map((drill, idx) => (
               <motion.div
                 key={drill.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
+                transition={{ delay: idx * 0.08 }}
               >
                 <TrainingCard drill={drill} onTrainComplete={handleTrainComplete} />
               </motion.div>
@@ -133,26 +137,27 @@ export const Gym: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="mt-12 bg-dark-secondary border border-neon-green/30 rounded-lg p-6"
+            className="mt-12 glass-card-premium rounded-2xl p-8 border-l-4 border-neon-green/50"
           >
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-center">
-              <div>
-                <p className="text-gray-400 text-sm mb-1">Energy</p>
-                <p className="text-2xl font-bold text-yellow-400">
+            <h3 className="section-header text-neon-green mb-8 text-xl">Fighter Status</h3>
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-6">
+              <motion.div className="text-center" whileHover={{ y: -4 }}>
+                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">Energy</p>
+                <p className="text-3xl font-bold text-cyan-400 glow-electric">
                   {Math.ceil(fighter?.currentEnergy || 0)}/100
                 </p>
-              </div>
-              <div>
-                <p className="text-gray-400 text-sm mb-1">Level</p>
-                <p className="text-2xl font-bold text-neon-green">{fighter?.level}</p>
-              </div>
-              <div>
-                <p className="text-gray-400 text-sm mb-1">Reputation</p>
-                <p className="text-2xl font-bold text-yellow-400">{fighter?.reputation}</p>
-              </div>
-              <div>
-                <p className="text-gray-400 text-sm mb-1">Avg Stats</p>
-                <p className="text-2xl font-bold text-neon-green">
+              </motion.div>
+              <motion.div className="text-center" whileHover={{ y: -4 }}>
+                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">Level</p>
+                <p className="text-3xl font-bold text-neon-green glow-electric">{fighter?.level}</p>
+              </motion.div>
+              <motion.div className="text-center" whileHover={{ y: -4 }}>
+                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">Reputation</p>
+                <p className="text-3xl font-bold text-yellow-400">{fighter?.reputation}</p>
+              </motion.div>
+              <motion.div className="text-center" whileHover={{ y: -4 }}>
+                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">Avg Stats</p>
+                <p className="text-3xl font-bold text-neon-green glow-electric">
                   {fighter
                     ? Math.round(
                         (fighter.stats.strength +
@@ -164,15 +169,15 @@ export const Gym: React.FC = () => {
                       )
                     : 0}
                 </p>
-              </div>
-              <div>
-                <p className="text-gray-400 text-sm mb-1">Wins</p>
-                <p className="text-2xl font-bold text-neon-green">{fighter?.record.wins || 0}</p>
-              </div>
-              <div>
-                <p className="text-gray-400 text-sm mb-1">Nickname</p>
+              </motion.div>
+              <motion.div className="text-center" whileHover={{ y: -4 }}>
+                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">Wins</p>
+                <p className="text-3xl font-bold text-neon-green glow-electric">{fighter?.record.wins || 0}</p>
+              </motion.div>
+              <motion.div className="text-center" whileHover={{ y: -4 }}>
+                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">Nickname</p>
                 <p className="text-lg font-bold text-alert-red italic truncate">{fighter?.nickname}</p>
-              </div>
+              </motion.div>
             </div>
           </motion.div>
         )}

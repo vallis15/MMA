@@ -46,62 +46,99 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard', onTab
         initial={{ x: -300 }}
         animate={{ x: isOpen ? 0 : -300 }}
         transition={{ duration: 0.3 }}
-        className="fixed left-0 top-0 h-screen w-64 bg-dark-secondary border-r border-dark-tertiary z-40 lg:relative lg:translate-x-0 flex flex-col"
+        className="fixed left-0 top-0 h-screen w-64 z-40 lg:relative lg:translate-x-0 flex flex-col glass-card-premium border-r-2 border-neon-green/20"
       >
         {/* Header */}
-        <div className="p-6 border-b border-dark-tertiary">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="p-6 border-b border-neon-green/20"
+        >
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-neon-green rounded-lg flex items-center justify-center font-bold text-dark-bg">
+            {/* Octagon Logo */}
+            <div
+              className="w-10 h-10 border-2 border-neon-green flex items-center justify-center font-bold text-neon-green text-xs"
+              style={{
+                clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)',
+                boxShadow: '0 0 15px rgba(0, 255, 65, 0.3)',
+              }}
+            >
               MMA
             </div>
             <div>
-              <h1 className="text-xl font-bold text-neon-green">MMA Manager</h1>
-              <p className="text-xs text-gray-400">Fight Management System</p>
+              <h1 className="text-lg font-oswald font-bold text-neon-green glow-electric uppercase tracking-wider">
+                MMA Manager
+              </h1>
+              <p className="text-xs text-gray-400 uppercase tracking-widest">Fight System</p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-2 flex-1">
-          {navItems.map((item) => {
+        <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
+          {navItems.map((item, idx) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
 
             return (
               <motion.button
                 key={item.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.05 * idx }}
                 onClick={() => handleNavClick(item.id, item.path)}
-                whileHover={{ x: 4 }}
+                whileHover={{ x: 6 }}
                 whileTap={{ scale: 0.98 }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group relative overflow-hidden ${
                   isActive
-                    ? 'bg-neon-green text-dark-bg font-semibold shadow-lg shadow-neon-green/20'
-                    : 'text-gray-300 hover:bg-dark-tertiary'
+                    ? 'bg-neon-green/20 border border-neon-green text-neon-green font-semibold border-glow-electric'
+                    : 'text-gray-300 hover:bg-dark-tertiary/50 border border-transparent hover:border-neon-green/30'
                 }`}
               >
-                <Icon size={20} />
+                {/* Glow background on active */}
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute inset-0 bg-neon-green/10 -z-10"
+                    initial={false}
+                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  />
+                )}
+
+                <Icon size={20} className="group-hover:text-neon-green transition-colors" />
                 <div className="text-left">
-                  <div className="font-medium">{item.label}</div>
-                  <div className="text-xs opacity-70">{item.description}</div>
+                  <div className="font-semibold uppercase text-xs tracking-wider">{item.label}</div>
+                  <div className="text-xs opacity-60 group-hover:opacity-80 transition">{item.description}</div>
                 </div>
+
+                {/* Right border glow */}
+                {isActive && (
+                  <div className="absolute right-0 top-0 bottom-0 w-1 bg-gradient-to-b from-neon-green to-emerald-500 shadow-lg shadow-neon-green/50" />
+                )}
               </motion.button>
             );
           })}
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-dark-tertiary bg-dark-secondary space-y-3">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="p-4 border-t border-neon-green/20 bg-dark-tertiary/30 space-y-3"
+        >
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-alert-red/20 border border-alert-red/30 text-alert-red rounded-lg hover:bg-alert-red/40 transition"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-alert-red/30 to-orange-600/30 border border-alert-red/50 text-alert-red rounded-lg hover:from-alert-red/50 hover:to-orange-600/50 transition-all duration-300 font-semibold uppercase text-xs tracking-wider group"
           >
-            <LogOut size={16} />
+            <LogOut size={16} className="group-hover:animate-pulse" />
             Logout
           </motion.button>
-          <p className="text-xs text-gray-500 text-center">v1.0.0</p>
-        </div>
+          <p className="text-xs text-gray-500 text-center font-oswald uppercase tracking-wider">v1.0.0</p>
+        </motion.div>
       </motion.aside>
 
       {/* Mobile Overlay */}

@@ -127,7 +127,7 @@ export const Rankings: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-dark-bg p-4 md:p-8">
+    <div className="min-h-screen p-4 md:p-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -136,17 +136,19 @@ export const Rankings: React.FC = () => {
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <Trophy className="w-8 h-8 text-neon-green" />
-            <h1 className="text-3xl md:text-4xl font-bold text-white">Global Leaderboard</h1>
+            <motion.div animate={{ rotate: [0, -10, 10, 0] }} transition={{ duration: 3, repeat: Infinity }}>
+              <Trophy className="w-8 h-8 text-neon-green glow-electric" />
+            </motion.div>
+            <h1 className="page-header text-neon-green glow-electric text-4xl">Global Leaderboard</h1>
           </div>
           {playerRank && (
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="text-center bg-dark-secondary px-6 py-3 rounded-lg border border-neon-green/30"
+              className="text-center glass-card px-8 py-4 rounded-lg border-glow-electric"
             >
-              <div className="text-neon-green font-bold text-2xl">#{playerRank}</div>
-              <div className="text-gray-400 text-sm">Your Rank</div>
+              <div className="text-3xl font-black text-neon-green glow-electric">#{playerRank}</div>
+              <div className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Your Rank</div>
             </motion.div>
           )}
         </div>
@@ -159,10 +161,10 @@ export const Rankings: React.FC = () => {
               onClick={() => setSortBy(sort)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+              className={`px-6 py-2 rounded-lg font-semibold transition-all uppercase tracking-wider text-sm ${
                 sortBy === sort
-                  ? 'bg-neon-green text-dark-bg'
-                  : 'bg-dark-secondary text-gray-300 hover:text-neon-green'
+                  ? 'bg-neon-green text-dark-bg shadow-lg shadow-neon-green/50'
+                  : 'glass-card text-gray-300 hover:text-neon-green border border-neon-green/20 hover:border-neon-green/50'
               }`}
             >
               {sort === 'reputation' && '💰 Reputation'}
@@ -178,10 +180,10 @@ export const Rankings: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 p-4 bg-alert-red/20 border border-alert-red/50 rounded-lg text-alert-red"
+          className="mb-8 glass-card-premium p-5 border-l-4 border-alert-red/80 rounded-lg text-alert-red"
         >
-          <p className="font-bold">⚠️ Error loading leaderboard</p>
-          <p className="text-sm mt-1">{error}</p>
+          <p className="font-bold uppercase tracking-wider text-sm mb-1">⚠️ Error Loading Leaderboard</p>
+          <p className="text-sm">{error}</p>
         </motion.div>
       )}
 
@@ -200,10 +202,10 @@ export const Rankings: React.FC = () => {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="space-y-0 rounded-lg overflow-hidden border border-dark-secondary"
+          className="space-y-0 rounded-2xl overflow-hidden glass-card-premium border border-dark-secondary/30"
         >
           {/* Header Row */}
-          <div className="bg-dark-secondary grid grid-cols-1 md:grid-cols-7 gap-4 p-4 font-bold text-gray-400 text-sm sticky top-0 z-10">
+          <div className="bg-dark-secondary/40 grid grid-cols-1 md:grid-cols-7 gap-4 p-4 font-bold text-gray-400 text-xs uppercase tracking-widest sticky top-0 z-10 backdrop-blur-sm">
             <div className="md:col-span-1 text-center">Rank</div>
             <div className="md:col-span-2">Fighter</div>
             <div className="text-right">Reputation</div>
@@ -232,7 +234,7 @@ export const Rankings: React.FC = () => {
                 <motion.div
                   key={player.id}
                   variants={rowVariants}
-                  className={`grid grid-cols-1 md:grid-cols-7 gap-4 p-4 border-t border-dark-secondary hover:bg-dark-secondary/50 transition-colors ${getRowHighlight(
+                  className={`grid grid-cols-1 md:grid-cols-7 gap-4 p-4 border-t border-dark-secondary/30 transition-all table-row-stripe ${getRowHighlight(
                     isCurrentPlayer
                   )}`}
                 >

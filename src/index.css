@@ -1,9 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: dark;
+  /* MMA Premium Colors */
+  --color-electric-green: #00ff41;
+  --color-deep-crimson: #dc143c;
+  --color-charcoal-dark: #0f0f0f;
+  --color-charcoal-mid: #1a1a1a;
+  --color-charcoal-light: #2d2d2d;
+  --color-steel: #a8aab5;
 }
 
 * {
@@ -17,16 +26,44 @@ body,
 #root {
   width: 100%;
   height: 100%;
-  background-color: #0a0a0a;
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 50%, #16213e 100%);
   color: #ffffff;
+  overflow-x: hidden;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Octagon Fence Texture Overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 50px,
+      rgba(0, 255, 65, 0.02) 50px,
+      rgba(0, 255, 65, 0.02) 51px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 50px,
+      rgba(0, 255, 65, 0.02) 50px,
+      rgba(0, 255, 65, 0.02) 51px
+    );
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Custom scrollbar */
@@ -46,4 +83,171 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #00dd35;
+}
+
+/* === PREMIUM GLASSMORPHISM EFFECTS === */
+
+.glass-card {
+  background: rgba(26, 26, 46, 0.5);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(168, 170, 181, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.glass-card-premium {
+  background: rgba(20, 20, 35, 0.6);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(168, 170, 181, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
+              0 8px 32px rgba(0, 255, 65, 0.1);
+}
+
+/* === NEON GLOW EFFECTS === */
+
+.glow-electric {
+  text-shadow: 0 0 10px #00ff41, 0 0 20px #00ff41;
+  color: #00ff41;
+}
+
+.glow-crimson {
+  text-shadow: 0 0 10px #dc143c, 0 0 20px #dc143c;
+  color: #dc143c;
+}
+
+.border-glow-electric {
+  border-color: #00ff41;
+  box-shadow: 0 0 15px rgba(0, 255, 65, 0.4), inset 0 0 15px rgba(0, 255, 65, 0.1);
+}
+
+.border-glow-crimson {
+  border-color: #dc143c;
+  box-shadow: 0 0 15px rgba(220, 20, 60, 0.4), inset 0 0 15px rgba(220, 20, 60, 0.1);
+}
+
+/* === ANIMATIONS === */
+
+@keyframes slam {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(-40px);
+  }
+  60% {
+    transform: scale(1.05) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes screen-shake {
+  0%, 100% { transform: translateX(0); }
+  10% { transform: translateX(-4px); }
+  20% { transform: translateX(2px); }
+  30% { transform: translateX(-2px); }
+  40% { transform: translateX(3px); }
+  50% { transform: translateX(-1px); }
+  60% { transform: translateX(2px); }
+  70% { transform: translateX(-2px); }
+  80% { transform: translateX(1px); }
+  90% { transform: translateX(-1px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(220, 20, 60, 0.5),
+                0 0 15px rgba(220, 20, 60, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(220, 20, 60, 0.8),
+                0 0 30px rgba(220, 20, 60, 0.5);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.slam-animate {
+  animation: slam 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.shake-animate {
+  animation: screen-shake 0.6s ease-in-out;
+}
+
+.pulse-button {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.shimmer-button {
+  position: relative;
+  background: linear-gradient(
+    90deg,
+    #00ff41,
+    #00ff41,
+    #00dd35,
+    #00ff41,
+    #00ff41
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 3s infinite;
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.4);
+}
+
+.shimmer-button::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  background: rgba(15, 15, 15, 0.95);
+  border-radius: 0.5rem;
+  z-index: -1;
+}
+
+/* === TYPOGRAPHY === */
+
+.title-mma {
+  font-family: 'Oswald', sans-serif;
+  font-size: 3.5rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+/* === PAGE HEADERS === */
+.page-header {
+  font-family: 'Oswald', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.section-header {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* === 3D TILT EFFECT === */
+
+.tilt-card {
+  perspective: 1200px;
+}
+
+/* === ZEBRA STRIPING FOR TABLES === */
+
+.table-row-stripe:nth-child(even) {
+  background: rgba(0, 255, 65, 0.03);
+}
+
+.table-row-stripe:hover {
+  background: rgba(0, 255, 65, 0.08);
 }

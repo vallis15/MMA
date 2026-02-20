@@ -80,7 +80,7 @@ export const Dashboard: React.FC = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="p-8 min-h-screen bg-gradient-to-br from-dark-bg via-dark-secondary/30 to-dark-bg"
+      className="p-8 min-h-screen"
     >
       <div className="max-w-7xl mx-auto">
         {/* Fighter Initialization Modal */}
@@ -92,6 +92,7 @@ export const Dashboard: React.FC = () => {
             />
           )}
         </AnimatePresence>
+
         {/* Global Announcement Banner */}
         <AnimatePresence>
           {announcement && showAnnouncement && (
@@ -99,50 +100,55 @@ export const Dashboard: React.FC = () => {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="mb-8 p-4 bg-gradient-to-r from-alert-red/20 to-orange-500/20 border border-alert-red/50 rounded-lg flex items-start gap-3"
+              className="mb-8 glass-card-premium p-5 border-l-4 border-alert-red/80 rounded-lg flex items-start gap-4 backdrop-blur-lg"
             >
-              <Bell className="w-5 h-5 text-alert-red mt-1 flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-white font-semibold">Global Announcement</p>
+              <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+                <Bell className="w-6 h-6 text-alert-red flex-shrink-0" />
+              </motion.div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-bold uppercase tracking-wider text-sm mb-1">⚡ Global Announcement</p>
                 <p className="text-gray-300 text-sm">{announcement}</p>
               </div>
-              <button
+              <motion.button
+                whileHover={{ scale: 1.2, rotate: 90 }}
                 onClick={() => setShowAnnouncement(false)}
-                className="text-gray-400 hover:text-white transition"
+                className="text-gray-400 hover:text-neon-green transition flex-shrink-0"
               >
                 <X className="w-5 h-5" />
-              </button>
+              </motion.button>
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* Header */}
-        <div className="mb-12">
-          <h1 className="text-5xl font-black text-neon-green mb-2 tracking-tight">Dashboard</h1>
-          <p className="text-gray-400 text-lg">Your complete MMA fighter management system</p>
-        </div>
+        <motion.div className="mb-12" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+          <h1 className="page-header text-neon-green glow-electric mb-3 text-5xl">Dashboard</h1>
+          <p className="text-gray-400 text-lg uppercase tracking-widest">Your Complete MMA Fighter Management System</p>
+        </motion.div>
 
         {/* Fighter Section */}
         <div className="mb-12">
           {fighter && fighter.name !== 'Undefined' ? (
-            <>
-              <h2 className="text-3xl font-bold text-neon-green mb-8">Active Fighter</h2>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h2 className="section-header text-neon-green mb-8 text-3xl">Active Fighter</h2>
               <FighterCard fighter={fighter} />
-            </>
+            </motion.div>
           ) : (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-dark-secondary border-2 border-dashed border-neon-green/50 rounded-lg p-12 text-center"
+              className="glass-card-premium rounded-2xl p-12 text-center border-2 border-dashed border-neon-green/40"
             >
-              <div className="text-6xl mb-4">🥋</div>
-              <h3 className="text-2xl font-bold text-neon-green mb-2">No Fighter Yet</h3>
-              <p className="text-gray-400 mb-6">Create your first fighter to get started!</p>
+              <motion.div className="text-6xl mb-6" animate={{ y: [0, -10, 0] }} transition={{ duration: 3, repeat: Infinity }}>
+                🥋
+              </motion.div>
+              <h3 className="text-3xl font-oswald font-bold text-neon-green mb-3 uppercase tracking-wider">No Fighter Yet</h3>
+              <p className="text-gray-400 mb-8 uppercase tracking-widest text-sm">Create your first fighter to get started!</p>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowCreateForm(true)}
-                className="inline-flex items-center gap-2 bg-neon-green text-dark-bg font-bold px-6 py-3 rounded-lg hover:bg-green-400 transition-colors shadow-lg shadow-neon-green/50"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-neon-green to-emerald-400 text-dark-bg font-bold px-8 py-3 rounded-lg hover:shadow-2xl hover:shadow-neon-green/50 transition-all uppercase tracking-wider text-sm border-glow-electric"
               >
                 <Plus size={20} />
                 Create Fighter
@@ -151,40 +157,41 @@ export const Dashboard: React.FC = () => {
           )}
         </div>
 
-        {/* Create Fighter Form */}
+        {/* Create Fighter Form Modal */}
         {showCreateForm && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           >
             <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              className="bg-dark-secondary border border-neon-green/50 rounded-lg p-8 w-full max-w-md shadow-2xl"
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="glass-card-premium rounded-2xl p-8 w-full max-w-md shadow-2xl"
             >
-              <h3 className="text-2xl font-bold text-neon-green mb-6">Create New Fighter</h3>
-              <form onSubmit={handleCreateFighter} className="space-y-4">
+              <h3 className="section-header text-neon-green mb-8 text-2xl">Create New Fighter</h3>
+              <form onSubmit={handleCreateFighter} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Fighter Name</label>
+                  <label className="block text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wider">Fighter Name</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="e.g., John Smith"
-                    className="w-full bg-dark-tertiary border border-neon-green/30 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-neon-green focus:outline-none transition-colors"
+                    className="w-full bg-dark-tertiary/50 border border-neon-green/30 focus:border-neon-green rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-all"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Nickname</label>
+                  <label className="block text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wider">Nickname</label>
                   <input
                     type="text"
                     value={formData.nickname}
                     onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
                     placeholder="e.g., The Champion"
-                    className="w-full bg-dark-tertiary border border-neon-green/30 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-neon-green focus:outline-none transition-colors"
+                    className="w-full bg-dark-tertiary/50 border border-neon-green/30 focus:border-neon-green rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-all"
                     required
                   />
                 </div>
@@ -193,7 +200,7 @@ export const Dashboard: React.FC = () => {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     type="submit"
-                    className="flex-1 bg-neon-green text-dark-bg font-bold py-2 rounded-lg hover:bg-green-400 transition-colors"
+                    className="flex-1 bg-gradient-to-r from-neon-green to-emerald-400 text-dark-bg font-bold py-3 rounded-lg hover:shadow-lg hover:shadow-neon-green/50 transition-all uppercase tracking-wider text-sm"
                   >
                     Create
                   </motion.button>
@@ -202,7 +209,7 @@ export const Dashboard: React.FC = () => {
                     whileTap={{ scale: 0.95 }}
                     type="button"
                     onClick={() => setShowCreateForm(false)}
-                    className="flex-1 bg-dark-tertiary text-gray-300 font-bold py-2 rounded-lg border border-dark-tertiary hover:border-neon-green/50 transition-colors"
+                    className="flex-1 bg-dark-tertiary/50 text-gray-300 font-bold py-3 rounded-lg border border-dark-tertiary hover:border-alert-red/50 transition-all uppercase tracking-wider text-sm"
                   >
                     Cancel
                   </motion.button>
