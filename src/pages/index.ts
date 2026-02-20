@@ -1,0 +1,8 @@
+export { Dashboard } from './Dashboard';
+export { Gym } from './Gym';
+export { Arena } from './Arena';
+export { Rankings } from './Rankings';
+export { Registration } from './Registration';
+export { Login } from './Login';
+export { AdminLogin } from './AdminLogin';
+export { AdminDashboard } from './AdminDashboard';

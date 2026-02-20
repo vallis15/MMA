@@ -1,0 +1,133 @@
+export interface FighterStats {
+  strength: number;
+  speed: number;
+  cardio: number;
+  striking: number;
+  grappling: number;
+}
+
+export interface FighterRecord {
+  wins: number;
+  losses: number;
+  draws: number;
+}
+
+export interface Fighter {
+  id: string;
+  name: string;
+  nickname: string;
+  record: FighterRecord;
+  stats: FighterStats;
+  currentEnergy: number;
+  maxEnergy: number;
+  level: number;
+  experience: number;
+  reputation: number;
+  health: number;
+  maxHealth: number;
+  createdAt: Date;
+}
+
+export interface AIFighter {
+  id: string;
+  name: string;
+  nickname: string;
+  record: FighterRecord;
+  stats: FighterStats;
+  level: number;
+  avatar: string;
+  health?: number;
+  maxHealth?: number;
+}
+
+export interface LeaderboardEntry {
+  id: string;
+  name: string;
+  nickname: string;
+  record: FighterRecord;
+  reputation: number;
+  level: number;
+  league: 'Amateur' | 'Regional Pro' | 'MMA Legend';
+  avatarEmoji?: string;
+  isPlayer?: boolean;
+}
+
+export type LeagueType = 'Amateur' | 'Regional Pro' | 'MMA Legend';
+
+export const getLeagueFromReputation = (reputation: number): LeagueType => {
+  if (reputation >= 2000) return 'MMA Legend';
+  if (reputation >= 500) return 'Regional Pro';
+  return 'Amateur';
+};
+
+export const getLeagueColor = (league: LeagueType): string => {
+  switch (league) {
+    case 'Amateur':
+      return 'text-yellow-600'; // Bronze
+    case 'Regional Pro':
+      return 'text-gray-400'; // Silver
+    case 'MMA Legend':
+      return 'text-yellow-400'; // Gold/Neon
+    default:
+      return 'text-gray-500';
+  }
+};
+
+export const getLeagueBgColor = (league: LeagueType): string => {
+  switch (league) {
+    case 'Amateur':
+      return 'bg-yellow-600/20 border border-yellow-600/50';
+    case 'Regional Pro':
+      return 'bg-gray-400/20 border border-gray-400/50';
+    case 'MMA Legend':
+      return 'bg-yellow-400/20 border border-yellow-400/50';
+    default:
+      return 'bg-gray-500/20';
+  }
+};
+
+export interface FightRound {
+  roundNumber: number;
+  playerAction: string;
+  opponentAction: string;
+  playerWon: boolean;
+}
+
+export interface FightLog {
+  text: string;
+  timestamp: number;
+  playerHealthDrop?: number;
+  opponentHealthDrop?: number;
+}
+
+export interface FightResult {
+  winner: 'player' | 'opponent';
+  rounds: FightRound[];
+  logs: FightLog[];
+  playerStats: { wins: number; reputation: number };
+}
+
+export interface TrainingDrill {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  energyCost: number;
+  benefits: {
+    stat: keyof FighterStats | 'all';
+    amount: number;
+  }[];
+}
+
+export interface FighterContextType {
+  fighter: Fighter | null;
+  timeSinceLastRegen?: number;
+  updateFighterStats: (stats: Partial<FighterStats>) => void;
+  updateFighterEnergy: (amount: number) => void;
+  createFighter: (name: string, nickname: string) => void;
+  addExperience: (amount: number) => void;
+  train: (drill: TrainingDrill) => { success: boolean; message: string };
+  fight: (opponent: AIFighter) => { success: boolean; message: string; result?: FightResult };
+  resetCareer: () => void;
+  reloadFighter: () => Promise<void>;
+}
