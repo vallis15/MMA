@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
 import { Fighter, FighterStats, FighterContextType, TrainingDrill, AIFighter, FightResult, FightRound, FightLog } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
@@ -43,6 +43,9 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
   const { user, loading: authLoading } = useAuth();
   const [fighter, setFighter] = useState<Fighter>(createDefaultFighter());
   const [timeSinceLastRegen, setTimeSinceLastRegen] = useState<number>(0);
+  
+  // Track last manual update to prevent energy regen from overwriting it
+  const lastManualUpdateRef = useRef<number>(0);
 
   // Load fighter from Supabase when user logs in
   useEffect(() => {
@@ -212,6 +215,15 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
       }
 
       console.log('✅ [FIGHTER UPDATE] Success! Updated rows:', data);
+
+      // CRUCIAL: Refetch from Supabase immediately after update to sync local state
+      // This prevents stale data from being pushed back to the DB
+      console.log('🔵 [FIGHTER UPDATE] Refetching fighter data to sync with DB...');
+      await reloadFighter();
+      
+      // Mark this as a manual update to prevent energy regen from immediately overwriting
+      lastManualUpdateRef.current = Date.now();
+      console.log('✅ [FIGHTER UPDATE] Local state synced with Supabase');
     } catch (error) {
       console.error('❌ [FIGHTER UPDATE] Exception:', error);
     }
@@ -229,6 +241,15 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
     const regenInterval = setInterval(() => {
       setTimeSinceLastRegen((prev) => {
         const newTime = prev + 1;
+        
+        // Check if a manual update happened recently (within last 5 seconds)
+        const timeSinceManualUpdate = Date.now() - lastManualUpdateRef.current;
+        const recentlyUpdatedManually = timeSinceManualUpdate < 5000;
+
+        if (recentlyUpdatedManually) {
+          console.log('🔵 [ENERGY REGEN] Skipping regen for 5s after manual update. Time since update:', Math.round(timeSinceManualUpdate / 1000) + 's');
+          return newTime; // Don't regen yet
+        }
         
         // Regenerate energy every 10 seconds
         if (newTime >= 10) {
@@ -282,6 +303,9 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
 
   const updateFighterEnergy = async (amount: number) => {
     console.log('🔵 [ENERGY UPDATE] Updating energy by:', amount);
+    
+    // Mark this as a manual update to prevent energy regen from immediately overwriting
+    lastManualUpdateRef.current = Date.now();
     
     setFighter((prev) => {
       const updated = {
