@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useFighter } from '../context/FighterContext';
 import { OpponentCard } from '../components/OpponentCard';
 import { AIFighter } from '../types';
-import { getRandomOpponents } from '../utils/opponents';
+import { supabase } from '../lib/supabase';
 import { getBattleMessage, BattleCategory, MMA_MOVES } from '../constants/battlePhrases';
 
 // ============ TYPES ============
@@ -120,10 +121,13 @@ const generateBattleEvents = (roundDuration: number = 60): BattleEvent[] => {
 
 export const Arena: React.FC = () => {
   const { fighter, updateFighterStats } = useFighter();
+  const location = useLocation();
 
   // Opponent selection
   const [opponents, setOpponents] = useState<AIFighter[]>([]);
   const [selectedOpponent, setSelectedOpponent] = useState<AIFighter | null>(null);
+  const [loadingOpponents, setLoadingOpponents] = useState(false);
+  const [opponentError, setOpponentError] = useState<string | null>(null);
 
   // Battle state
   const [isBattling, setIsBattling] = useState(false);
@@ -167,19 +171,133 @@ export const Arena: React.FC = () => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const roundStartTime = useRef<number>(0);
 
-  // Initialize opponents
-  useEffect(() => {
-    if (fighter && fighter.name !== 'Undefined' && opponents.length === 0) {
-      setOpponents(getRandomOpponents(3));
-    }
-  }, [fighter, opponents.length]);
-
   const canFight = fighter && fighter.name !== 'Undefined' && fighter.currentEnergy >= 50;
 
   // Sync isBattling state to ref for queue processor
   useEffect(() => {
     isBattlingRef.current = isBattling;
   }, [isBattling]);
+
+  // ============ MATCHMAKING: FETCH REAL PLAYERS FROM DATABASE ============
+
+  useEffect(() => {
+    const fetchMatchmakingOpponents = async () => {
+      if (!fighter || fighter.name === 'Undefined' || opponents.length > 0) {
+        return;
+      }
+
+      setLoadingOpponents(true);
+      setOpponentError(null);
+
+      try {
+        console.log('🎯 [ARENA] Fetching matchmaking opponents...');
+
+        // Fetch all players from database sorted by reputation
+        const { data: allPlayers, error: fetchError } = await supabase
+          .from('profiles')
+          .select('id, username, reputation, wins, losses, draws, level, strength, speed, cardio, striking, grappling')
+          .order('reputation', { ascending: false });
+
+        if (fetchError) {
+          throw new Error(`Database error: ${fetchError.message}`);
+        }
+
+        if (!allPlayers || allPlayers.length === 0) {
+          setOpponentError('No players found in database');
+          setOpponents([]);
+          return;
+        }
+
+        // Filter out current player and players without energy
+        const availablePlayers = allPlayers.filter(
+          (p) => p.username !== fighter.name && p.username && p.id
+        );
+
+        console.log('✅ [ARENA] Available players:', availablePlayers.length);
+
+        if (availablePlayers.length === 0) {
+          setOpponentError('No other players available to fight');
+          setOpponents([]);
+          return;
+        }
+
+        // Find current player's rank
+        const currentPlayerIndex = allPlayers.findIndex((p) => p.username === fighter.name);
+        const currentReputation = fighter.reputation || 0;
+
+        let selectedPlayers: typeof allPlayers = [];
+
+        if (availablePlayers.length <= 6) {
+          // If 6 or fewer players, show all
+          selectedPlayers = availablePlayers;
+        } else {
+          // Matchmaking: 3 above, 3 below based on reputation
+          const playersAbove = availablePlayers
+            .filter((p) => (p.reputation || 0) > currentReputation)
+            .slice(0, 3);
+
+          const playersBelow = availablePlayers
+            .filter((p) => (p.reputation || 0) <= currentReputation)
+            .slice(0, 3);
+
+          selectedPlayers = [...playersAbove, ...playersBelow];
+
+          // If not enough, fill with remaining players
+          if (selectedPlayers.length < 6) {
+            const remaining = availablePlayers
+              .filter((p) => !selectedPlayers.includes(p))
+              .slice(0, 6 - selectedPlayers.length);
+            selectedPlayers = [...selectedPlayers, ...remaining];
+          }
+        }
+
+        // Convert to AIFighter format
+        const matchedOpponents: AIFighter[] = selectedPlayers.map((p) => ({
+          id: p.id,
+          name: p.username || 'Unknown Fighter',
+          nickname: `Rank #${allPlayers.findIndex((ap) => ap.id === p.id) + 1}`,
+          record: {
+            wins: p.wins || 0,
+            losses: p.losses || 0,
+            draws: p.draws || 0,
+          },
+          stats: {
+            strength: p.strength || 50,
+            speed: p.speed || 50,
+            cardio: p.cardio || 50,
+            striking: p.striking || 50,
+            grappling: p.grappling || 50,
+          },
+          level: p.level || 1,
+          avatar: '🥊',
+          health: 100,
+          maxHealth: 100,
+        }));
+
+        console.log('✅ [ARENA] Matched opponents:', matchedOpponents.length);
+        setOpponents(matchedOpponents);
+
+        // Check if there's a pre-selected opponent from navigation state
+        const preSelectedOpponent = (location.state as any)?.opponent;
+        if (preSelectedOpponent) {
+          const foundOpponent = matchedOpponents.find((o) => o.id === preSelectedOpponent.id);
+          if (foundOpponent) {
+            console.log('✅ [ARENA] Pre-selected opponent:', foundOpponent.name);
+            setSelectedOpponent(foundOpponent);
+          }
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('❌ [ARENA] Matchmaking error:', errorMessage);
+        setOpponentError(errorMessage);
+        setOpponents([]);
+      } finally {
+        setLoadingOpponents(false);
+      }
+    };
+
+    fetchMatchmakingOpponents();
+  }, [fighter, opponents.length, location.state]);
 
   // ============ BATTLE CLOCK (PLAYBACK ENGINE) ============
 
@@ -502,6 +620,8 @@ export const Arena: React.FC = () => {
               onSelectOpponent={setSelectedOpponent}
               onStartBattle={startBattle}
               canFight={canFight}
+              loading={loadingOpponents}
+              error={opponentError}
             />
           )}
         </AnimatePresence>
@@ -771,6 +891,8 @@ interface SetupScreenProps {
   onSelectOpponent: (opp: AIFighter) => void;
   onStartBattle: () => void;
   canFight: boolean;
+  loading: boolean;
+  error: string | null;
 }
 
 const SetupScreen: React.FC<SetupScreenProps> = ({
@@ -780,6 +902,8 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
   onSelectOpponent,
   onStartBattle,
   canFight,
+  loading,
+  error,
 }) => {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-10">
@@ -789,11 +913,11 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
           <motion.div animate={{ rotate: [0, 15, -15, 0] }} transition={{ duration: 2, repeat: Infinity }}>
             <Zap size={44} className="text-alert-red glow-crimson" />
           </motion.div>
-          <h1 className="page-header text-alert-red glow-crimson text-6xl">ARENA</h1>
+          <h1 className="page-header text-alert-red glow-crimson text-6xl">PvP ARENA</h1>
         </div>
         <p className="text-gray-400 text-lg uppercase tracking-widest font-light">
           {canFight
-            ? `Welcome ${fighter?.name}! Select your opponent and step into the octagon.`
+            ? `Welcome ${fighter?.name}! Challenge real players from around the world.`
             : !fighter || fighter.name === 'Undefined'
               ? 'Create a fighter first to enter the Arena!'
               : 'You need 50 Energy to fight. Train to recover!'}
@@ -833,8 +957,39 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
         </motion.div>
       )}
 
+      {/* Error State */}
+      {canFight && error && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card-premium rounded-2xl p-8 text-center border-2 border-alert-red"
+        >
+          <div className="text-5xl mb-4">⚠️</div>
+          <h3 className="section-header text-alert-red text-2xl mb-3">Matchmaking Error</h3>
+          <p className="text-gray-400">{error}</p>
+        </motion.div>
+      )}
+
+      {/* Loading State */}
+      {canFight && loading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center justify-center min-h-[400px]"
+        >
+          <div>
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              className="w-16 h-16 border-4 border-neon-green/20 border-t-neon-green rounded-full mx-auto mb-4"
+            />
+            <p className="text-gray-400 uppercase tracking-wider text-sm">Finding opponents...</p>
+          </div>
+        </motion.div>
+      )}
+
       {/* Opponent Selection */}
-      {canFight && (
+      {canFight && !loading && !error && (
         <>
           <motion.div
             initial={{ opacity: 0, y: 20 }}

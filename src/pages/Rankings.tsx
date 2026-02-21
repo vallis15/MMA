@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Award, RotateCcw } from 'lucide-react';
+import { Trophy, Award, RotateCcw, Swords } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useFighter } from '../context/FighterContext';
 import { supabase } from '../lib/supabase';
 import { LeagueBadge } from '../components/LeagueBadge';
@@ -20,6 +21,7 @@ type SortBy = 'reputation' | 'wins' | 'level';
 
 export const Rankings: React.FC = () => {
   const { fighter, resetCareer } = useFighter();
+  const navigate = useNavigate();
   const [sortBy, setSortBy] = useState<SortBy>('reputation');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [players, setPlayers] = useState<DatabasePlayer[]>([]);
@@ -126,6 +128,45 @@ export const Rankings: React.FC = () => {
     return Math.floor((reputation ?? 0) / 100) + 1;
   };
 
+  const handleChallenge = (player: DatabasePlayer) => {
+    // Safety check: can't challenge yourself
+    if (fighter && player.username === fighter.name) {
+      return;
+    }
+
+    // Safety check: need energy to fight
+    if (!fighter || fighter.currentEnergy < 50) {
+      alert('You need at least 50 Energy to challenge someone!');
+      return;
+    }
+
+    // Convert player to opponent format
+    const opponent = {
+      id: player.id,
+      name: player.username || 'Unknown Fighter',
+      nickname: `Rank #${sortedPlayers.findIndex((p) => p.id === player.id) + 1}`,
+      record: {
+        wins: player.wins || 0,
+        losses: player.losses || 0,
+        draws: player.draws || 0,
+      },
+      stats: {
+        strength: 50,
+        speed: 50,
+        cardio: 50,
+        striking: 50,
+        grappling: 50,
+      },
+      level: player.level || 1,
+      avatar: '🥊',
+      health: 100,
+      maxHealth: 100,
+    };
+
+    // Navigate to Arena with pre-selected opponent
+    navigate('/arena', { state: { opponent } });
+  };
+
   return (
     <div className="min-h-screen p-4 md:p-8">
       {/* Header */}
@@ -205,13 +246,14 @@ export const Rankings: React.FC = () => {
           className="space-y-0 rounded-2xl overflow-hidden glass-card-premium border border-dark-secondary/30"
         >
           {/* Header Row */}
-          <div className="bg-dark-secondary/40 grid grid-cols-1 md:grid-cols-7 gap-4 p-4 font-bold text-gray-400 text-xs uppercase tracking-widest sticky top-0 z-10 backdrop-blur-sm">
+          <div className="bg-dark-secondary/40 grid grid-cols-1 md:grid-cols-8 gap-4 p-4 font-bold text-gray-400 text-xs uppercase tracking-widest sticky top-0 z-10 backdrop-blur-sm">
             <div className="md:col-span-1 text-center">Rank</div>
             <div className="md:col-span-2">Fighter</div>
             <div className="text-right">Reputation</div>
             <div className="text-right">Record</div>
             <div className="text-right">Win Rate</div>
             <div className="text-right">Level</div>
+            <div className="text-center">Action</div>
           </div>
 
           {/* Data Rows */}
@@ -234,7 +276,7 @@ export const Rankings: React.FC = () => {
                 <motion.div
                   key={player.id}
                   variants={rowVariants}
-                  className={`grid grid-cols-1 md:grid-cols-7 gap-4 p-4 border-t border-dark-secondary/30 transition-all table-row-stripe ${getRowHighlight(
+                  className={`grid grid-cols-1 md:grid-cols-8 gap-4 p-4 border-t border-dark-secondary/30 transition-all table-row-stripe ${getRowHighlight(
                     isCurrentPlayer
                   )}`}
                 >
@@ -281,6 +323,28 @@ export const Rankings: React.FC = () => {
                   {/* Level */}
                   <div className="text-right">
                     <span className="text-blue-400 font-bold">Lv. {level}</span>
+                  </div>
+
+                  {/* Challenge Button */}
+                  <div className="flex items-center justify-center">
+                    {isCurrentPlayer ? (
+                      <span className="text-gray-600 text-xs">-</span>
+                    ) : (
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handleChallenge(player)}
+                        disabled={!fighter || fighter.currentEnergy < 50}
+                        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
+                          fighter && fighter.currentEnergy >= 50
+                            ? 'bg-gradient-to-r from-alert-red to-orange-500 text-white hover:shadow-lg hover:shadow-alert-red/50'
+                            : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                        }`}
+                      >
+                        <Swords className="w-3 h-3" />
+                        Fight
+                      </motion.button>
+                    )}
                   </div>
                 </motion.div>
               );
