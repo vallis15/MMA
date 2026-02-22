@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Zap } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useFighter } from '../context/FighterContext';
+import { useLanguage } from '../context/LanguageContext';
 import { OpponentCard } from '../components/OpponentCard';
 import { AIFighter } from '../types';
 import { supabase } from '../lib/supabase';
@@ -61,7 +62,7 @@ const getDamageRange = (category: BattleCategory): [number, number] => {
 
 // ============ EVENT GENERATOR ============
 
-const generateBattleEvents = (roundDuration: number = 60): BattleEvent[] => {
+const generateBattleEvents = (roundDuration: number = 60, language: string = 'en'): BattleEvent[] => {
   const events: BattleEvent[] = [];
   const eventCount = 20 + Math.floor(Math.random() * 11); // 20-30 events
 
@@ -70,7 +71,7 @@ const generateBattleEvents = (roundDuration: number = 60): BattleEvent[] => {
     const timestamp = Math.floor((roundDuration / eventCount) * i) + Math.floor(Math.random() * 2);
 
     const attacker = Math.random() > 0.5 ? 'player' : 'opponent';
-    const move = MMA_MOVES[Math.floor(Math.random() * MMA_MOVES.length)];
+    const move = MMA_MOVES[language as 'en' | 'cs' | 'pl'][Math.floor(Math.random() * MMA_MOVES[language as 'en' | 'cs' | 'pl'].length)];
 
     // Weighted probability for action types
     const roll = Math.random();
@@ -121,6 +122,7 @@ const generateBattleEvents = (roundDuration: number = 60): BattleEvent[] => {
 
 export const Arena: React.FC = () => {
   const { fighter, updateFighterStats } = useFighter();
+  const { language, t } = useLanguage();
   const location = useLocation();
 
   // Opponent selection
@@ -322,7 +324,7 @@ export const Arena: React.FC = () => {
 
           const attackerName = event.attacker === 'player' ? fighter!.name : selectedOpponent!.name;
           const defenderName = event.attacker === 'player' ? selectedOpponent!.name : fighter!.name;
-          const message = getBattleMessage(event.category, attackerName, defenderName, event.move);
+          const message = getBattleMessage(event.category, attackerName, defenderName, event.move, language);
 
           displayQueueRef.current.push({
             event,
@@ -464,7 +466,7 @@ export const Arena: React.FC = () => {
     if (!selectedOpponent || !fighter) return;
 
     // Generate all events upfront
-    const events = generateBattleEvents(60);
+    const events = generateBattleEvents(60, language);
     eventsRef.current = events;
     processedEventIds.current.clear();
     displayQueueRef.current = [];
@@ -489,7 +491,7 @@ export const Arena: React.FC = () => {
 
   const startNextRound = () => {
     // Generate new events for next round
-    const events = generateBattleEvents(60);
+    const events = generateBattleEvents(60, language);
     eventsRef.current = events;
     processedEventIds.current.clear();
     displayQueueRef.current = [];
@@ -597,6 +599,7 @@ export const Arena: React.FC = () => {
               result={battleResult}
               roundStats={roundStats}
               onReset={resetArena}
+              t={t}
             />
           ) : isBattling && selectedOpponent ? (
             <BattleScreen
@@ -610,6 +613,7 @@ export const Arena: React.FC = () => {
               battleLog={battleLog}
               battleLogRef={battleLogRef}
               roundStats={roundStats}
+              t={t}
             />
           ) : (
             <SetupScreen
@@ -622,6 +626,7 @@ export const Arena: React.FC = () => {
               canFight={canFight}
               loading={loadingOpponents}
               error={opponentError}
+              t={t}
             />
           )}
         </AnimatePresence>
@@ -642,6 +647,7 @@ interface BattleScreenProps {
   battleLog: BattleLogEntry[];
   battleLogRef: React.RefObject<HTMLDivElement>;
   roundStats: RoundResult;
+  t: (key: string) => string;
 }
 
 const BattleScreen: React.FC<BattleScreenProps> = ({
@@ -654,6 +660,7 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
   battleLog,
   battleLogRef,
   roundStats,
+  t,
 }) => {
   return (
     <motion.div
@@ -669,12 +676,12 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
         animate={{ y: 0 }}
       >
         <div className="text-center flex-1">
-          <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">Round</p>
+          <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">{t('round')}</p>
           <p className="text-4xl font-bold text-neon-green">{currentRound}/3</p>
         </div>
 
         <div className="text-center flex-1 border-x border-gray-700 px-8">
-          <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">Time</p>
+          <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">{t('time')}</p>
           <motion.div
             className="font-mono text-5xl font-bold text-alert-red glow-crimson"
             animate={{ scale: timeRemaining <= 10 ? [1, 1.05, 1] : 1 }}
@@ -686,8 +693,8 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
         </div>
 
         <div className="text-center flex-1">
-          <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">Status</p>
-          <p className="text-lg font-semibold text-cyan-400 animate-pulse">● LIVE</p>
+          <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">{t('status')}</p>
+          <p className="text-lg font-semibold text-cyan-400 animate-pulse">● {t('live').toUpperCase()}</p>
         </div>
       </motion.div>
 
@@ -742,7 +749,7 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
         transition={{ delay: 0.2 }}
       >
         <h3 className="section-header text-gray-300 mb-4 sticky top-0 bg-gray-900/90 py-2">
-          LIVE COMMENTARY
+          {t('live_commentary').toUpperCase()}
         </h3>
         <div ref={battleLogRef} className="h-80 overflow-y-auto space-y-2 pr-2">
           <AnimatePresence>
@@ -756,14 +763,14 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
       {/* ROUND STATS */}
       <div className="grid grid-cols-2 gap-4 glass-card rounded-2xl p-6">
         <div className="text-center">
-          <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">Your Damage</p>
+          <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">{t('your_damage')}</p>
           <p className="text-3xl font-bold text-neon-green">{roundStats.playerDamage}</p>
-          <p className="text-xs text-gray-400 mt-1">({roundStats.playerHits} hits)</p>
+          <p className="text-xs text-gray-400 mt-1">({roundStats.playerHits} {t('hits')})</p>
         </div>
         <div className="text-center">
-          <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">Opponent Damage</p>
+          <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">{t('opponent_damage')}</p>
           <p className="text-3xl font-bold text-alert-red">{roundStats.opponentDamage}</p>
-          <p className="text-xs text-gray-400 mt-1">({roundStats.opponentHits} hits)</p>
+          <p className="text-xs text-gray-400 mt-1">({roundStats.opponentHits} {t('hits')})</p>
         </div>
       </div>
     </motion.div>
@@ -827,9 +834,10 @@ interface ResultScreenProps {
   result: { winner: 'player' | 'opponent' | 'draw'; method: string };
   roundStats: RoundResult;
   onReset: () => void;
+  t: (key: string) => string;
 }
 
-const ResultScreen: React.FC<ResultScreenProps> = ({ result, roundStats, onReset }) => {
+const ResultScreen: React.FC<ResultScreenProps> = ({ result, roundStats, onReset, t }) => {
   const isVictory = result.winner === 'player';
   const isDraw = result.winner === 'draw';
 
@@ -852,21 +860,21 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ result, roundStats, onReset
         className="page-header text-6xl mb-4"
         style={{ color: isVictory ? '#00ff41' : isDraw ? '#fbbf24' : '#dc143c' }}
       >
-        {isVictory ? 'VICTORY' : isDraw ? 'DRAW' : 'DEFEAT'}
+        {isVictory ? t('victory').toUpperCase() : isDraw ? t('draw').toUpperCase() : t('defeat').toUpperCase()}
       </h1>
 
       <p className="text-gray-400 text-xl uppercase tracking-widest mb-10">{result.method}</p>
 
       <div className="grid grid-cols-2 gap-8 mb-10 bg-gray-900/40 p-8 rounded-lg">
         <div>
-          <p className="text-gray-400 uppercase tracking-wider text-sm mb-3">Your Damage</p>
+          <p className="text-gray-400 uppercase tracking-wider text-sm mb-3">{t('your_damage')}</p>
           <p className="text-4xl font-bold text-neon-green">{roundStats.playerDamage}</p>
-          <p className="text-sm text-gray-500 mt-2">({roundStats.playerHits} hits)</p>
+          <p className="text-sm text-gray-500 mt-2">({roundStats.playerHits} {t('hits')})</p>
         </div>
         <div>
-          <p className="text-gray-400 uppercase tracking-wider text-sm mb-3">Opponent Damage</p>
+          <p className="text-gray-400 uppercase tracking-wider text-sm mb-3">{t('opponent_damage')}</p>
           <p className="text-4xl font-bold text-alert-red">{roundStats.opponentDamage}</p>
-          <p className="text-sm text-gray-500 mt-2">({roundStats.opponentHits} hits)</p>
+          <p className="text-sm text-gray-500 mt-2">({roundStats.opponentHits} {t('hits')})</p>
         </div>
       </div>
 
@@ -876,7 +884,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ result, roundStats, onReset
         onClick={onReset}
         className="px-10 py-4 bg-gradient-to-r from-neon-green to-emerald-400 text-black font-bold uppercase tracking-wider rounded-lg hover:shadow-xl hover:shadow-neon-green/50 transition-all text-lg"
       >
-        Return to Arena
+        {t('return_to_arena')}
       </motion.button>
     </motion.div>
   );
@@ -893,6 +901,7 @@ interface SetupScreenProps {
   canFight: boolean;
   loading: boolean;
   error: string | null;
+  t: (key: string) => string;
 }
 
 const SetupScreen: React.FC<SetupScreenProps> = ({
@@ -904,6 +913,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
   canFight,
   loading,
   error,
+  t,
 }) => {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-10">
@@ -913,14 +923,14 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
           <motion.div animate={{ rotate: [0, 15, -15, 0] }} transition={{ duration: 2, repeat: Infinity }}>
             <Zap size={44} className="text-alert-red glow-crimson" />
           </motion.div>
-          <h1 className="page-header text-alert-red glow-crimson text-6xl">PvP ARENA</h1>
+          <h1 className="page-header text-alert-red glow-crimson text-6xl">{t('pvp_arena').toUpperCase()}</h1>
         </div>
         <p className="text-gray-400 text-lg uppercase tracking-widest font-light">
           {canFight
-            ? `Welcome ${fighter?.name}! Challenge real players from around the world.`
+            ? t('welcome_fighter').replace('{name}', fighter?.name || '')
             : !fighter || fighter.name === 'Undefined'
-              ? 'Create a fighter first to enter the Arena!'
-              : 'You need 50 Energy to fight. Train to recover!'}
+              ? t('create_fighter_first')
+              : t('need_energy')}
         </p>
       </motion.div>
 
@@ -947,12 +957,12 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
               color: !fighter || fighter.name === 'Undefined' ? '#dc143c' : '#fbbf24',
             }}
           >
-            {!fighter || fighter.name === 'Undefined' ? 'No Fighter' : 'Low Energy'}
+            {!fighter || fighter.name === 'Undefined' ? t('no_fighter') : t('low_energy')}
           </h3>
           <p className="text-gray-400 uppercase tracking-widest">
             {!fighter || fighter.name === 'Undefined'
-              ? 'Create your fighter on the Dashboard!'
-              : `You need 50 Energy. Current: ${Math.ceil(fighter?.currentEnergy || 0)}`}
+              ? t('create_fighter_dashboard')
+              : t('need_energy_current').replace('{energy}', Math.ceil(fighter?.currentEnergy || 0).toString())}
           </p>
         </motion.div>
       )}
@@ -965,7 +975,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
           className="glass-card-premium rounded-2xl p-8 text-center border-2 border-alert-red"
         >
           <div className="text-5xl mb-4">⚠️</div>
-          <h3 className="section-header text-alert-red text-2xl mb-3">Matchmaking Error</h3>
+          <h3 className="section-header text-alert-red text-2xl mb-3">{t('matchmaking_error')}</h3>
           <p className="text-gray-400">{error}</p>
         </motion.div>
       )}
@@ -983,7 +993,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
               transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
               className="w-16 h-16 border-4 border-neon-green/20 border-t-neon-green rounded-full mx-auto mb-4"
             />
-            <p className="text-gray-400 uppercase tracking-wider text-sm">Finding opponents...</p>
+            <p className="text-gray-400 uppercase tracking-wider text-sm">{t('finding_opponents')}</p>
           </div>
         </motion.div>
       )}
@@ -997,10 +1007,10 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
             transition={{ delay: 0.1 }}
             className="glass-card-premium rounded-2xl p-8 border-l-4 border-alert-red"
           >
-            <h3 className="section-header text-alert-red text-2xl mb-6 text-center">Choose Your Opponent</h3>
+            <h3 className="section-header text-alert-red text-2xl mb-6 text-center">{t('choose_opponent')}</h3>
             <div className="grid grid-cols-3 gap-8 items-center">
               <div className="text-center">
-                <p className="text-gray-400 text-xs uppercase tracking-widest mb-3">Your Fighter</p>
+                <p className="text-gray-400 text-xs uppercase tracking-widest mb-3">{t('your_fighter')}</p>
                 <motion.div
                   className="text-6xl mb-3"
                   animate={{ y: [0, -8, 0] }}
@@ -1026,7 +1036,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
 
               <div className="text-center">
                 <p className="text-gray-400 text-xs uppercase tracking-widest mb-3">
-                  {selectedOpponent ? 'Selected' : 'Choose Below'}
+                  {selectedOpponent ? t('selected') : t('choose_below')}
                 </p>
                 <motion.div
                   className="text-6xl mb-3"
@@ -1036,7 +1046,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
                   🥊
                 </motion.div>
                 <p className="text-xl font-bold text-alert-red">
-                  {selectedOpponent?.name || 'Select Opponent'}
+                  {selectedOpponent?.name || t('select_opponent')}
                 </p>
               </div>
             </div>
@@ -1074,7 +1084,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
                     whileTap={{ scale: 0.95 }}
                     className="w-full mt-4 py-4 bg-gradient-to-r from-neon-green to-emerald-400 text-black font-bold uppercase tracking-wider rounded-lg hover:shadow-xl hover:shadow-neon-green/60 transition-all text-lg"
                   >
-                    ⚡ START FIGHT
+                    ⚡ {t('start_fight').toUpperCase()}
                   </motion.button>
                 )}
               </motion.div>

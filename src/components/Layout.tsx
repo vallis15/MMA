@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { Sidebar } from './Sidebar';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface LayoutProps {
   children: ReactNode;
@@ -42,6 +43,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
         animate={{ backgroundPosition: ['0px 0px', '50px 50px'] }}
         transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
       />
+
+      {/* Language Switcher - Fixed Top Right */}
+      <div className="fixed top-4 right-4 z-50 pointer-events-auto">
+        <LanguageSwitcher />
+      </div>
 
       <Sidebar activeTab={activeTab} onTabChange={onTabChange} />
       

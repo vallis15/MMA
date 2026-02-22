@@ -4,6 +4,7 @@ import { Dashboard, Gym, Arena, Rankings, Registration, Login, AdminLogin } from
 import { FighterProvider } from './context/FighterContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { NotificationCenter } from './components/NotificationCenter';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -85,13 +86,15 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <NotificationProvider>
-          <FighterProvider>
-            <AppContent />
-          </FighterProvider>
-        </NotificationProvider>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            <FighterProvider>
+              <AppContent />
+            </FighterProvider>
+          </NotificationProvider>
+        </AuthProvider>
+      </LanguageProvider>
     </Router>
   );
 }

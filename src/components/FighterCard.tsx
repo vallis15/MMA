@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Zap, Trophy, TrendingUp } from 'lucide-react';
 import { Fighter } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 import { StatBar } from './StatBar';
 import { EnergyBar } from './EnergyBar';
 
@@ -10,6 +11,7 @@ interface FighterCardProps {
 }
 
 export const FighterCard: React.FC<FighterCardProps> = ({ fighter }) => {
+  const { t } = useLanguage();
   const totalWins = fighter.record.wins + fighter.record.losses + fighter.record.draws;
   const winRate = totalWins > 0 ? ((fighter.record.wins / totalWins) * 100).toFixed(1) : 0;
 
@@ -53,15 +55,15 @@ export const FighterCard: React.FC<FighterCardProps> = ({ fighter }) => {
         {/* Record */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <motion.div whileHover={{ scale: 1.05 }} className="bg-dark-tertiary rounded-lg p-4 text-center border border-neon-green/20">
-            <p className="text-sm text-gray-400 mb-1">Wins</p>
+            <p className="text-sm text-gray-400 mb-1">{t('wins')}</p>
             <p className="text-3xl font-bold text-neon-green">{fighter.record.wins}</p>
           </motion.div>
           <motion.div whileHover={{ scale: 1.05 }} className="bg-dark-tertiary rounded-lg p-4 text-center border border-alert-red/20">
-            <p className="text-sm text-gray-400 mb-1">Losses</p>
+            <p className="text-sm text-gray-400 mb-1">{t('losses')}</p>
             <p className="text-3xl font-bold text-alert-red">{fighter.record.losses}</p>
           </motion.div>
           <motion.div whileHover={{ scale: 1.05 }} className="bg-dark-tertiary rounded-lg p-4 text-center border border-gray-500/20">
-            <p className="text-sm text-gray-400 mb-1">Draws</p>
+            <p className="text-sm text-gray-400 mb-1">{t('draws')}</p>
             <p className="text-3xl font-bold text-gray-400">{fighter.record.draws}</p>
           </motion.div>
         </div>
@@ -69,11 +71,11 @@ export const FighterCard: React.FC<FighterCardProps> = ({ fighter }) => {
         {/* Reputation */}
         <div className="grid grid-cols-2 gap-4 mb-8">
           <motion.div whileHover={{ scale: 1.05 }} className="bg-dark-tertiary rounded-lg p-4 text-center border border-yellow-500/20">
-            <p className="text-sm text-gray-400 mb-1">Reputation</p>
+            <p className="text-sm text-gray-400 mb-1">{t('reputation')}</p>
             <p className="text-3xl font-bold text-yellow-400">{fighter.reputation}</p>
           </motion.div>
           <motion.div whileHover={{ scale: 1.05 }} className="bg-dark-tertiary rounded-lg p-4 text-center border border-neon-green/20">
-            <p className="text-sm text-gray-400 mb-1">Energy</p>
+            <p className="text-sm text-gray-400 mb-1">{t('energy')}</p>
             <motion.p
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
@@ -88,7 +90,7 @@ export const FighterCard: React.FC<FighterCardProps> = ({ fighter }) => {
         <div className="text-center">
           <div className="inline-flex items-center gap-2 bg-dark-tertiary px-4 py-2 rounded-full border border-neon-green/30">
             <Trophy size={18} className="text-neon-green" />
-            <span className="text-gray-300">Win Rate: </span>
+            <span className="text-gray-300">{t('win_rate_label')} </span>
             <span className="font-bold text-neon-green">{winRate}%</span>
           </div>
         </div>
@@ -105,10 +107,10 @@ export const FighterCard: React.FC<FighterCardProps> = ({ fighter }) => {
         <motion.div variants={itemVariants} className="bg-dark-secondary border border-neon-green/30 rounded-lg p-6 shadow-lg shadow-neon-green/10">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp size={24} className="text-neon-green" />
-            <h3 className="text-lg font-bold text-neon-green">Level {fighter.level}</h3>
+            <h3 className="text-lg font-bold text-neon-green">{t('level_number').replace('{level}', fighter.level.toString())}</h3>
           </div>
           <StatBar
-            label={`Level Progress (${fighter.experience % 100}/100 XP)`}
+            label={t('level_progress_xp').replace('{xp}', (fighter.experience % 100).toString())}
             value={Math.round(levelProgress)}
             maxValue={100}
           />
@@ -119,36 +121,36 @@ export const FighterCard: React.FC<FighterCardProps> = ({ fighter }) => {
       <motion.div variants={itemVariants} className="bg-dark-secondary border border-neon-green/20 rounded-lg p-8 shadow-lg">
         <h2 className="text-2xl font-bold text-neon-green mb-6 flex items-center gap-2">
           <Zap size={24} />
-          Fighter Stats
+          {t('fighter_stats')}
         </h2>
 
         <div className="space-y-5">
           <StatBar
-            label="Strength"
+            label={t('strength')}
             value={fighter.stats.strength}
             maxValue={100}
             icon="💪"
           />
           <StatBar
-            label="Speed"
+            label={t('speed')}
             value={fighter.stats.speed}
             maxValue={100}
             icon="⚡"
           />
           <StatBar
-            label="Cardio"
+            label={t('cardio')}
             value={fighter.stats.cardio}
             maxValue={100}
             icon="🫁"
           />
           <StatBar
-            label="Striking"
+            label={t('striking')}
             value={fighter.stats.striking}
             maxValue={100}
             icon="👊"
           />
           <StatBar
-            label="Grappling"
+            label={t('grappling')}
             value={fighter.stats.grappling}
             maxValue={100}
             icon="🤼"
@@ -158,7 +160,7 @@ export const FighterCard: React.FC<FighterCardProps> = ({ fighter }) => {
         {/* Average Stat */}
         <motion.div whileHover={{ scale: 1.02 }} className="mt-6 pt-6 border-t border-dark-tertiary">
           <div className="flex justify-between items-center bg-dark-tertiary rounded-lg p-4 border border-neon-green/20">
-            <span className="text-gray-300 font-medium">Average Stat</span>
+            <span className="text-gray-300 font-medium">{t('average_stat')}</span>
             <span className="text-2xl font-bold text-neon-green">
               {Math.round(
                 (fighter.stats.strength +

@@ -2,10 +2,12 @@ import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Lock, AlertCircle, Loader } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 
 export const Login: React.FC = () => {
   const { signIn } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,7 +23,7 @@ export const Login: React.FC = () => {
     setError(null);
 
     if (!email || !password) {
-      setError('Email and password are required');
+      setError(t('email_password_required'));
       return;
     }
 
@@ -137,7 +139,7 @@ export const Login: React.FC = () => {
             transition={{ duration: 0.8, type: 'spring', stiffness: 120 }}
           >
             <h1 className="title-mma text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-green via-emerald-400 to-neon-green tracking-wider mb-3">
-              MMA MANAGER
+              {t('mma_manager')}
             </h1>
           </motion.div>
 
@@ -148,7 +150,16 @@ export const Login: React.FC = () => {
             transition={{ delay: 0.4 }}
             className="text-lg text-gray-300 font-light tracking-widest uppercase"
           >
-            Enter the <span className="text-neon-green glow-electric">Octagon</span>
+            {t('enter_octagon').split(' ').map((word, index) => (
+              <span key={index}>
+                {index > 0 && ' '}
+                {word === 'Octagon' || word === 'oktagonu' || word === 'oktagonu' ? (
+                  <span className="text-neon-green glow-electric">{word}</span>
+                ) : (
+                  word
+                )}
+              </span>
+            ))}
           </motion.p>
         </div>
 
@@ -171,7 +182,7 @@ export const Login: React.FC = () => {
             {/* Email Input */}
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-300 uppercase tracking-wide">
-                Email Address
+                {t('email_address')}
               </label>
               <div className="relative group">
                 <Mail className="absolute left-4 top-4 w-5 h-5 text-neon-green/70 group-focus-within:text-neon-green transition" />
@@ -179,7 +190,7 @@ export const Login: React.FC = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="fighter@example.com"
+                  placeholder={t('placeholder_email')}
                   className="w-full bg-dark-tertiary/50 border border-dark-tertiary group-focus-within:border-neon-green/50 pl-12 pr-4 py-3 rounded-lg text-white placeholder-gray-600 focus:outline-none transition-all duration-300 backdrop-blur-sm"
                 />
               </div>
@@ -188,7 +199,7 @@ export const Login: React.FC = () => {
             {/* Password Input */}
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-300 uppercase tracking-wide">
-                Password
+                {t('password')}
               </label>
               <div className="relative group">
                 <Lock className="absolute left-4 top-4 w-5 h-5 text-neon-green/70 group-focus-within:text-neon-green transition" />
@@ -196,7 +207,7 @@ export const Login: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder={t('placeholder_password')}
                   className="w-full bg-dark-tertiary/50 border border-dark-tertiary group-focus-within:border-neon-green/50 pl-12 pr-4 py-3 rounded-lg text-white placeholder-gray-600 focus:outline-none transition-all duration-300 backdrop-blur-sm"
                 />
               </div>
@@ -210,7 +221,7 @@ export const Login: React.FC = () => {
                 onChange={(e) => setShowPassword(e.target.checked)}
                 className="w-4 h-4 rounded accent-neon-green"
               />
-              Show password
+              {t('show_password')}
             </label>
 
             {/* Error Message */}
@@ -237,10 +248,10 @@ export const Login: React.FC = () => {
                 {loading ? (
                   <>
                     <Loader className="w-5 h-5 animate-spin" />
-                    Entering Arena...
+                    {t('entering_arena')}
                   </>
                 ) : (
-                  'Login'
+                  t('login')
                 )}
               </span>
             </motion.button>
@@ -248,14 +259,14 @@ export const Login: React.FC = () => {
             {/* Sign Up Link */}
             <div className="pt-2">
               <p className="text-center text-gray-400 text-sm">
-                New fighter?{' '}
+                {t('new_fighter_question')}{' '}
                 <motion.button
                   type="button"
                   onClick={() => navigate('/register')}
                   whileHover={{ scale: 1.05 }}
                   className="text-neon-green hover:underline font-semibold hover:text-emerald-300 transition"
                 >
-                  Create Account
+                  {t('create_account')}
                 </motion.button>
               </p>
             </div>
@@ -269,7 +280,7 @@ export const Login: React.FC = () => {
             transition={{ delay: 0.6 }}
           >
             <p className="text-center text-gray-500 text-xs uppercase tracking-wider font-semibold mb-4">
-              ⚡ Executive Access
+              {t('executive_access')}
             </p>
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -278,7 +289,7 @@ export const Login: React.FC = () => {
               onClick={() => navigate('/admin-login')}
               className="pulse-button w-full py-3 px-4 bg-gradient-to-r from-alert-red/30 to-orange-600/30 border border-alert-red/50 text-alert-red font-semibold rounded-lg hover:from-alert-red/40 hover:to-orange-600/40 transition-all uppercase tracking-wider text-sm"
             >
-              Admin Panel
+              {t('admin_panel')}
             </motion.button>
           </motion.div>
         </motion.div>
@@ -290,7 +301,7 @@ export const Login: React.FC = () => {
           transition={{ delay: 0.8 }}
           className="text-center text-gray-600 text-xs mt-8 uppercase tracking-wide"
         >
-          Players Championship Management System
+          {t('championship_system')}
         </motion.p>
       </motion.div>
     </div>

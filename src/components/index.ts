@@ -11,3 +11,4 @@ export { LoadingScreen, LoadingSkeleton } from './LoadingScreen';
 export { ProtectedRoute } from './ProtectedRoute';
 export { LeagueBadge } from './LeagueBadge';
 export { ErrorBoundary } from './ErrorBoundary';
+export { LanguageSwitcher } from './LanguageSwitcher';

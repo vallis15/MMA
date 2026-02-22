@@ -4,6 +4,7 @@ import { Zap, Check } from 'lucide-react';
 import { TrainingDrill } from '../types';
 import { useFighter } from '../context/FighterContext';
 import { useNotification } from '../context/NotificationContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface TrainingCardProps {
   drill: TrainingDrill;
@@ -13,6 +14,7 @@ interface TrainingCardProps {
 export const TrainingCard: React.FC<TrainingCardProps> = ({ drill, onTrainComplete }) => {
   const { fighter, train } = useFighter();
   const { addNotification } = useNotification();
+  const { t } = useLanguage();
   const [isTraining, setIsTraining] = useState(false);
   const [showStatGain, setShowStatGain] = useState(false);
 
@@ -56,8 +58,8 @@ export const TrainingCard: React.FC<TrainingCardProps> = ({ drill, onTrainComple
       <div className="text-4xl mb-4">{drill.icon}</div>
 
       {/* Title and Description */}
-      <h3 className="text-lg font-bold text-white mb-2">{drill.name}</h3>
-      <p className="text-sm text-gray-300 mb-4">{drill.description}</p>
+      <h3 className="text-lg font-bold text-white mb-2">{t(drill.name)}</h3>
+      <p className="text-sm text-gray-300 mb-4">{t(drill.description)}</p>
 
       {/* Stats Gained */}
       <div className="bg-dark-tertiary rounded p-3 mb-4 space-y-2">

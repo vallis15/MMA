@@ -3,11 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Bell, X } from 'lucide-react';
 import { useFighter } from '../context/FighterContext';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { FighterCard } from '../components/FighterCard';
 import { FighterInitialization } from '../components/FighterInitialization';
 export const Dashboard: React.FC = () => {
   const { fighter, createFighter, reloadFighter } = useFighter();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showInitialization, setShowInitialization] = useState(false);
   const [formData, setFormData] = useState({ name: '', nickname: '' });
@@ -106,7 +108,7 @@ export const Dashboard: React.FC = () => {
                 <Bell className="w-6 h-6 text-alert-red flex-shrink-0" />
               </motion.div>
               <div className="flex-1 min-w-0">
-                <p className="text-white font-bold uppercase tracking-wider text-sm mb-1">⚡ Global Announcement</p>
+                <p className="text-white font-bold uppercase tracking-wider text-sm mb-1">{t('global_announcement')}</p>
                 <p className="text-gray-300 text-sm">{announcement}</p>
               </div>
               <motion.button
@@ -122,15 +124,15 @@ export const Dashboard: React.FC = () => {
 
         {/* Header */}
         <motion.div className="mb-12" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="page-header text-neon-green glow-electric mb-3 text-5xl">Dashboard</h1>
-          <p className="text-gray-400 text-lg uppercase tracking-widest">Your Complete MMA Fighter Management System</p>
+          <h1 className="page-header text-neon-green glow-electric mb-3 text-5xl">{t('dashboard')}</h1>
+          <p className="text-gray-400 text-lg uppercase tracking-widest">{t('dashboard_subtitle')}</p>
         </motion.div>
 
         {/* Fighter Section */}
         <div className="mb-12">
           {fighter && fighter.name !== 'Undefined' ? (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <h2 className="section-header text-neon-green mb-8 text-3xl">Active Fighter</h2>
+              <h2 className="section-header text-neon-green mb-8 text-3xl">{t('active_fighter')}</h2>
               <FighterCard fighter={fighter} />
             </motion.div>
           ) : (
@@ -142,8 +144,8 @@ export const Dashboard: React.FC = () => {
               <motion.div className="text-6xl mb-6" animate={{ y: [0, -10, 0] }} transition={{ duration: 3, repeat: Infinity }}>
                 🥋
               </motion.div>
-              <h3 className="text-3xl font-oswald font-bold text-neon-green mb-3 uppercase tracking-wider">No Fighter Yet</h3>
-              <p className="text-gray-400 mb-8 uppercase tracking-widest text-sm">Create your first fighter to get started!</p>
+              <h3 className="text-3xl font-oswald font-bold text-neon-green mb-3 uppercase tracking-wider">{t('no_fighter_yet')}</h3>
+              <p className="text-gray-400 mb-8 uppercase tracking-widest text-sm">{t('create_fighter_prompt')}</p>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -151,7 +153,7 @@ export const Dashboard: React.FC = () => {
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-neon-green to-emerald-400 text-dark-bg font-bold px-8 py-3 rounded-lg hover:shadow-2xl hover:shadow-neon-green/50 transition-all uppercase tracking-wider text-sm border-glow-electric"
               >
                 <Plus size={20} />
-                Create Fighter
+                {t('create_fighter')}
               </motion.button>
             </motion.div>
           )}
@@ -171,26 +173,26 @@ export const Dashboard: React.FC = () => {
               exit={{ scale: 0.9, y: 20 }}
               className="glass-card-premium rounded-2xl p-8 w-full max-w-md shadow-2xl"
             >
-              <h3 className="section-header text-neon-green mb-8 text-2xl">Create New Fighter</h3>
+              <h3 className="section-header text-neon-green mb-8 text-2xl">{t('create_new_fighter')}</h3>
               <form onSubmit={handleCreateFighter} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wider">Fighter Name</label>
+                  <label className="block text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wider">{t('fighter_name')}</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., John Smith"
+                    placeholder={t('placeholder_name')}
                     className="w-full bg-dark-tertiary/50 border border-neon-green/30 focus:border-neon-green rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-all"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wider">Nickname</label>
+                  <label className="block text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wider">{t('nickname')}</label>
                   <input
                     type="text"
                     value={formData.nickname}
                     onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
-                    placeholder="e.g., The Champion"
+                    placeholder={t('placeholder_nickname')}
                     className="w-full bg-dark-tertiary/50 border border-neon-green/30 focus:border-neon-green rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-all"
                     required
                   />
@@ -202,7 +204,7 @@ export const Dashboard: React.FC = () => {
                     type="submit"
                     className="flex-1 bg-gradient-to-r from-neon-green to-emerald-400 text-dark-bg font-bold py-3 rounded-lg hover:shadow-lg hover:shadow-neon-green/50 transition-all uppercase tracking-wider text-sm"
                   >
-                    Create
+                    {t('create')}
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -211,7 +213,7 @@ export const Dashboard: React.FC = () => {
                     onClick={() => setShowCreateForm(false)}
                     className="flex-1 bg-dark-tertiary/50 text-gray-300 font-bold py-3 rounded-lg border border-dark-tertiary hover:border-alert-red/50 transition-all uppercase tracking-wider text-sm"
                   >
-                    Cancel
+                    {t('cancel')}
                   </motion.button>
                 </div>
               </form>

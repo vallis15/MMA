@@ -3,6 +3,7 @@ import { Menu, X, Home, Dumbbell, Zap, Trophy, LogOut } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface SidebarProps {
   activeTab?: string;
@@ -13,12 +14,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard', onTab
   const [isOpen, setIsOpen] = useState(true);
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { t } = useLanguage();
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home, description: 'Home', path: '/' },
-    { id: 'gym', label: 'Gym', icon: Dumbbell, description: 'Training', path: '/gym' },
-    { id: 'arena', label: 'Arena', icon: Zap, description: 'Fights', path: '/arena' },
-    { id: 'rankings', label: 'Rankings', icon: Trophy, description: 'Leaderboards', path: '/rankings' },
+    { id: 'dashboard', icon: Home, path: '/' },
+    { id: 'gym', icon: Dumbbell, path: '/gym' },
+    { id: 'arena', icon: Zap, path: '/arena' },
+    { id: 'rankings', icon: Trophy, path: '/rankings' },
   ];
 
   const handleNavClick = (itemId: string, path: string) => {
@@ -108,8 +110,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard', onTab
 
                 <Icon size={20} className="group-hover:text-neon-green transition-colors" />
                 <div className="text-left">
-                  <div className="font-semibold uppercase text-xs tracking-wider">{item.label}</div>
-                  <div className="text-xs opacity-60 group-hover:opacity-80 transition">{item.description}</div>
+                  <div className="font-semibold uppercase text-xs tracking-wider">{t(item.id)}</div>
+                  <div className="text-xs opacity-60 group-hover:opacity-80 transition">{t(`${item.id}_description`)}</div>
                 </div>
 
                 {/* Right border glow */}
@@ -135,7 +137,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard', onTab
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-alert-red/30 to-orange-600/30 border border-alert-red/50 text-alert-red rounded-lg hover:from-alert-red/50 hover:to-orange-600/50 transition-all duration-300 font-semibold uppercase text-xs tracking-wider group"
           >
             <LogOut size={16} className="group-hover:animate-pulse" />
-            Logout
+            {t('logout')}
           </motion.button>
           <p className="text-xs text-gray-500 text-center font-oswald uppercase tracking-wider">v1.0.0</p>
         </motion.div>

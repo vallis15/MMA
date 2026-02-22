@@ -2,46 +2,47 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Dumbbell } from 'lucide-react';
 import { useFighter } from '../context/FighterContext';
+import { useLanguage } from '../context/LanguageContext';
 import { TrainingCard } from '../components/TrainingCard';
 import { TrainingDrill } from '../types';
 
 const TRAINING_DRILLS: TrainingDrill[] = [
   {
     id: 'heavy-bag',
-    name: 'Heavy Bag',
-    description: 'Pound the heavy bag to improve striking technique.',
+    name: 'drill_heavy_bag',
+    description: 'drill_heavy_bag_desc',
     icon: '🥊',
     energyCost: 10,
     benefits: [{ stat: 'striking', amount: 0.5 }],
   },
   {
     id: 'bjj-rolling',
-    name: 'BJJ Rolling',
-    description: 'Practice ground fighting and submissions.',
+    name: 'drill_bjj_rolling',
+    description: 'drill_bjj_rolling_desc',
     icon: '🤼',
     energyCost: 15,
     benefits: [{ stat: 'grappling', amount: 0.8 }],
   },
   {
     id: 'sprints',
-    name: 'Sprints',
-    description: 'High-intensity cardio training.',
+    name: 'drill_sprints',
+    description: 'drill_sprints_desc',
     icon: '🏃',
     energyCost: 20,
     benefits: [{ stat: 'speed', amount: 1.0 }],
   },
   {
     id: 'weightlifting',
-    name: 'Weightlifting',
-    description: 'Build raw power and strength.',
+    name: 'drill_weightlifting',
+    description: 'drill_weightlifting_desc',
     icon: '🏋️',
     energyCost: 20,
     benefits: [{ stat: 'strength', amount: 1.0 }],
   },
   {
     id: 'sparring',
-    name: 'Sparring',
-    description: 'Full-contact training with all techniques.',
+    name: 'drill_sparring',
+    description: 'drill_sparring_desc',
     icon: '⚡',
     energyCost: 30,
     benefits: [
@@ -52,8 +53,8 @@ const TRAINING_DRILLS: TrainingDrill[] = [
   },
   {
     id: 'cardio',
-    name: 'Intense Cardio',
-    description: 'Improve overall conditioning and stamina.',
+    name: 'drill_intense_cardio',
+    description: 'drill_intense_cardio_desc',
     icon: '🫁',
     energyCost: 15,
     benefits: [{ stat: 'cardio', amount: 1.2 }],
@@ -62,6 +63,7 @@ const TRAINING_DRILLS: TrainingDrill[] = [
 
 export const Gym: React.FC = () => {
   const { fighter } = useFighter();
+  const { t } = useLanguage();
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleTrainComplete = () => {
@@ -86,12 +88,12 @@ export const Gym: React.FC = () => {
             <motion.div animate={{ rotate: [0, 5, -5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
               <Dumbbell size={36} className="text-neon-green glow-electric" />
             </motion.div>
-            <h1 className="page-header text-neon-green glow-electric text-5xl">Gym</h1>
+            <h1 className="page-header text-neon-green glow-electric text-5xl">{t('gym')}</h1>
           </div>
           <p className="text-gray-400 text-lg uppercase tracking-widest font-light">
             {canTrain
-              ? `Welcome ${fighter?.name}! Choose a training drill to improve your stats.`
-              : 'Create a fighter first to start training!'}
+              ? t('gym_welcome').replace('{name}', fighter?.name || '')
+              : t('gym_no_fighter')}
           </p>
         </motion.div>
 
@@ -105,8 +107,8 @@ export const Gym: React.FC = () => {
             <motion.div className="text-6xl mb-6" animate={{ y: [0, -10, 0] }} transition={{ duration: 3, repeat: Infinity }}>
               🥋
             </motion.div>
-            <h3 className="section-header text-neon-green mb-3 text-3xl">No Fighter Yet</h3>
-            <p className="text-gray-400 uppercase tracking-widest text-sm">Create your first fighter on the Dashboard to start training!</p>
+            <h3 className="section-header text-neon-green mb-3 text-3xl">{t('no_fighter_yet')}</h3>
+            <p className="text-gray-400 uppercase tracking-widest text-sm">{t('gym_create_prompt')}</p>
           </motion.div>
         )}
 
@@ -139,24 +141,24 @@ export const Gym: React.FC = () => {
             transition={{ delay: 0.5 }}
             className="mt-12 glass-card-premium rounded-2xl p-8 border-l-4 border-neon-green/50"
           >
-            <h3 className="section-header text-neon-green mb-8 text-xl">Fighter Status</h3>
+            <h3 className="section-header text-neon-green mb-8 text-xl">{t('fighter_status')}</h3>
             <div className="grid grid-cols-2 md:grid-cols-6 gap-6">
               <motion.div className="text-center" whileHover={{ y: -4 }}>
-                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">Energy</p>
+                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">{t('energy')}</p>
                 <p className="text-3xl font-bold text-cyan-400 glow-electric">
                   {Math.ceil(fighter?.currentEnergy || 0)}/100
                 </p>
               </motion.div>
               <motion.div className="text-center" whileHover={{ y: -4 }}>
-                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">Level</p>
+                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">{t('level')}</p>
                 <p className="text-3xl font-bold text-neon-green glow-electric">{fighter?.level}</p>
               </motion.div>
               <motion.div className="text-center" whileHover={{ y: -4 }}>
-                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">Reputation</p>
+                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">{t('reputation')}</p>
                 <p className="text-3xl font-bold text-yellow-400">{fighter?.reputation}</p>
               </motion.div>
               <motion.div className="text-center" whileHover={{ y: -4 }}>
-                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">Avg Stats</p>
+                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">{t('avg_stats')}</p>
                 <p className="text-3xl font-bold text-neon-green glow-electric">
                   {fighter
                     ? Math.round(
@@ -171,11 +173,11 @@ export const Gym: React.FC = () => {
                 </p>
               </motion.div>
               <motion.div className="text-center" whileHover={{ y: -4 }}>
-                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">Wins</p>
+                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">{t('wins')}</p>
                 <p className="text-3xl font-bold text-neon-green glow-electric">{fighter?.record.wins || 0}</p>
               </motion.div>
               <motion.div className="text-center" whileHover={{ y: -4 }}>
-                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">Nickname</p>
+                <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-2">{t('nickname')}</p>
                 <p className="text-lg font-bold text-alert-red italic truncate">{fighter?.nickname}</p>
               </motion.div>
             </div>

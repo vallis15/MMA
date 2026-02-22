@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Trophy, Award, RotateCcw, Swords } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFighter } from '../context/FighterContext';
+import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../lib/supabase';
 import { LeagueBadge } from '../components/LeagueBadge';
 import { getLeagueFromReputation } from '../types';
@@ -21,6 +22,7 @@ type SortBy = 'reputation' | 'wins' | 'level';
 
 export const Rankings: React.FC = () => {
   const { fighter, resetCareer } = useFighter();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [sortBy, setSortBy] = useState<SortBy>('reputation');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -136,7 +138,7 @@ export const Rankings: React.FC = () => {
 
     // Safety check: need energy to fight
     if (!fighter || fighter.currentEnergy < 50) {
-      alert('You need at least 50 Energy to challenge someone!');
+      alert(t('need_energy_to_fight'));
       return;
     }
 
@@ -180,7 +182,7 @@ export const Rankings: React.FC = () => {
             <motion.div animate={{ rotate: [0, -10, 10, 0] }} transition={{ duration: 3, repeat: Infinity }}>
               <Trophy className="w-8 h-8 text-neon-green glow-electric" />
             </motion.div>
-            <h1 className="page-header text-neon-green glow-electric text-4xl">Global Leaderboard</h1>
+            <h1 className="page-header text-neon-green glow-electric text-4xl">{t('global_leaderboard')}</h1>
           </div>
           {playerRank && (
             <motion.div
@@ -189,7 +191,7 @@ export const Rankings: React.FC = () => {
               className="text-center glass-card px-8 py-4 rounded-lg border-glow-electric"
             >
               <div className="text-3xl font-black text-neon-green glow-electric">#{playerRank}</div>
-              <div className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Your Rank</div>
+              <div className="text-gray-400 text-xs uppercase tracking-wider font-semibold">{t('your_rank')}</div>
             </motion.div>
           )}
         </div>
@@ -208,9 +210,9 @@ export const Rankings: React.FC = () => {
                   : 'glass-card text-gray-300 hover:text-neon-green border border-neon-green/20 hover:border-neon-green/50'
               }`}
             >
-              {sort === 'reputation' && '💰 Reputation'}
-              {sort === 'wins' && '🏆 Wins'}
-              {sort === 'level' && '📈 Level'}
+              {sort === 'reputation' && t('sort_by_reputation')}
+              {sort === 'wins' && t('sort_by_wins')}
+              {sort === 'level' && t('sort_by_level')}
             </motion.button>
           ))}
         </div>
@@ -223,7 +225,7 @@ export const Rankings: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8 glass-card-premium p-5 border-l-4 border-alert-red/80 rounded-lg text-alert-red"
         >
-          <p className="font-bold uppercase tracking-wider text-sm mb-1">⚠️ Error Loading Leaderboard</p>
+          <p className="font-bold uppercase tracking-wider text-sm mb-1">{t('error_loading_leaderboard')}</p>
           <p className="text-sm">{error}</p>
         </motion.div>
       )}
@@ -247,20 +249,20 @@ export const Rankings: React.FC = () => {
         >
           {/* Header Row */}
           <div className="bg-dark-secondary/40 grid grid-cols-1 md:grid-cols-8 gap-4 p-4 font-bold text-gray-400 text-xs uppercase tracking-widest sticky top-0 z-10 backdrop-blur-sm">
-            <div className="md:col-span-1 text-center">Rank</div>
-            <div className="md:col-span-2">Fighter</div>
-            <div className="text-right">Reputation</div>
-            <div className="text-right">Record</div>
-            <div className="text-right">Win Rate</div>
-            <div className="text-right">Level</div>
-            <div className="text-center">Action</div>
+            <div className="md:col-span-1 text-center">{t('rank')}</div>
+            <div className="md:col-span-2">{t('fighter')}</div>
+            <div className="text-right">{t('reputation')}</div>
+            <div className="text-right">{t('record')}</div>
+            <div className="text-right">{t('win_rate')}</div>
+            <div className="text-right">{t('level')}</div>
+            <div className="text-center">{t('action')}</div>
           </div>
 
           {/* Data Rows */}
           {sortedPlayers.length === 0 ? (
             <div className="text-center p-8 text-gray-400">
               <Trophy className="w-8 h-8 mx-auto mb-2 text-gray-600" />
-              <p>No players found in the database</p>
+              <p>{t('no_players_found')}</p>
             </div>
           ) : (
             sortedPlayers.map((player, index) => {
@@ -292,7 +294,7 @@ export const Rankings: React.FC = () => {
                       <div className="font-bold text-white">
                         {player.username}
                         {isCurrentPlayer && (
-                          <span className="ml-2 text-neon-green text-xs font-semibold">(YOU)</span>
+                          <span className="ml-2 text-neon-green text-xs font-semibold">({t('you').toUpperCase()})</span>
                         )}
                       </div>
                       <div className="text-gray-400 text-sm">Lv. {level}</div>
@@ -310,7 +312,7 @@ export const Rankings: React.FC = () => {
                     <div className="text-white font-semibold">
                       {wins}-{losses}-{draws}
                     </div>
-                    <div className="text-gray-400 text-xs">W-L-D</div>
+                    <div className="text-gray-400 text-xs">{t('w_l_d')}</div>
                   </div>
 
                   {/* Win Rate */}
@@ -342,7 +344,7 @@ export const Rankings: React.FC = () => {
                         }`}
                       >
                         <Swords className="w-3 h-3" />
-                        Fight
+                        {t('fight_button')}
                       </motion.button>
                     )}
                   </div>
@@ -363,19 +365,19 @@ export const Rankings: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* League Info */}
             <div className="text-center">
-              <div className="text-gray-400 text-sm mb-2">Your League</div>
+              <div className="text-gray-400 text-sm mb-2">{t('your_league')}</div>
               <LeagueBadge league={getLeagueFromReputation(fighter.reputation)} />
               <div className="text-gray-500 text-xs mt-2">
-                {fighter.reputation < 500 && 'Climb to 500 for Regional Pro'}
-                {fighter.reputation >= 500 && fighter.reputation < 2000 && 'Climb to 2000 for MMA Legend'}
-                {fighter.reputation >= 2000 && 'You are an MMA Legend!'}
+                {fighter.reputation < 500 && t('climb_to_regional_pro')}
+                {fighter.reputation >= 500 && fighter.reputation < 2000 && t('climb_to_legend')}
+                {fighter.reputation >= 2000 && t('you_are_legend')}
               </div>
             </div>
 
             {/* Stats */}
             <div className="text-center">
               <Award className="w-6 h-6 text-neon-green mx-auto mb-2" />
-              <div className="text-gray-400 text-sm mb-1">Total Reputation</div>
+              <div className="text-gray-400 text-sm mb-1">{t('total_reputation')}</div>
               <div className="text-2xl font-bold text-neon-green">{fighter.reputation}</div>
             </div>
 
@@ -389,7 +391,7 @@ export const Rankings: React.FC = () => {
                   className="flex items-center justify-center gap-2 mx-auto px-4 py-2 bg-alert-red/20 border border-alert-red/50 text-alert-red rounded-lg hover:bg-alert-red/30 transition-colors"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  Reset Career
+                  {t('reset_career')}
                 </motion.button>
               ) : (
                 <motion.div
@@ -397,7 +399,7 @@ export const Rankings: React.FC = () => {
                   animate={{ opacity: 1 }}
                   className="flex flex-col gap-2"
                 >
-                  <p className="text-alert-red text-sm font-bold">Are you sure?</p>
+                  <p className="text-alert-red text-sm font-bold">{t('are_you_sure')}</p>
                   <div className="flex gap-2 justify-center">
                     <button
                       onClick={() => {
@@ -406,13 +408,13 @@ export const Rankings: React.FC = () => {
                       }}
                       className="px-3 py-1 bg-alert-red text-white text-sm rounded hover:bg-alert-red/80 transition"
                     >
-                      Yes, Reset
+                      {t('yes_reset')}
                     </button>
                     <button
                       onClick={() => setShowResetConfirm(false)}
                       className="px-3 py-1 bg-dark-tertiary text-gray-300 text-sm rounded hover:bg-dark-secondary transition"
                     >
-                      Cancel
+                      {t('cancel')}
                     </button>
                   </div>
                 </motion.div>
@@ -430,7 +432,7 @@ export const Rankings: React.FC = () => {
           className="mt-8 text-center p-8 bg-dark-secondary rounded-lg border border-dark-tertiary"
         >
           <Trophy className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400 text-lg">Create a fighter to see your ranking!</p>
+          <p className="text-gray-400 text-lg">{t('create_fighter_to_rank')}</p>
         </motion.div>
       )}
     </div>
