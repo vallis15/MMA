@@ -7,9 +7,11 @@ import { useLanguage } from '../context/LanguageContext';
 import { OpponentCard } from '../components/OpponentCard';
 import { AIFighter } from '../types';
 import { supabase } from '../lib/supabase';
-import { getBattleMessage, BattleCategory, MMA_MOVES } from '../constants/battlePhrases';
+import { getBattleMessage, BattleCategory, MMA_MOVES, TAKEDOWN_MOVES, SUBMISSION_MOVES } from '../constants/battlePhrases';
 
 // ============ TYPES ============
+
+export type FightPhase = 'STANDUP' | 'GROUND';
 
 interface BattleEvent {
   id: string;
@@ -18,6 +20,9 @@ interface BattleEvent {
   category: BattleCategory;
   move: string;
   damage: number;
+  phase: FightPhase;
+  // For ground phase: who is on top controlling
+  groundAttacker?: 'player' | 'opponent';
 }
 
 interface BattleLogEntry {
@@ -29,7 +34,6 @@ interface BattleLogEntry {
 
 interface QueuedEvent {
   event: BattleEvent;
-  message: string;
   attackerName: string;
   defenderName: string;
 }
@@ -55,66 +59,220 @@ const getDamageRange = (category: BattleCategory): [number, number] => {
       return [41, 60];
     case 'FINISHER':
       return [61, 100];
+    // Ground game
+    case 'TAKEDOWN_ATTEMPT':
+      return [5, 14];   // impact of hitting the canvas
+    case 'TAKEDOWN_DEFENSE':
+      return [0, 0];
+    case 'GROUND_CONTROL':
+      return [12, 28];  // ground and pound
+    case 'SUBMISSION_ATTEMPT':
+      return [8, 18];   // submission squeeze damage
+    case 'SUBMISSION_ESCAPE':
+      return [0, 0];
     default:
       return [0, 0];
   }
 };
 
-// ============ EVENT GENERATOR ============
+// ============ EVENT GENERATOR (GROUND GAME STATE MACHINE) ============
 
-const generateBattleEvents = (roundDuration: number = 60, language: string = 'en'): BattleEvent[] => {
+const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+const randItem = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+const generateBattleEvents = (
+  roundDuration: number = 60,
+  language: string = 'en',
+  playerGrappling: number = 50,
+  opponentGrappling: number = 50,
+): BattleEvent[] => {
   const events: BattleEvent[] = [];
-  const eventCount = 20 + Math.floor(Math.random() * 11); // 20-30 events
+  const lang = language as 'en' | 'cs' | 'pl';
+  const strikingMoves = MMA_MOVES[lang];
+  const tdMoves = TAKEDOWN_MOVES[lang];
+  const subMoves = SUBMISSION_MOVES[lang];
 
-  for (let i = 0; i < eventCount; i++) {
-    // Distribute events across the round duration
-    const timestamp = Math.floor((roundDuration / eventCount) * i) + Math.floor(Math.random() * 2);
+  let time = 0;
+  let eid = 0;
+  let phase: FightPhase = 'STANDUP';
+  let groundTopFighter: 'player' | 'opponent' = 'player';
+  let groundEndTime = 0;
 
-    const attacker = Math.random() > 0.5 ? 'player' : 'opponent';
-    const move = MMA_MOVES[language as 'en' | 'cs' | 'pl'][Math.floor(Math.random() * MMA_MOVES[language as 'en' | 'cs' | 'pl'].length)];
-
-    // Weighted probability for action types
-    const roll = Math.random();
-    let category: BattleCategory;
-    let damage = 0;
-
-    if (roll < 0.12) {
-      category = 'MISS';
-    } else if (roll < 0.22) {
-      category = 'DODGE';
-    } else if (roll < 0.50) {
-      category = 'LIGHT_HIT';
-      const [min, max] = getDamageRange('LIGHT_HIT');
-      damage = Math.floor(Math.random() * (max - min + 1)) + min;
-    } else if (roll < 0.72) {
-      category = 'MEDIUM_HIT';
-      const [min, max] = getDamageRange('MEDIUM_HIT');
-      damage = Math.floor(Math.random() * (max - min + 1)) + min;
-    } else if (roll < 0.88) {
-      category = 'HEAVY_HIT';
-      const [min, max] = getDamageRange('HEAVY_HIT');
-      damage = Math.floor(Math.random() * (max - min + 1)) + min;
-    } else if (roll < 0.96) {
-      category = 'CRITICAL_HIT';
-      const [min, max] = getDamageRange('CRITICAL_HIT');
-      damage = Math.floor(Math.random() * (max - min + 1)) + min;
-    } else {
-      category = 'FINISHER';
-      const [min, max] = getDamageRange('FINISHER');
-      damage = Math.floor(Math.random() * (max - min + 1)) + min;
-    }
-
-    events.push({
-      id: `event-${i}-${Date.now()}`,
-      timestamp,
+  const mkEvent = (
+    category: BattleCategory,
+    attacker: 'player' | 'opponent',
+    move: string,
+    curPhase: FightPhase,
+    gTop?: 'player' | 'opponent',
+  ): BattleEvent => {
+    const [mn, mx] = getDamageRange(category);
+    return {
+      id: `ev-${eid++}-${Date.now()}`,
+      timestamp: time,
       attacker,
       category,
       move,
-      damage,
-    });
+      damage: mn > 0 ? randInt(mn, mx) : 0,
+      phase: curPhase,
+      groundAttacker: gTop,
+    };
+  };
+
+  // Takedown probability scales with grappling stat (50-base = neutral)
+  const tdChancePlayer = 0.10 + (playerGrappling - 50) / 400;   // ~5–22%
+  const tdChanceOpponent = 0.10 + (opponentGrappling - 50) / 400;
+
+  while (time < roundDuration) {
+    // Spacing between events: tighter on ground (quick exchanges), wider standing
+    const spacing = phase === 'GROUND' ? randInt(2, 4) : randInt(2, 5);
+    time += spacing;
+    if (time >= roundDuration) break;
+
+    // ─── GROUND PHASE ───────────────────────────────────────────
+    if (phase === 'GROUND') {
+      // Natural standup by referee or escape back to feet
+      if (time >= groundEndTime) {
+        // Insert "back to standing" system log entry
+        events.push({
+          id: `standup-sys-${eid++}`,
+          timestamp: time,
+          attacker: groundTopFighter,
+          category: 'TAKEDOWN_DEFENSE',   // reuse this category for "defended / stood up"
+          move: lang === 'cs' ? 'vstávání po obraně' : 'scramble back to feet',
+          damage: 0,
+          phase: 'STANDUP',
+          groundAttacker: undefined,
+        });
+        phase = 'STANDUP';
+        continue;
+      }
+
+      const roll = Math.random();
+      const bottom = groundTopFighter === 'player' ? 'opponent' : 'player';
+
+      if (roll < 0.18) {
+        // ── Submission attempt by the top fighter
+        const sub = randItem(subMoves);
+        events.push(mkEvent('SUBMISSION_ATTEMPT', groundTopFighter, sub, 'GROUND', groundTopFighter));
+
+        // Immediate tap check: ~9% chance of finish
+        if (Math.random() < 0.09) {
+          time += 1;
+          events.push(mkEvent('FINISHER', groundTopFighter, sub, 'GROUND', groundTopFighter));
+          break; // round over — submission finish
+        }
+
+        // Escape check: ~40% chance defender fights out
+        if (Math.random() < 0.40) {
+          time += randInt(1, 3);
+          if (time >= roundDuration) break;
+          events.push(mkEvent('SUBMISSION_ESCAPE', bottom, sub, 'GROUND', groundTopFighter));
+
+          // After escape: 50% chance back to standup, 50% stay ground (bottom takes top)
+          if (Math.random() < 0.50) {
+            phase = 'STANDUP';
+          } else {
+            // Reversal — bottom fighter takes top
+            groundTopFighter = bottom;
+            groundEndTime = time + randInt(10, 20);
+          }
+        }
+      } else if (roll < 0.55) {
+        // ── Ground and pound (dominant position)
+        events.push(mkEvent('GROUND_CONTROL', groundTopFighter, lang === 'cs' ? 'ground and pound' : 'ground and pound', 'GROUND', groundTopFighter));
+      } else if (roll < 0.70) {
+        // ── Bottom fighter tries to escape / sweep
+        events.push(mkEvent('SUBMISSION_ESCAPE', bottom, lang === 'cs' ? 'práce z gardu' : 'guard work', 'GROUND', groundTopFighter));
+        // Partial escape — might return to standup
+        if (Math.random() < 0.25) {
+          phase = 'STANDUP';
+        }
+      } else if (roll < 0.82) {
+        // ── Another submission attempt (different move)
+        const sub = randItem(subMoves);
+        events.push(mkEvent('SUBMISSION_ATTEMPT', groundTopFighter, sub, 'GROUND', groundTopFighter));
+      } else {
+        // ── Ground control / positional advancement
+        events.push(mkEvent('GROUND_CONTROL', groundTopFighter, lang === 'cs' ? 'kontrola pozice' : 'positional control', 'GROUND', groundTopFighter));
+      }
+
+    // ─── STANDUP PHASE ──────────────────────────────────────────
+    } else {
+      const tdAttemptChance = Math.random() < 0.5 ? tdChancePlayer : tdChanceOpponent;
+      const roll = Math.random();
+
+      if (roll < tdAttemptChance) {
+        // ── Takedown sequence
+        const attacker: 'player' | 'opponent' = Math.random() < 0.5 ? 'player' : 'opponent';
+        const defender: 'player' | 'opponent' = attacker === 'player' ? 'opponent' : 'player';
+        const td = randItem(tdMoves);
+        events.push(mkEvent('TAKEDOWN_ATTEMPT', attacker, td, 'STANDUP'));
+
+        // Defense roll: attacker grappling vs defender grappling
+        const atkGrappling = attacker === 'player' ? playerGrappling : opponentGrappling;
+        const defGrappling = defender === 'player' ? playerGrappling : opponentGrappling;
+        const tdSuccessChance = 0.45 + (atkGrappling - defGrappling) / 200; // 45% base ± diff
+
+        if (Math.random() > tdSuccessChance) {
+          // defended!
+          time += randInt(1, 2);
+          if (time >= roundDuration) break;
+          events.push(mkEvent('TAKEDOWN_DEFENSE', defender, td, 'STANDUP'));
+        } else {
+          // Takedown landed — enter ground phase
+          time += 1;
+          phase = 'GROUND';
+          groundTopFighter = attacker;
+          groundEndTime = time + randInt(20, 35); // 20-35 s on the ground
+        }
+
+      } else {
+        // ── Standard striking exchange
+        const attacker: 'player' | 'opponent' = Math.random() < 0.5 ? 'player' : 'opponent';
+        const move = randItem(strikingMoves);
+        let category: BattleCategory;
+        let damage = 0;
+
+        const sr = Math.random();
+        if (sr < 0.12) {
+          category = 'MISS';
+        } else if (sr < 0.22) {
+          category = 'DODGE';
+        } else if (sr < 0.50) {
+          category = 'LIGHT_HIT';
+          const [mn, mx] = getDamageRange('LIGHT_HIT');
+          damage = randInt(mn, mx);
+        } else if (sr < 0.72) {
+          category = 'MEDIUM_HIT';
+          const [mn, mx] = getDamageRange('MEDIUM_HIT');
+          damage = randInt(mn, mx);
+        } else if (sr < 0.88) {
+          category = 'HEAVY_HIT';
+          const [mn, mx] = getDamageRange('HEAVY_HIT');
+          damage = randInt(mn, mx);
+        } else if (sr < 0.96) {
+          category = 'CRITICAL_HIT';
+          const [mn, mx] = getDamageRange('CRITICAL_HIT');
+          damage = randInt(mn, mx);
+        } else {
+          category = 'FINISHER';
+          const [mn, mx] = getDamageRange('FINISHER');
+          damage = randInt(mn, mx);
+        }
+
+        events.push({
+          id: `ev-${eid++}-${Date.now()}`,
+          timestamp: time,
+          attacker,
+          category,
+          move,
+          damage,
+          phase: 'STANDUP',
+        });
+      }
+    }
   }
 
-  // Sort by timestamp
   return events.sort((a, b) => a.timestamp - b.timestamp);
 };
 
@@ -165,6 +323,10 @@ export const Arena: React.FC = () => {
     winner: 'player' | 'opponent' | 'draw';
     method: string;
   } | null>(null);
+
+  // Fight phase (standup vs ground)
+  const [fightPhase, setFightPhase] = useState<FightPhase>('STANDUP');
+  const [groundAttackerName, setGroundAttackerName] = useState<string | null>(null);
 
   // Screen shake
   const [shakeIntensity, setShakeIntensity] = useState(0);
@@ -324,11 +486,11 @@ export const Arena: React.FC = () => {
 
           const attackerName = event.attacker === 'player' ? fighter!.name : selectedOpponent!.name;
           const defenderName = event.attacker === 'player' ? selectedOpponent!.name : fighter!.name;
-          const message = getBattleMessage(event.category, attackerName, defenderName, event.move, language);
 
+          // NOTE: message is resolved in the queue processor (not here)
+          // to always use the current language, not a stale closure value.
           displayQueueRef.current.push({
             event,
-            message,
             attackerName,
             defenderName,
           });
@@ -359,7 +521,7 @@ export const Arena: React.FC = () => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isBattling, battleResult, currentRound, playerHealth, opponentHealth, fighter, selectedOpponent]);
+}, [isBattling, battleResult, currentRound, playerHealth, opponentHealth, fighter, selectedOpponent, language]);  // language must be here to avoid stale closure
 
   // ============ QUEUE PROCESSOR (DRAMATIC TIMING) ============
 
@@ -381,10 +543,22 @@ export const Arena: React.FC = () => {
       return;
     }
 
-    const { event, message } = queuedEvent;
+    const { event, attackerName, defenderName } = queuedEvent;
+
+    // Resolve message HERE (at display time) so language is always current
+    const message = getBattleMessage(event.category, attackerName, defenderName, event.move, language);
 
     // Console log at DISPLAY time (not generation time)
     console.log('💬 [COMMENTARY]', message);
+
+    // Update fight phase indicator immediately when event is displayed
+    setFightPhase(event.phase);
+    if (event.phase === 'GROUND' && event.groundAttacker) {
+      const topName = event.groundAttacker === 'player' ? fighter!.name : selectedOpponent!.name;
+      setGroundAttackerName(topName);
+    } else if (event.phase === 'STANDUP') {
+      setGroundAttackerName(null);
+    }
 
     // Add to battle log (typewriter will animate it)
     setBattleLog((log) => [
@@ -420,9 +594,18 @@ export const Arena: React.FC = () => {
           }));
         }
 
-        // Trigger screen shake for heavy hits
-        if (event.category === 'HEAVY_HIT' || event.category === 'CRITICAL_HIT' || event.category === 'FINISHER') {
-          const intensity = event.category === 'FINISHER' ? 3 : event.category === 'CRITICAL_HIT' ? 2 : 1;
+        // Trigger screen shake for heavy hits and ground events
+        if (
+          event.category === 'HEAVY_HIT' ||
+          event.category === 'CRITICAL_HIT' ||
+          event.category === 'FINISHER' ||
+          event.category === 'TAKEDOWN_ATTEMPT'
+        ) {
+          const intensity =
+            event.category === 'FINISHER' ? 3
+            : event.category === 'CRITICAL_HIT' ? 2
+            : event.category === 'TAKEDOWN_ATTEMPT' ? 2
+            : 1;
           setShakeIntensity(intensity);
           setTimeout(() => setShakeIntensity(0), 400);
         }
@@ -465,8 +648,13 @@ export const Arena: React.FC = () => {
   const startBattle = () => {
     if (!selectedOpponent || !fighter) return;
 
-    // Generate all events upfront
-    const events = generateBattleEvents(60, language);
+    // Generate all events upfront, passing grappling stats for ground game
+    const events = generateBattleEvents(
+      60,
+      language,
+      fighter.stats?.grappling ?? 50,
+      selectedOpponent.stats?.grappling ?? 50,
+    );
     eventsRef.current = events;
     processedEventIds.current.clear();
     displayQueueRef.current = [];
@@ -479,6 +667,8 @@ export const Arena: React.FC = () => {
     setPlayerHealth(100);
     setOpponentHealth(100);
     setBattleLog([]);
+    setFightPhase('STANDUP');
+    setGroundAttackerName(null);
     setRoundStats({
       playerDamage: 0,
       opponentDamage: 0,
@@ -490,8 +680,13 @@ export const Arena: React.FC = () => {
   };
 
   const startNextRound = () => {
-    // Generate new events for next round
-    const events = generateBattleEvents(60, language);
+    // Generate new events for next round, passing grappling stats
+    const events = generateBattleEvents(
+      60,
+      language,
+      fighter?.stats?.grappling ?? 50,
+      selectedOpponent?.stats?.grappling ?? 50,
+    );
     eventsRef.current = events;
     processedEventIds.current.clear();
     displayQueueRef.current = [];
@@ -502,6 +697,8 @@ export const Arena: React.FC = () => {
     setTimeRemaining(60);
     setPlayerHealth(100);
     setOpponentHealth(100);
+    setFightPhase('STANDUP');
+    setGroundAttackerName(null);
     setRoundStats({
       playerDamage: 0,
       opponentDamage: 0,
@@ -572,6 +769,8 @@ export const Arena: React.FC = () => {
     setTimeRemaining(60);
     setPlayerHealth(100);
     setOpponentHealth(100);
+    setFightPhase('STANDUP');
+    setGroundAttackerName(null);
     eventsRef.current = [];
     processedEventIds.current.clear();
     displayQueueRef.current = [];
@@ -647,6 +846,8 @@ interface BattleScreenProps {
   battleLog: BattleLogEntry[];
   battleLogRef: React.RefObject<HTMLDivElement>;
   roundStats: RoundResult;
+  fightPhase: FightPhase;
+  groundAttackerName: string | null;
   t: (key: string) => string;
 }
 
@@ -660,8 +861,12 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
   battleLog,
   battleLogRef,
   roundStats,
+  fightPhase,
+  groundAttackerName,
   t,
 }) => {
+  const isGround = fightPhase === 'GROUND';
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -697,6 +902,51 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
           <p className="text-lg font-semibold text-cyan-400 animate-pulse">● {t('live').toUpperCase()}</p>
         </div>
       </motion.div>
+
+      {/* FIGHT PHASE INDICATOR */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={fightPhase}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.3 }}
+          className={`rounded-xl px-6 py-3 flex items-center justify-center gap-3 border ${
+            isGround
+              ? 'bg-orange-950/60 border-orange-500/60'
+              : 'bg-gray-900/40 border-gray-700/40'
+          }`}
+        >
+          <motion.span
+            animate={isGround ? { scale: [1, 1.15, 1] } : {}}
+            transition={{ duration: 1.2, repeat: isGround ? Infinity : 0 }}
+            className="text-2xl"
+          >
+            {isGround ? '🤼' : '🥊'}
+          </motion.span>
+          <div>
+            <p
+              className={`text-xs uppercase tracking-widest font-bold ${
+                isGround ? 'text-orange-400' : 'text-neon-green'
+              }`}
+            >
+              {isGround ? 'GROUND FIGHT' : 'STANDING'}
+            </p>
+            {isGround && groundAttackerName && (
+              <p className="text-xs text-orange-300/80">
+                {groundAttackerName} is on top
+              </p>
+            )}
+          </div>
+          {isGround && (
+            <motion.div
+              animate={{ opacity: [1, 0.3, 1] }}
+              transition={{ duration: 0.8, repeat: Infinity }}
+              className="w-2 h-2 rounded-full bg-orange-400 ml-2"
+            />
+          )}
+        </motion.div>
+      </AnimatePresence>
 
       {/* HEALTH BARS */}
       <div className="grid grid-cols-2 gap-6">
@@ -783,6 +1033,12 @@ const LogEntry: React.FC<{ entry: BattleLogEntry }> = ({ entry }) => {
   const [displayedText, setDisplayedText] = useState('');
   const isCritical = entry.category === 'CRITICAL_HIT' || entry.category === 'FINISHER';
   const isNegative = entry.category === 'MISS' || entry.category === 'DODGE';
+  const isGround = (
+    entry.category === 'GROUND_CONTROL' ||
+    entry.category === 'SUBMISSION_ATTEMPT' ||
+    entry.category === 'SUBMISSION_ESCAPE'
+  );
+  const isTakedown = entry.category === 'TAKEDOWN_ATTEMPT' || entry.category === 'TAKEDOWN_DEFENSE';
 
   useEffect(() => {
     let currentIndex = 0;
@@ -813,6 +1069,14 @@ const LogEntry: React.FC<{ entry: BattleLogEntry }> = ({ entry }) => {
           ? 'font-bold text-alert-red glow-crimson text-base'
           : isNegative
             ? 'italic text-gray-500'
+          : isTakedown
+            ? 'font-semibold text-yellow-400'
+          : isGround && entry.category === 'SUBMISSION_ATTEMPT'
+            ? 'font-bold text-orange-400'
+          : isGround && entry.category === 'SUBMISSION_ESCAPE'
+            ? 'italic text-cyan-400'
+          : isGround
+            ? 'text-orange-300'
             : 'text-gray-300'
       }`}
     >
