@@ -5,13 +5,25 @@ import { useLocation } from 'react-router-dom';
 import { useFighter } from '../context/FighterContext';
 import { useLanguage } from '../context/LanguageContext';
 import { OpponentCard } from '../components/OpponentCard';
-import { AIFighter } from '../types';
+import { AIFighter, FighterStats, DetailedFighterStats } from '../types';
 import { supabase } from '../lib/supabase';
-import { getBattleMessage, BattleCategory, MMA_MOVES, TAKEDOWN_MOVES, SUBMISSION_MOVES, GROUND_POUND_MOVES } from '../constants/battlePhrases';
+import { getBattleMessage, BattleCategory, MMA_MOVES, TAKEDOWN_MOVES, SUBMISSION_MOVES } from '../constants/battlePhrases';
 
 // ============ TYPES ============
 
 export type FightPhase = 'STANDUP' | 'GROUND';
+export type BodyPart = 'head' | 'body' | 'legs';
+
+/** Localized damage state for one fighter. */
+export interface HealthStatus {
+  head: number;    // → 0 = Knockout
+  body: number;    // → 0 = TKO (body)
+  legs: number;    // → 0 = TKO (immobility)
+  stamina: number; // drains over the fight; scales attacker damage
+}
+
+/** Core stats snapshot used by the battle engine. */
+type FighterSnapshot = FighterStats;
 
 interface BattleEvent {
   id: string;
@@ -20,6 +32,7 @@ interface BattleEvent {
   category: BattleCategory;
   move: string;
   damage: number;
+  targetPart: BodyPart;   // which body part receives the damage
   phase: FightPhase;
   // For ground phase: who is on top controlling
   groundAttacker?: 'player' | 'opponent';
@@ -75,6 +88,50 @@ const getDamageRange = (category: BattleCategory): [number, number] => {
   }
 };
 
+// ============ NEW SYSTEM CONSTANTS ============
+
+/** Stamina drained per event category from the ATTACKER. */
+const STAMINA_DRAIN: Partial<Record<BattleCategory, number>> = {
+  MISS: 3, DODGE: 2,
+  LIGHT_HIT: 5, MEDIUM_HIT: 8, HEAVY_HIT: 12, CRITICAL_HIT: 15, FINISHER: 22,
+  TAKEDOWN_ATTEMPT: 11, TAKEDOWN_DEFENSE: 5,
+  GROUND_CONTROL: 7, SUBMISSION_ATTEMPT: 9, SUBMISSION_ESCAPE: 5,
+};
+
+/** Finisher messages when a body part reaches 0. */
+const FINISHER_MSGS: Record<BodyPart, (winner: string, loser: string) => string> = {
+  head: (w, l) => `💥 KNOCKOUT!! ${w} drops ${l} with a devastating blow to the head! The referee waves it off!`,
+  body: (_w, l) => `🛑 TKO!! The referee stops the fight — ${l}'s body has taken too much punishment!`,
+  legs: (_w, l) => `🦵 TKO!! ${l}'s legs give out completely! The referee stops the contest!`,
+};
+
+/** Determine which body part a strike targets. */
+const getTargetPart = (move: string, category: BattleCategory): BodyPart => {
+  const m = move.toLowerCase();
+  // Leg kicks — English, Czech and Polish terms
+  if (
+    (m.includes('leg kick') || m.includes('low kick') || m.includes('kopnięcie nogi')) &&
+    category !== 'TAKEDOWN_ATTEMPT' && category !== 'TAKEDOWN_DEFENSE'
+  ) return 'legs';
+  // Body kicks and knees
+  if (
+    m.includes('body kick') || m.includes('kop na tělo') || m.includes('kopnięcie w korpus') ||
+    m.includes('knee') || m.includes('koleno') || m.includes('kolano')
+  ) return Math.random() < 0.8 ? 'body' : 'head';
+  // Takedowns → body impact on canvas
+  if (category === 'TAKEDOWN_ATTEMPT' || category === 'TAKEDOWN_DEFENSE') return 'body';
+  // Ground and pound — mix of head (45%) and body (55%)
+  if (category === 'GROUND_CONTROL') return Math.random() < 0.45 ? 'head' : 'body';
+  // Submissions squeeze the body
+  if (category === 'SUBMISSION_ATTEMPT' || category === 'SUBMISSION_ESCAPE') return 'body';
+  // Default striking (jabs, hooks, crosses, etc.) — head 68%, body 32%
+  return Math.random() < 0.68 ? 'head' : 'body';
+};
+
+/** Build a body-part location suffix for commentary. */
+const partLabel = (part: BodyPart): string =>
+  part === 'head' ? 'to the head' : part === 'body' ? 'to the body' : 'to the legs';
+
 // ============ EVENT GENERATOR (GROUND GAME STATE MACHINE) ============
 
 const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -85,9 +142,41 @@ const generateBattleEvents = (
   language: string = 'en',
   player: FighterSnapshot = { grappling: 50, strength: 50, speed: 50, striking: 50, cardio: 50 },
   opponent: FighterSnapshot = { grappling: 50, strength: 50, speed: 50, striking: 50, cardio: 50 },
+  playerDetail?: Partial<DetailedFighterStats>,
+  opponentDetail?: Partial<DetailedFighterStats>,
 ): BattleEvent[] => {
   const playerGrappling = player.grappling;
   const opponentGrappling = opponent.grappling;
+
+  // ── Simulated stamina (affects damage scaling and TD success) ──
+  let playerStaminaSim = 100;
+  let opponentStaminaSim = 100;
+
+  // ── Stat-based damage modifier for a specific body part ──
+  const applyStatMod = (
+    baseDmg: number,
+    targetPart: BodyPart,
+    atkDetail: Partial<DetailedFighterStats> | undefined,
+    defDetail: Partial<DetailedFighterStats> | undefined,
+    atkStamina: number,
+  ): number => {
+    let d = baseDmg * (atkStamina / 100); // stamina scales output
+    if (targetPart === 'legs') {
+      // Attacker's leg kick hardness boosts leg damage
+      d *= 1 + ((atkDetail?.leg_kick_hardness ?? 50) - 50) / 200;
+    } else if (targetPart === 'head') {
+      // Defender chin durability reduces head damage
+      d /= 1 + (defDetail?.chin_durability ?? 50) / 200;
+      // Attacker striking power (best of cross/hook/uppercut) boosts head damage
+      const strike = Math.max(atkDetail?.cross_power ?? 50, atkDetail?.hook_lethality ?? 50, atkDetail?.uppercut_timing ?? 50);
+      d *= 1 + (strike - 50) / 300;
+    } else {
+      // Body: GnP pressure + knee impact
+      d *= 1 + ((atkDetail?.gnp_pressure ?? 50) - 50) / 300;
+      d *= 1 + ((atkDetail?.knee_impact ?? 50) - 50) / 300;
+    }
+    return Math.round(Math.max(1, d));
+  };
 
   const events: BattleEvent[] = [];
   const lang = language as 'en' | 'cs' | 'pl';
@@ -101,6 +190,11 @@ const generateBattleEvents = (
   let groundTopFighter: 'player' | 'opponent' = 'player';
   let groundEndTime = 0;
 
+  // Base td chances (modified by stamina exhaustion)
+  const tdChancePlayer   = 0.10 + (playerGrappling   - 50) / 400;
+  const tdChanceOpponent = 0.10 + (opponentGrappling - 50) / 400;
+
+  /** Build a BattleEvent with body part targeting + stat/stamina-scaled damage. */
   const mkEvent = (
     category: BattleCategory,
     attacker: 'player' | 'opponent',
@@ -109,40 +203,52 @@ const generateBattleEvents = (
     gTop?: 'player' | 'opponent',
   ): BattleEvent => {
     const [mn, mx] = getDamageRange(category);
+    const tPart = getTargetPart(move, category);
+    const atkStamina = attacker === 'player' ? playerStaminaSim : opponentStaminaSim;
+    const atkDetail  = attacker === 'player' ? playerDetail : opponentDetail;
+    const defDetail  = attacker === 'player' ? opponentDetail : playerDetail;
+    const rawDmg = mn > 0 ? randInt(mn, mx) : 0;
+    const finalDmg = rawDmg > 0 ? applyStatMod(rawDmg, tPart, atkDetail, defDetail, atkStamina) : 0;
+
+    // Drain attacker stamina, fractional recovery for defender
+    const drain = STAMINA_DRAIN[category] ?? 5;
+    if (attacker === 'player') {
+      playerStaminaSim   = Math.max(5, playerStaminaSim - drain);
+      opponentStaminaSim = Math.min(100, opponentStaminaSim + 1);
+    } else {
+      opponentStaminaSim = Math.max(5, opponentStaminaSim - drain);
+      playerStaminaSim   = Math.min(100, playerStaminaSim + 1);
+    }
+
     return {
       id: `ev-${eid++}-${Date.now()}`,
       timestamp: time,
       attacker,
       category,
       move,
-      damage: mn > 0 ? randInt(mn, mx) : 0,
+      damage: finalDmg,
+      targetPart: tPart,
       phase: curPhase,
       groundAttacker: gTop,
     };
   };
 
-  // Takedown probability scales with grappling stat (50-base = neutral)
-  const tdChancePlayer = 0.10 + (playerGrappling - 50) / 400;   // ~5–22%
-  const tdChanceOpponent = 0.10 + (opponentGrappling - 50) / 400;
-
   while (time < roundDuration) {
-    // Spacing between events: tighter on ground (quick exchanges), wider standing
     const spacing = phase === 'GROUND' ? randInt(2, 4) : randInt(2, 5);
     time += spacing;
     if (time >= roundDuration) break;
 
     // ─── GROUND PHASE ───────────────────────────────────────────
     if (phase === 'GROUND') {
-      // Natural standup by referee or escape back to feet
       if (time >= groundEndTime) {
-        // Insert "back to standing" system log entry
         events.push({
           id: `standup-sys-${eid++}`,
           timestamp: time,
           attacker: groundTopFighter,
-          category: 'TAKEDOWN_DEFENSE',   // reuse this category for "defended / stood up"
-          move: lang === 'cs' ? 'vstávání po obraně' : 'scramble back to feet',
+          category: 'TAKEDOWN_DEFENSE',
+          move: lang === 'cs' ? 'vstávání po obraně' : lang === 'pl' ? 'powrót na nogi' : 'scramble back to feet',
           damage: 0,
+          targetPart: 'body',
           phase: 'STANDUP',
           groundAttacker: undefined,
         });
@@ -151,52 +257,40 @@ const generateBattleEvents = (
       }
 
       const roll = Math.random();
-      const bottom = groundTopFighter === 'player' ? 'opponent' : 'player';
+      const bottom: 'player' | 'opponent' = groundTopFighter === 'player' ? 'opponent' : 'player';
 
       if (roll < 0.18) {
-        // ── Submission attempt by the top fighter
         const sub = randItem(subMoves);
         events.push(mkEvent('SUBMISSION_ATTEMPT', groundTopFighter, sub, 'GROUND', groundTopFighter));
-
-        // Immediate tap check: ~9% chance of finish
         if (Math.random() < 0.09) {
           time += 1;
           events.push(mkEvent('FINISHER', groundTopFighter, sub, 'GROUND', groundTopFighter));
-          break; // round over — submission finish
+          break;
         }
-
-        // Escape check: ~40% chance defender fights out
         if (Math.random() < 0.40) {
           time += randInt(1, 3);
           if (time >= roundDuration) break;
           events.push(mkEvent('SUBMISSION_ESCAPE', bottom, sub, 'GROUND', groundTopFighter));
-
-          // After escape: 50% chance back to standup, 50% stay ground (bottom takes top)
           if (Math.random() < 0.50) {
             phase = 'STANDUP';
           } else {
-            // Reversal — bottom fighter takes top
             groundTopFighter = bottom;
             groundEndTime = time + randInt(10, 20);
           }
         }
       } else if (roll < 0.55) {
-        // ── Ground and pound (dominant position)
-        events.push(mkEvent('GROUND_CONTROL', groundTopFighter, lang === 'cs' ? 'ground and pound' : 'ground and pound', 'GROUND', groundTopFighter));
+        const gnpMove = lang === 'cs' ? 'ground and pound' : lang === 'pl' ? 'ground and pound' : 'ground and pound';
+        events.push(mkEvent('GROUND_CONTROL', groundTopFighter, gnpMove, 'GROUND', groundTopFighter));
       } else if (roll < 0.70) {
-        // ── Bottom fighter tries to escape / sweep
-        events.push(mkEvent('SUBMISSION_ESCAPE', bottom, lang === 'cs' ? 'práce z gardu' : 'guard work', 'GROUND', groundTopFighter));
-        // Partial escape — might return to standup
-        if (Math.random() < 0.25) {
-          phase = 'STANDUP';
-        }
+        const guardWork = lang === 'cs' ? 'práce z gardu' : lang === 'pl' ? 'praca z gardy' : 'guard work';
+        events.push(mkEvent('SUBMISSION_ESCAPE', bottom, guardWork, 'GROUND', groundTopFighter));
+        if (Math.random() < 0.25) phase = 'STANDUP';
       } else if (roll < 0.82) {
-        // ── Another submission attempt (different move)
         const sub = randItem(subMoves);
         events.push(mkEvent('SUBMISSION_ATTEMPT', groundTopFighter, sub, 'GROUND', groundTopFighter));
       } else {
-        // ── Ground control / positional advancement
-        events.push(mkEvent('GROUND_CONTROL', groundTopFighter, lang === 'cs' ? 'kontrola pozice' : 'positional control', 'GROUND', groundTopFighter));
+        const posWork = lang === 'cs' ? 'kontrola pozice' : lang === 'pl' ? 'kontrola pozycji' : 'positional control';
+        events.push(mkEvent('GROUND_CONTROL', groundTopFighter, posWork, 'GROUND', groundTopFighter));
       }
 
     // ─── STANDUP PHASE ──────────────────────────────────────────
@@ -205,73 +299,53 @@ const generateBattleEvents = (
       const roll = Math.random();
 
       if (roll < tdAttemptChance) {
-        // ── Takedown sequence
         const attacker: 'player' | 'opponent' = Math.random() < 0.5 ? 'player' : 'opponent';
         const defender: 'player' | 'opponent' = attacker === 'player' ? 'opponent' : 'player';
         const td = randItem(tdMoves);
         events.push(mkEvent('TAKEDOWN_ATTEMPT', attacker, td, 'STANDUP'));
 
-        // Defense roll: attacker grappling vs defender grappling
         const atkGrappling = attacker === 'player' ? playerGrappling : opponentGrappling;
         const defGrappling = defender === 'player' ? playerGrappling : opponentGrappling;
-        const tdSuccessChance = 0.45 + (atkGrappling - defGrappling) / 200; // 45% base ± diff
+        // Low stamina (< 20%) on defender → 50% easier to take down
+        const defStamina = defender === 'player' ? playerStaminaSim : opponentStaminaSim;
+        const exhaustionBonus = defStamina < 20 ? 1.5 : 1.0;
+        const tdSuccessChance = (0.45 + (atkGrappling - defGrappling) / 200) * exhaustionBonus;
 
         if (Math.random() > tdSuccessChance) {
-          // defended!
           time += randInt(1, 2);
           if (time >= roundDuration) break;
           events.push(mkEvent('TAKEDOWN_DEFENSE', defender, td, 'STANDUP'));
         } else {
-          // Takedown landed — enter ground phase
           time += 1;
           phase = 'GROUND';
           groundTopFighter = attacker;
-          groundEndTime = time + randInt(20, 35); // 20-35 s on the ground
+          groundEndTime = time + randInt(20, 35);
         }
-
       } else {
-        // ── Standard striking exchange
         const attacker: 'player' | 'opponent' = Math.random() < 0.5 ? 'player' : 'opponent';
         const move = randItem(strikingMoves);
-        let category: BattleCategory;
-        let damage = 0;
+        // Low stamina on attacker shifts distribution to lighter hits
+        const atkStaminaNow = attacker === 'player' ? playerStaminaSim : opponentStaminaSim;
+        const fatiguedBias = atkStaminaNow < 30 ? 0.15 : 0; // shift thresholds up = fewer crits
 
+        let category: BattleCategory;
         const sr = Math.random();
-        if (sr < 0.12) {
+        if (sr < 0.12 + fatiguedBias) {
           category = 'MISS';
-        } else if (sr < 0.22) {
+        } else if (sr < 0.22 + fatiguedBias) {
           category = 'DODGE';
-        } else if (sr < 0.50) {
+        } else if (sr < 0.50 + fatiguedBias) {
           category = 'LIGHT_HIT';
-          const [mn, mx] = getDamageRange('LIGHT_HIT');
-          damage = randInt(mn, mx);
-        } else if (sr < 0.72) {
+        } else if (sr < 0.72 + fatiguedBias) {
           category = 'MEDIUM_HIT';
-          const [mn, mx] = getDamageRange('MEDIUM_HIT');
-          damage = randInt(mn, mx);
         } else if (sr < 0.88) {
           category = 'HEAVY_HIT';
-          const [mn, mx] = getDamageRange('HEAVY_HIT');
-          damage = randInt(mn, mx);
         } else if (sr < 0.96) {
           category = 'CRITICAL_HIT';
-          const [mn, mx] = getDamageRange('CRITICAL_HIT');
-          damage = randInt(mn, mx);
         } else {
           category = 'FINISHER';
-          const [mn, mx] = getDamageRange('FINISHER');
-          damage = randInt(mn, mx);
         }
-
-        events.push({
-          id: `ev-${eid++}-${Date.now()}`,
-          timestamp: time,
-          attacker,
-          category,
-          move,
-          damage,
-          phase: 'STANDUP',
-        });
+        events.push(mkEvent(category, attacker, move, 'STANDUP'));
       }
     }
   }
@@ -282,7 +356,7 @@ const generateBattleEvents = (
 // ============ MAIN ARENA COMPONENT ============
 
 export const Arena: React.FC = () => {
-  const { fighter, updateFighterStats } = useFighter();
+  const { fighter, reloadFighter } = useFighter();
   const { language, t } = useLanguage();
   const location = useLocation();
 
@@ -292,12 +366,19 @@ export const Arena: React.FC = () => {
   const [loadingOpponents, setLoadingOpponents] = useState(false);
   const [opponentError, setOpponentError] = useState<string | null>(null);
 
+  // ── Health / Stamina state (Localized Damage System) ──
+  const defaultHS = (): HealthStatus => ({ head: 100, body: 100, legs: 100, stamina: 100 });
+  const [playerHS, setPlayerHS] = useState<HealthStatus>(defaultHS);
+  const [opponentHS, setOpponentHS] = useState<HealthStatus>(defaultHS);
+  // Refs mirror state for the queue processor (avoids stale closure issues)
+  const playerHSRef   = useRef<HealthStatus>(defaultHS());
+  const opponentHSRef = useRef<HealthStatus>(defaultHS());
+  const battleEndedRef = useRef(false);
+
   // Battle state
   const [isBattling, setIsBattling] = useState(false);
   const [currentRound, setCurrentRound] = useState(1);
   const [timeRemaining, setTimeRemaining] = useState(60);
-  const [playerHealth, setPlayerHealth] = useState(100);
-  const [opponentHealth, setOpponentHealth] = useState(100);
 
   // Pre-calculated events
   const eventsRef = useRef<BattleEvent[]>([]);
@@ -310,7 +391,7 @@ export const Arena: React.FC = () => {
   // Display queue for dramatic timing
   const displayQueueRef = useRef<QueuedEvent[]>([]);
   const isProcessingQueueRef = useRef(false);
-  const processingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const processingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isBattlingRef = useRef(false);
 
   // Round stats
@@ -335,7 +416,7 @@ export const Arena: React.FC = () => {
   const [shakeIntensity, setShakeIntensity] = useState(0);
 
   // Timer control
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const roundStartTime = useRef<number>(0);
 
   const canFight = fighter && fighter.name !== 'Undefined' && fighter.currentEnergy >= 50;
@@ -389,7 +470,6 @@ export const Arena: React.FC = () => {
         }
 
         // Find current player's rank
-        const currentPlayerIndex = allPlayers.findIndex((p) => p.username === fighter.name);
         const currentReputation = fighter.reputation || 0;
 
         let selectedPlayers: typeof allPlayers = [];
@@ -499,19 +579,11 @@ export const Arena: React.FC = () => {
           });
         });
 
-        // Check for KO
-        if (playerHealth <= 0 || opponentHealth <= 0) {
-          endBattle(playerHealth <= 0 ? 'opponent' : 'player', 'Knockout');
-          return 0;
-        }
-
-        // Round time expired
+        // Round time expired (KO/finish handled by queue processor via battleEndedRef)
         if (newTime <= 0) {
           if (currentRound >= 3) {
-            // All rounds complete - judges' decision
             endBattle('judges', "Judges' Decision");
           } else {
-            // Next round
             startNextRound();
           }
           return 0;
@@ -524,7 +596,7 @@ export const Arena: React.FC = () => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-}, [isBattling, battleResult, currentRound, playerHealth, opponentHealth, fighter, selectedOpponent, language]);  // language must be here to avoid stale closure
+}, [isBattling, battleResult, currentRound, fighter, selectedOpponent, language]);
 
   // ============ QUEUE PROCESSOR (DRAMATIC TIMING) ============
 
@@ -548,8 +620,14 @@ export const Arena: React.FC = () => {
 
     const { event, attackerName, defenderName } = queuedEvent;
 
-    // Resolve message HERE (at display time) so language is always current
-    const message = getBattleMessage(event.category, attackerName, defenderName, event.move, language);
+    // ── Build message with body-part location ──────────────────
+    const baseMsg = getBattleMessage(event.category, attackerName, defenderName, event.move, language);
+    const isStrike = event.damage > 0 && (
+      event.category === 'LIGHT_HIT' || event.category === 'MEDIUM_HIT' ||
+      event.category === 'HEAVY_HIT' || event.category === 'CRITICAL_HIT'
+    );
+    const locationSuffix = isStrike ? ` [${partLabel(event.targetPart)}]` : '';
+    const message = baseMsg + locationSuffix;
 
     // Console log at DISPLAY time (not generation time)
     console.log('💬 [COMMENTARY]', message);
@@ -577,48 +655,73 @@ export const Arena: React.FC = () => {
     // Calculate typewriter duration (60ms per character)
     const typewriterDuration = message.length * 60;
 
-    // Wait for typewriter to complete before updating HP
+    // Wait for typewriter to complete before updating HealthStatus
     setTimeout(() => {
-      // Apply damage and visual effects
       if (event.damage > 0) {
-        if (event.attacker === 'player') {
-          setOpponentHealth((hp) => Math.max(0, hp - event.damage));
-          setRoundStats((stats) => ({
-            ...stats,
-            playerDamage: stats.playerDamage + event.damage,
-            playerHits: stats.playerHits + 1,
-          }));
+        const tPart = event.targetPart;
+        const isPlayerAttacking = event.attacker === 'player';
+        const drain = STAMINA_DRAIN[event.category] ?? 5;
+
+        if (isPlayerAttacking) {
+          // ── Damage to opponent's body part ──
+          const newOppHS = {
+            ...opponentHSRef.current,
+            [tPart]: Math.max(0, opponentHSRef.current[tPart] - event.damage),
+          };
+          opponentHSRef.current = newOppHS;
+          setOpponentHS(newOppHS);
+          // Drain player stamina, slight recovery for opponent
+          playerHSRef.current = { ...playerHSRef.current, stamina: Math.max(5, playerHSRef.current.stamina - drain) };
+          setPlayerHS({ ...playerHSRef.current });
+          opponentHSRef.current = { ...opponentHSRef.current, stamina: Math.min(100, opponentHSRef.current.stamina + 1) };
+          setOpponentHS({ ...opponentHSRef.current });
+
+          setRoundStats((stats) => ({ ...stats, playerDamage: stats.playerDamage + event.damage, playerHits: stats.playerHits + 1 }));
+
+          // ── Finisher check ──
+          if (newOppHS[tPart] <= 0 && !battleEndedRef.current) {
+            battleEndedRef.current = true;
+            const method = tPart === 'head' ? 'Knockout' : tPart === 'body' ? 'TKO — Body Damage' : 'TKO — Leg Damage';
+            setBattleLog((log) => [...log, { id: `finish-${Date.now()}`, message: FINISHER_MSGS[tPart](attackerName, defenderName), category: 'FINISHER', displayTime: Date.now() }]);
+            setTimeout(() => endBattle('player', method), 1200);
+          }
         } else {
-          setPlayerHealth((hp) => Math.max(0, hp - event.damage));
-          setRoundStats((stats) => ({
-            ...stats,
-            opponentDamage: stats.opponentDamage + event.damage,
-            opponentHits: stats.opponentHits + 1,
-          }));
+          // ── Damage to player's body part ──
+          const newPlHS = {
+            ...playerHSRef.current,
+            [tPart]: Math.max(0, playerHSRef.current[tPart] - event.damage),
+          };
+          playerHSRef.current = newPlHS;
+          setPlayerHS(newPlHS);
+          // Drain opponent stamina, slight recovery for player
+          opponentHSRef.current = { ...opponentHSRef.current, stamina: Math.max(5, opponentHSRef.current.stamina - drain) };
+          setOpponentHS({ ...opponentHSRef.current });
+          playerHSRef.current = { ...playerHSRef.current, stamina: Math.min(100, playerHSRef.current.stamina + 1) };
+          setPlayerHS({ ...playerHSRef.current });
+
+          setRoundStats((stats) => ({ ...stats, opponentDamage: stats.opponentDamage + event.damage, opponentHits: stats.opponentHits + 1 }));
+
+          // ── Finisher check ──
+          if (newPlHS[tPart] <= 0 && !battleEndedRef.current) {
+            battleEndedRef.current = true;
+            const method = tPart === 'head' ? 'Knockout' : tPart === 'body' ? 'TKO — Body Damage' : 'TKO — Leg Damage';
+            setBattleLog((log) => [...log, { id: `finish-${Date.now()}`, message: FINISHER_MSGS[tPart](defenderName, attackerName), category: 'FINISHER', displayTime: Date.now() }]);
+            setTimeout(() => endBattle('opponent', method), 1200);
+          }
         }
 
-        // Trigger screen shake for heavy hits and ground events
-        if (
-          event.category === 'HEAVY_HIT' ||
-          event.category === 'CRITICAL_HIT' ||
-          event.category === 'FINISHER' ||
-          event.category === 'TAKEDOWN_ATTEMPT'
-        ) {
-          const intensity =
-            event.category === 'FINISHER' ? 3
-            : event.category === 'CRITICAL_HIT' ? 2
-            : event.category === 'TAKEDOWN_ATTEMPT' ? 2
-            : 1;
+        // Trigger screen shake for heavy hits
+        if (event.category === 'HEAVY_HIT' || event.category === 'CRITICAL_HIT' || event.category === 'FINISHER' || event.category === 'TAKEDOWN_ATTEMPT') {
+          const intensity = event.category === 'FINISHER' ? 3 : event.category === 'CRITICAL_HIT' ? 2 : event.category === 'TAKEDOWN_ATTEMPT' ? 2 : 1;
           setShakeIntensity(intensity);
           setTimeout(() => setShakeIntensity(0), 400);
         }
       }
 
       // Dead air pause (1-2 seconds) before next message
-      const pauseDuration = 1000 + Math.random() * 1000; // 1-2 seconds
+      const pauseDuration = 1000 + Math.random() * 1000;
       setTimeout(() => {
         isProcessingQueueRef.current = false;
-        // Process next event
         processNextQueuedEvent();
       }, pauseDuration);
     }, typewriterDuration);
@@ -666,18 +769,22 @@ export const Arena: React.FC = () => {
       cardio:     selectedOpponent.stats?.cardio    ?? 50,
     };
 
-    const events = generateBattleEvents(60, language, playerSnap, opponentSnap);
+    const events = generateBattleEvents(60, language, playerSnap, opponentSnap, fighter.detailedStats, undefined);
     eventsRef.current = events;
     processedEventIds.current.clear();
     displayQueueRef.current = [];
     isProcessingQueueRef.current = false;
 
     // Reset battle state
+    const freshHS = defaultHS();
+    playerHSRef.current   = freshHS;
+    opponentHSRef.current = freshHS;
+    battleEndedRef.current = false;
+    setPlayerHS({ ...freshHS });
+    setOpponentHS({ ...freshHS });
     setIsBattling(true);
     setCurrentRound(1);
     setTimeRemaining(60);
-    setPlayerHealth(100);
-    setOpponentHealth(100);
     setBattleLog([]);
     setFightPhase('STANDUP');
     setGroundAttackerName(null);
@@ -706,17 +813,23 @@ export const Arena: React.FC = () => {
       striking:   selectedOpponent?.stats?.striking  ?? 50,
       cardio:     selectedOpponent?.stats?.cardio    ?? 50,
     };
-    const events = generateBattleEvents(60, language, playerSnap, opponentSnap);
+    const events = generateBattleEvents(60, language, playerSnap, opponentSnap, fighter?.detailedStats, undefined);
     eventsRef.current = events;
     processedEventIds.current.clear();
     displayQueueRef.current = [];
     isProcessingQueueRef.current = false;
 
-    // Reset for next round
+    // Reset for next round — health resets, stamina carries over (fatigued!)
+    const roundFreshHS = defaultHS();
+    const carryoverPlayerStamina = playerHSRef.current.stamina;
+    const carryoverOppStamina    = opponentHSRef.current.stamina;
+    playerHSRef.current   = { ...roundFreshHS, stamina: carryoverPlayerStamina };
+    opponentHSRef.current = { ...roundFreshHS, stamina: carryoverOppStamina };
+    battleEndedRef.current = false;
+    setPlayerHS({ ...playerHSRef.current });
+    setOpponentHS({ ...opponentHSRef.current });
     setCurrentRound((r) => r + 1);
     setTimeRemaining(60);
-    setPlayerHealth(100);
-    setOpponentHealth(100);
     setFightPhase('STANDUP');
     setGroundAttackerName(null);
     setRoundStats({
@@ -755,23 +868,30 @@ export const Arena: React.FC = () => {
       }
     }
 
-    setBattleResult({ winner: finalWinner, method });
+    setBattleResult({ winner: finalWinner as 'player' | 'opponent' | 'draw', method });
 
     // Update database ONLY NOW
     if (fighter) {
+      const energyAfter = Math.max(0, fighter.currentEnergy - 50);
       if (finalWinner === 'player') {
         const xpGain = 50 + roundStats.playerDamage;
         const reputationGain = 10 + roundStats.playerHits * 2;
-
-        updateFighterStats({
-          xp: fighter.xp + xpGain,
-          reputation: fighter.reputation + reputationGain,
-          currentEnergy: Math.max(0, fighter.currentEnergy - 50),
-        });
+        supabase.from('profiles').update({
+          wins: (fighter.record.wins || 0) + 1,
+          reputation: (fighter.reputation || 0) + reputationGain,
+          experience: (fighter.experience || 0) + xpGain,
+          energy: energyAfter,
+        }).eq('id', fighter.id).then(() => reloadFighter());
+      } else if (finalWinner === 'opponent') {
+        supabase.from('profiles').update({
+          losses: (fighter.record.losses || 0) + 1,
+          energy: energyAfter,
+        }).eq('id', fighter.id).then(() => reloadFighter());
       } else {
-        updateFighterStats({
-          currentEnergy: Math.max(0, fighter.currentEnergy - 50),
-        });
+        supabase.from('profiles').update({
+          draws: (fighter.record.draws || 0) + 1,
+          energy: energyAfter,
+        }).eq('id', fighter.id).then(() => reloadFighter());
       }
     }
   };
@@ -787,8 +907,12 @@ export const Arena: React.FC = () => {
     setBattleLog([]);
     setCurrentRound(1);
     setTimeRemaining(60);
-    setPlayerHealth(100);
-    setOpponentHealth(100);
+    const resetHS = defaultHS();
+    playerHSRef.current   = resetHS;
+    opponentHSRef.current = resetHS;
+    battleEndedRef.current = false;
+    setPlayerHS({ ...resetHS });
+    setOpponentHS({ ...resetHS });
     setFightPhase('STANDUP');
     setGroundAttackerName(null);
     eventsRef.current = [];
@@ -827,8 +951,8 @@ export const Arena: React.FC = () => {
               opponent={selectedOpponent}
               currentRound={currentRound}
               timeRemaining={timeRemaining}
-              playerHealth={playerHealth}
-              opponentHealth={opponentHealth}
+              playerHS={playerHS}
+              opponentHS={opponentHS}
               battleLog={battleLog}
               battleLogRef={battleLogRef}
               roundStats={roundStats}
@@ -844,7 +968,7 @@ export const Arena: React.FC = () => {
               selectedOpponent={selectedOpponent}
               onSelectOpponent={setSelectedOpponent}
               onStartBattle={startBattle}
-              canFight={canFight}
+              canFight={!!canFight}
               loading={loadingOpponents}
               error={opponentError}
               t={t}
@@ -863,8 +987,8 @@ interface BattleScreenProps {
   opponent: AIFighter;
   currentRound: number;
   timeRemaining: number;
-  playerHealth: number;
-  opponentHealth: number;
+  playerHS: HealthStatus;
+  opponentHS: HealthStatus;
   battleLog: BattleLogEntry[];
   battleLogRef: React.RefObject<HTMLDivElement>;
   roundStats: RoundResult;
@@ -873,13 +997,103 @@ interface BattleScreenProps {
   t: (key: string) => string;
 }
 
+// ─── Part Bar: single health segment (Head / Body / Legs / Stamina) ──────────
+const PartBar: React.FC<{
+  label: string;
+  value: number;
+  baseGradient: string;
+  height?: string;
+}> = ({ label, value, baseGradient, height = 'h-3' }) => {
+  const isLow  = value < 20;
+  const isMid  = value < 50 && !isLow;
+  const gradient = isLow
+    ? 'from-red-600 to-red-400'
+    : isMid
+    ? 'from-orange-500 to-yellow-400'
+    : baseGradient;
+  const labelColor = isLow ? 'text-red-400' : isMid ? 'text-orange-400' : 'text-gray-400';
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className={`text-[10px] font-bold uppercase w-10 text-right ${labelColor}`}>{label}</span>
+      <div className={`flex-1 ${height} bg-gray-800/80 rounded-full overflow-hidden border border-gray-700/40`}>
+        <motion.div
+          className={`h-full rounded-full bg-gradient-to-r ${gradient} ${isLow ? 'animate-pulse' : ''}`}
+          animate={{ width: `${Math.max(0, value)}%` }}
+          transition={{ type: 'spring', stiffness: 80, damping: 12 }}
+        />
+      </div>
+      <span className={`text-[10px] font-mono w-7 text-right ${isLow ? 'text-red-400 font-bold' : isMid ? 'text-orange-400' : 'text-gray-500'}`}>
+        {Math.ceil(value)}
+      </span>
+    </div>
+  );
+};
+
+// ─── Fighter HUD: compact status card for one fighter ────────────────────────
+const FighterHUD: React.FC<{
+  name: string;
+  hs: HealthStatus;
+  isPlayer: boolean;
+  align?: 'left' | 'right';
+}> = ({ name, hs, isPlayer, align = 'left' }) => {
+  const nameColor  = isPlayer ? 'text-neon-green glow-electric' : 'text-alert-red glow-crimson';
+  const gradient   = isPlayer ? 'from-neon-green to-emerald-400' : 'from-alert-red to-orange-500';
+
+  return (
+    <motion.div
+      className="glass-card rounded-2xl p-4 space-y-2"
+      initial={{ opacity: 0, x: isPlayer ? -20 : 20 }}
+      animate={{ opacity: 1, x: 0 }}
+    >
+      {/* Fighter name */}
+      <div className={`flex items-center justify-between mb-1 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
+        <h3 className={`font-black text-base truncate ${nameColor}`}>{name}</h3>
+        <span className="text-[10px] text-gray-600 uppercase tracking-wider">
+          {isPlayer ? '👊 FIGHTER' : '🥊 OPPONENT'}
+        </span>
+      </div>
+
+      {/* Stamina bar — large, prominent */}
+      <div>
+        <div className="flex justify-between text-[9px] text-gray-500 mb-1">
+          <span className="uppercase tracking-widest font-bold">Stamina</span>
+          <span className={`font-bold ${hs.stamina < 20 ? 'text-red-400 animate-pulse' : hs.stamina < 40 ? 'text-orange-400' : 'text-cyan-400'}`}>
+            {Math.ceil(hs.stamina)}%
+          </span>
+        </div>
+        <div className="h-4 bg-gray-800/80 rounded-full overflow-hidden border border-gray-700/40">
+          <motion.div
+            className={`h-full rounded-full bg-gradient-to-r ${
+              hs.stamina < 20
+                ? 'from-red-600 to-red-400 animate-pulse'
+                : hs.stamina < 40
+                ? 'from-orange-500 to-yellow-400'
+                : 'from-cyan-500 to-blue-400'
+            }`}
+            animate={{ width: `${Math.max(0, hs.stamina)}%` }}
+            transition={{ type: 'spring', stiffness: 80, damping: 12 }}
+          />
+        </div>
+      </div>
+
+      {/* Head / Body / Legs */}
+      <div className="space-y-1.5 pt-1">
+        <PartBar label="HEAD" value={hs.head} baseGradient={gradient} />
+        <PartBar label="BODY" value={hs.body} baseGradient={gradient} />
+        <PartBar label="LEGS" value={hs.legs} baseGradient={gradient} />
+      </div>
+    </motion.div>
+  );
+};
+
 const BattleScreen: React.FC<BattleScreenProps> = ({
   fighter,
   opponent,
   currentRound,
   timeRemaining,
-  playerHealth,
-  opponentHealth,
+  playerHS,
+  opponentHS,
   battleLog,
   battleLogRef,
   roundStats,
@@ -936,7 +1150,6 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
             transition={{ duration: 0.35 }}
             className="rounded-2xl px-6 py-4 border-2 border-orange-500/70 bg-orange-950/50 flex items-center gap-4"
           >
-            {/* pulsing indicator dot */}
             <motion.div
               animate={{ scale: [1, 1.5, 1], opacity: [1, 0.4, 1] }}
               transition={{ duration: 0.9, repeat: Infinity }}
@@ -975,47 +1188,10 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
         )}
       </AnimatePresence>
 
-      {/* HEALTH BARS */}
+      {/* ─── PAPER DOLL HUD — Localized Damage Display ─────────────── */}
       <div className="grid grid-cols-2 gap-6">
-        {/* Player */}
-        <motion.div
-          className="glass-card rounded-2xl p-6"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-        >
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-xl text-neon-green glow-electric">{fighter.name}</h3>
-            <p className="text-lg font-bold text-neon-green">{Math.ceil(playerHealth)}/100</p>
-          </div>
-          <motion.div className="w-full h-8 bg-gray-800 rounded-full overflow-hidden border-2 border-gray-700">
-            <motion.div
-              className="h-full bg-gradient-to-r from-neon-green to-emerald-400 rounded-full"
-              initial={{ width: '100%' }}
-              animate={{ width: `${playerHealth}%` }}
-              transition={{ type: 'spring', stiffness: 100, damping: 15 }}
-            />
-          </motion.div>
-        </motion.div>
-
-        {/* Opponent */}
-        <motion.div
-          className="glass-card rounded-2xl p-6"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-        >
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-xl text-alert-red glow-crimson">{opponent.name}</h3>
-            <p className="text-lg font-bold text-alert-red">{Math.ceil(opponentHealth)}/100</p>
-          </div>
-          <motion.div className="w-full h-8 bg-gray-800 rounded-full overflow-hidden border-2 border-gray-700">
-            <motion.div
-              className="h-full bg-gradient-to-r from-alert-red to-orange-500 rounded-full"
-              initial={{ width: '100%' }}
-              animate={{ width: `${opponentHealth}%` }}
-              transition={{ type: 'spring', stiffness: 100, damping: 15 }}
-            />
-          </motion.div>
-        </motion.div>
+        <FighterHUD name={fighter.name} hs={playerHS}   isPlayer={true}  align="left"  />
+        <FighterHUD name={opponent.name} hs={opponentHS} isPlayer={false} align="right" />
       </div>
 
       {/* BATTLE LOG */}
