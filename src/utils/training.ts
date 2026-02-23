@@ -1,0 +1,88 @@
+import { supabase } from '../lib/supabase';
+import { GYM_EXERCISES, GymExercise } from '../data/gymExercises';
+import { DetailedFighterStats } from '../types';
+
+// All stat keys from DetailedFighterStats
+const STAT_KEYS: (keyof DetailedFighterStats)[] = [
+  'jab_precision', 'cross_power', 'hook_lethality', 'uppercut_timing',
+  'leg_kick_hardness', 'high_kick_speed', 'spinning_mastery', 'elbow_sharpness',
+  'knee_impact', 'combination_flow',
+  'double_leg_explosion', 'single_leg_grit', 'sprawl_technique', 'clinch_control',
+  'judo_trips', 'gnp_pressure', 'top_control_weight', 'scramble_ability',
+  'choke_mastery', 'joint_lock_technique', 'submission_defense', 'guard_game',
+  'sweep_technique', 'submission_chain',
+  'cardio', 'chin_durability', 'fight_iq', 'explosive_burst', 'recovery_rate',
+  'mental_heart',
+];
+
+export interface TrainingResult {
+  success: boolean;
+  message: string;
+  statChanges?: Partial<Record<keyof DetailedFighterStats, number>>;
+  newEnergy?: number;
+}
+
+/**
+ * Performs a training exercise for a fighter.
+ * 1. Validates energy
+ * 2. Applies stat changes (clamped 1–100)
+ * 3. Deducts energy
+ * 4. Upserts Supabase profiles row
+ */
+export const performTraining = async (
+  fighterId: string,
+  exerciseId: string,
+  currentEnergy: number,
+  currentStats: Partial<Record<keyof DetailedFighterStats, number>>,
+): Promise<TrainingResult> => {
+  const exercise: GymExercise | undefined = GYM_EXERCISES.find(e => e.id === exerciseId);
+
+  if (!exercise) {
+    return { success: false, message: 'Exercise not found.' };
+  }
+
+  if (currentEnergy < exercise.energyCost) {
+    return {
+      success: false,
+      message: `Not enough energy. Need ${exercise.energyCost}, have ${Math.ceil(currentEnergy)}.`,
+    };
+  }
+
+  // Build updated stat object — clamp each value to [1, 100]
+  const updatedStats: Record<string, number> = {};
+  for (const key of STAT_KEYS) {
+    const current = currentStats[key] ?? 10;
+    const delta = exercise.statChanges[key] ?? 0;
+    updatedStats[key] = Math.min(100, Math.max(1, current + delta));
+  }
+
+  const newEnergy = Math.max(0, currentEnergy - exercise.energyCost);
+  const now = new Date().toISOString();
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      ...updatedStats,
+      energy: newEnergy,
+      updated_at: now,
+    })
+    .eq('id', fighterId);
+
+  if (error) {
+    console.error('[performTraining] Supabase error:', error);
+    return { success: false, message: `Training failed: ${error.message}` };
+  }
+
+  // Return the actual delta (what changed) for display
+  const deltaResults: Partial<Record<keyof DetailedFighterStats, number>> = {};
+  for (const [key, delta] of Object.entries(exercise.statChanges) as [keyof DetailedFighterStats, number][]) {
+    if (delta !== 0) deltaResults[key] = delta;
+  }
+
+  return {
+    success: true,
+    message: `${exercise.name} complete!`,
+    statChanges: deltaResults,
+    newEnergy,
+  };
+};
