@@ -7,7 +7,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { OpponentCard } from '../components/OpponentCard';
 import { AIFighter } from '../types';
 import { supabase } from '../lib/supabase';
-import { getBattleMessage, BattleCategory, MMA_MOVES, TAKEDOWN_MOVES, SUBMISSION_MOVES } from '../constants/battlePhrases';
+import { getBattleMessage, BattleCategory, MMA_MOVES, TAKEDOWN_MOVES, SUBMISSION_MOVES, GROUND_POUND_MOVES } from '../constants/battlePhrases';
 
 // ============ TYPES ============
 
@@ -83,9 +83,12 @@ const randItem = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)
 const generateBattleEvents = (
   roundDuration: number = 60,
   language: string = 'en',
-  playerGrappling: number = 50,
-  opponentGrappling: number = 50,
+  player: FighterSnapshot = { grappling: 50, strength: 50, speed: 50, striking: 50, cardio: 50 },
+  opponent: FighterSnapshot = { grappling: 50, strength: 50, speed: 50, striking: 50, cardio: 50 },
 ): BattleEvent[] => {
+  const playerGrappling = player.grappling;
+  const opponentGrappling = opponent.grappling;
+
   const events: BattleEvent[] = [];
   const lang = language as 'en' | 'cs' | 'pl';
   const strikingMoves = MMA_MOVES[lang];
@@ -648,13 +651,22 @@ export const Arena: React.FC = () => {
   const startBattle = () => {
     if (!selectedOpponent || !fighter) return;
 
-    // Generate all events upfront, passing grappling stats for ground game
-    const events = generateBattleEvents(
-      60,
-      language,
-      fighter.stats?.grappling ?? 50,
-      selectedOpponent.stats?.grappling ?? 50,
-    );
+    const playerSnap: FighterSnapshot = {
+      grappling:  fighter.stats?.grappling ?? 50,
+      strength:   fighter.stats?.strength  ?? 50,
+      speed:      fighter.stats?.speed     ?? 50,
+      striking:   fighter.stats?.striking  ?? 50,
+      cardio:     fighter.stats?.cardio    ?? 50,
+    };
+    const opponentSnap: FighterSnapshot = {
+      grappling:  selectedOpponent.stats?.grappling ?? 50,
+      strength:   selectedOpponent.stats?.strength  ?? 50,
+      speed:      selectedOpponent.stats?.speed     ?? 50,
+      striking:   selectedOpponent.stats?.striking  ?? 50,
+      cardio:     selectedOpponent.stats?.cardio    ?? 50,
+    };
+
+    const events = generateBattleEvents(60, language, playerSnap, opponentSnap);
     eventsRef.current = events;
     processedEventIds.current.clear();
     displayQueueRef.current = [];
@@ -680,13 +692,21 @@ export const Arena: React.FC = () => {
   };
 
   const startNextRound = () => {
-    // Generate new events for next round, passing grappling stats
-    const events = generateBattleEvents(
-      60,
-      language,
-      fighter?.stats?.grappling ?? 50,
-      selectedOpponent?.stats?.grappling ?? 50,
-    );
+    const playerSnap: FighterSnapshot = {
+      grappling:  fighter?.stats?.grappling ?? 50,
+      strength:   fighter?.stats?.strength  ?? 50,
+      speed:      fighter?.stats?.speed     ?? 50,
+      striking:   fighter?.stats?.striking  ?? 50,
+      cardio:     fighter?.stats?.cardio    ?? 50,
+    };
+    const opponentSnap: FighterSnapshot = {
+      grappling:  selectedOpponent?.stats?.grappling ?? 50,
+      strength:   selectedOpponent?.stats?.strength  ?? 50,
+      speed:      selectedOpponent?.stats?.speed     ?? 50,
+      striking:   selectedOpponent?.stats?.striking  ?? 50,
+      cardio:     selectedOpponent?.stats?.cardio    ?? 50,
+    };
+    const events = generateBattleEvents(60, language, playerSnap, opponentSnap);
     eventsRef.current = events;
     processedEventIds.current.clear();
     displayQueueRef.current = [];
@@ -812,6 +832,8 @@ export const Arena: React.FC = () => {
               battleLog={battleLog}
               battleLogRef={battleLogRef}
               roundStats={roundStats}
+              fightPhase={fightPhase}
+              groundAttackerName={groundAttackerName}
               t={t}
             />
           ) : (
@@ -905,47 +927,52 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
 
       {/* FIGHT PHASE INDICATOR */}
       <AnimatePresence mode="wait">
-        <motion.div
-          key={fightPhase}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.3 }}
-          className={`rounded-xl px-6 py-3 flex items-center justify-center gap-3 border ${
-            isGround
-              ? 'bg-orange-950/60 border-orange-500/60'
-              : 'bg-gray-900/40 border-gray-700/40'
-          }`}
-        >
-          <motion.span
-            animate={isGround ? { scale: [1, 1.15, 1] } : {}}
-            transition={{ duration: 1.2, repeat: isGround ? Infinity : 0 }}
-            className="text-2xl"
+        {isGround ? (
+          <motion.div
+            key="ground"
+            initial={{ opacity: 0, y: -12, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.95 }}
+            transition={{ duration: 0.35 }}
+            className="rounded-2xl px-6 py-4 border-2 border-orange-500/70 bg-orange-950/50 flex items-center gap-4"
           >
-            {isGround ? '🤼' : '🥊'}
-          </motion.span>
-          <div>
-            <p
-              className={`text-xs uppercase tracking-widest font-bold ${
-                isGround ? 'text-orange-400' : 'text-neon-green'
-              }`}
-            >
-              {isGround ? 'GROUND FIGHT' : 'STANDING'}
-            </p>
-            {isGround && groundAttackerName && (
-              <p className="text-xs text-orange-300/80">
-                {groundAttackerName} is on top
-              </p>
-            )}
-          </div>
-          {isGround && (
+            {/* pulsing indicator dot */}
             <motion.div
-              animate={{ opacity: [1, 0.3, 1] }}
-              transition={{ duration: 0.8, repeat: Infinity }}
-              className="w-2 h-2 rounded-full bg-orange-400 ml-2"
+              animate={{ scale: [1, 1.5, 1], opacity: [1, 0.4, 1] }}
+              transition={{ duration: 0.9, repeat: Infinity }}
+              className="w-3 h-3 rounded-full bg-orange-500 flex-shrink-0"
             />
-          )}
-        </motion.div>
+            <div className="flex-1">
+              <p className="text-orange-400 font-black uppercase tracking-widest text-sm">
+                ⚠️ GROUND GAME — fight on the mat
+              </p>
+              {groundAttackerName && (
+                <p className="text-orange-300/90 text-xs mt-0.5">
+                  🔝 <span className="font-bold">{groundAttackerName}</span> controls from top position
+                </p>
+              )}
+            </div>
+            <span className="text-3xl">🤼</span>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="standing"
+            initial={{ opacity: 0, y: 12, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -12, scale: 0.95 }}
+            transition={{ duration: 0.35 }}
+            className="rounded-2xl px-6 py-4 border border-gray-700/60 bg-gray-900/30 flex items-center gap-4"
+          >
+            <div className="w-3 h-3 rounded-full bg-neon-green flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-neon-green font-bold uppercase tracking-widest text-sm">
+                STAND-UP — striking range
+              </p>
+              <p className="text-gray-500 text-xs mt-0.5">fighters on their feet</p>
+            </div>
+            <span className="text-3xl">🥊</span>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* HEALTH BARS */}

@@ -6,6 +6,44 @@ export interface FighterStats {
   grappling: number;
 }
 
+// 30 detailed MMA attributes from Supabase profiles table
+export interface DetailedFighterStats {
+  // Striking (10)
+  jab_precision: number;
+  cross_power: number;
+  hook_lethality: number;
+  uppercut_timing: number;
+  leg_kick_hardness: number;
+  high_kick_speed: number;
+  spinning_mastery: number;
+  elbow_sharpness: number;
+  knee_impact: number;
+  combination_flow: number;
+  // Wrestling (8)
+  double_leg_explosion: number;
+  single_leg_grit: number;
+  sprawl_technique: number;
+  clinch_control: number;
+  judo_trips: number;
+  gnp_pressure: number;
+  top_control_weight: number;
+  scramble_ability: number;
+  // BJJ (6)
+  choke_mastery: number;
+  joint_lock_technique: number;
+  submission_defense: number;
+  guard_game: number;
+  sweep_technique: number;
+  submission_chain: number;
+  // Physical / Mental (6)
+  cardio: number;
+  chin_durability: number;
+  fight_iq: number;
+  explosive_burst: number;
+  recovery_rate: number;
+  mental_heart: number;
+}
+
 export interface FighterRecord {
   wins: number;
   losses: number;
@@ -18,6 +56,7 @@ export interface Fighter {
   nickname: string;
   record: FighterRecord;
   stats: FighterStats;
+  detailedStats?: DetailedFighterStats;
   currentEnergy: number;
   maxEnergy: number;
   level: number;

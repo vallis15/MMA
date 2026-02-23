@@ -3,6 +3,7 @@ import { Language } from '../context/LanguageContext';
 export const translations: Record<string, Record<Language, string>> = {
   // Navigation & Pages
   dashboard: { en: 'Dashboard', cs: 'Přehled', pl: 'Panel' },
+  profile: { en: 'Fighter Profile', cs: 'Profil bojovníka', pl: 'Profil zawodnika' },
   gym: { en: 'Gym', cs: 'Tělocvična', pl: 'Siłownia' },
   arena: { en: 'Arena', cs: 'Aréna', pl: 'Arena' },
   pvp_arena: { en: 'PvP Arena', cs: 'PvP Aréna', pl: 'Arena PvP' },
@@ -12,6 +13,7 @@ export const translations: Record<string, Record<Language, string>> = {
   
   // Navigation Descriptions
   dashboard_description: { en: 'Home', cs: 'Domů', pl: 'Główna' },
+  profile_description: { en: 'Stats & Skills', cs: 'Statistiky', pl: 'Statystyki' },
   gym_description: { en: 'Training', cs: 'Trénink', pl: 'Trening' },
   arena_description: { en: 'Fights', cs: 'Boje', pl: 'Walki' },
   rankings_description: { en: 'Leaderboards', cs: 'Žebříčky', pl: 'Rankingi' },

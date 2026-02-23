@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
-import { Fighter, FighterStats, FighterContextType, TrainingDrill, AIFighter, FightResult, FightRound, FightLog } from '../types';
+import { Fighter, FighterStats, FighterContextType, TrainingDrill, AIFighter, FightResult, FightRound, FightLog, DetailedFighterStats } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
@@ -79,6 +79,44 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
           console.log('✅ [FIGHTER LOAD] Profile found! Data:', data);
           
           // Convert Supabase profile to Fighter object
+          const d10 = (v: unknown) => (typeof v === 'number' && !isNaN(v) ? v : 10);
+          const detailedStats: DetailedFighterStats = {
+            // Striking
+            jab_precision:       d10(data.jab_precision),
+            cross_power:         d10(data.cross_power),
+            hook_lethality:      d10(data.hook_lethality),
+            uppercut_timing:     d10(data.uppercut_timing),
+            leg_kick_hardness:   d10(data.leg_kick_hardness),
+            high_kick_speed:     d10(data.high_kick_speed),
+            spinning_mastery:    d10(data.spinning_mastery),
+            elbow_sharpness:     d10(data.elbow_sharpness),
+            knee_impact:         d10(data.knee_impact),
+            combination_flow:    d10(data.combination_flow),
+            // Wrestling
+            double_leg_explosion: d10(data.double_leg_explosion),
+            single_leg_grit:      d10(data.single_leg_grit),
+            sprawl_technique:     d10(data.sprawl_technique),
+            clinch_control:       d10(data.clinch_control),
+            judo_trips:           d10(data.judo_trips),
+            gnp_pressure:         d10(data.gnp_pressure),
+            top_control_weight:   d10(data.top_control_weight),
+            scramble_ability:     d10(data.scramble_ability),
+            // BJJ
+            choke_mastery:        d10(data.choke_mastery),
+            joint_lock_technique: d10(data.joint_lock_technique),
+            submission_defense:   d10(data.submission_defense),
+            guard_game:           d10(data.guard_game),
+            sweep_technique:      d10(data.sweep_technique),
+            submission_chain:     d10(data.submission_chain),
+            // Physical / Mental
+            cardio:               d10(data.cardio),
+            chin_durability:      d10(data.chin_durability),
+            fight_iq:             d10(data.fight_iq),
+            explosive_burst:      d10(data.explosive_burst),
+            recovery_rate:        d10(data.recovery_rate),
+            mental_heart:         d10(data.mental_heart),
+          };
+
           const fighterData: Fighter = {
             id: data.id,
             name: data.username || 'Fighter',
@@ -103,6 +141,7 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
             health: 100,
             maxHealth: 100,
             createdAt: data.created_at ? new Date(data.created_at) : new Date(),
+            detailedStats,
           };
           
           console.log('✅ [FIGHTER LOAD] Fighter object created:', fighterData);
@@ -144,6 +183,25 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
       if (data) {
         console.log('✅ [FIGHTER RELOAD] Profile data fetched:', data);
 
+        const d10 = (v: unknown) => (typeof v === 'number' && !isNaN(v) ? v : 10);
+        const detailedStats: DetailedFighterStats = {
+          jab_precision: d10(data.jab_precision), cross_power: d10(data.cross_power),
+          hook_lethality: d10(data.hook_lethality), uppercut_timing: d10(data.uppercut_timing),
+          leg_kick_hardness: d10(data.leg_kick_hardness), high_kick_speed: d10(data.high_kick_speed),
+          spinning_mastery: d10(data.spinning_mastery), elbow_sharpness: d10(data.elbow_sharpness),
+          knee_impact: d10(data.knee_impact), combination_flow: d10(data.combination_flow),
+          double_leg_explosion: d10(data.double_leg_explosion), single_leg_grit: d10(data.single_leg_grit),
+          sprawl_technique: d10(data.sprawl_technique), clinch_control: d10(data.clinch_control),
+          judo_trips: d10(data.judo_trips), gnp_pressure: d10(data.gnp_pressure),
+          top_control_weight: d10(data.top_control_weight), scramble_ability: d10(data.scramble_ability),
+          choke_mastery: d10(data.choke_mastery), joint_lock_technique: d10(data.joint_lock_technique),
+          submission_defense: d10(data.submission_defense), guard_game: d10(data.guard_game),
+          sweep_technique: d10(data.sweep_technique), submission_chain: d10(data.submission_chain),
+          cardio: d10(data.cardio), chin_durability: d10(data.chin_durability),
+          fight_iq: d10(data.fight_iq), explosive_burst: d10(data.explosive_burst),
+          recovery_rate: d10(data.recovery_rate), mental_heart: d10(data.mental_heart),
+        };
+
         const fighterData: Fighter = {
           id: data.id,
           name: data.username || 'Fighter',
@@ -168,6 +226,7 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
           health: 100,
           maxHealth: 100,
           createdAt: data.created_at ? new Date(data.created_at) : new Date(),
+          detailedStats,
         };
 
         console.log('✅ [FIGHTER RELOAD] Fighter object updated:', fighterData);

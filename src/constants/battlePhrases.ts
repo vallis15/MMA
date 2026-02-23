@@ -2,6 +2,25 @@ import { Language } from '../context/LanguageContext';
 
 export type BattleCategory = 'MISS' | 'DODGE' | 'LIGHT_HIT' | 'MEDIUM_HIT' | 'HEAVY_HIT' | 'CRITICAL_HIT' | 'FINISHER' | 'TAKEDOWN_ATTEMPT' | 'TAKEDOWN_DEFENSE' | 'GROUND_CONTROL' | 'SUBMISSION_ATTEMPT' | 'SUBMISSION_ESCAPE';
 
+// Ground & Pound moves (used ONLY when in GROUND phase — no kicks, no spinning)
+export const GROUND_POUND_MOVES: Record<Language, string[]> = {
+  en: [
+    'short elbow', 'hammerfist', 'ground elbow', 'short right hand',
+    'left elbow from mount', 'downward elbow', 'hammerfist to the temple',
+    'ground and pound right', 'short uppercut from mount', 'brutal elbow',
+  ],
+  cs: [
+    'krátký loket', 'kladivový úder', 'loket ze země', 'krátká pravačka',
+    'loket z mountu', 'loket shora', 'kladivák na spánek',
+    'ground and pound pravou', 'krátký zvedák z mountu', 'surový loket',
+  ],
+  pl: [
+    'krótki łokieć', 'uderzenie z góry', 'łokieć z ziemi', 'krótka prawa',
+    'łokieć z mountu', 'łokieć z góry', 'uderzenie w skroń',
+    'ground and pound prawą', 'krótki uppercut z mountu', 'brutalny łokieć',
+  ],
+};
+
 // Takedown moves in all languages
 export const TAKEDOWN_MOVES: Record<Language, string[]> = {
   en: [
