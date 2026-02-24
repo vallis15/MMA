@@ -12,7 +12,7 @@
   - Email/password signup with Supabase Auth
   - Email/password login with Supabase Auth
   - Session management with real-time auth state
-  - Admin authentication with hardcoded credentials (username: `vallis`, password: `r300x8aw`)
+  - Admin authentication via environment variables (`VITE_ADMIN_USERNAME`, `VITE_ADMIN_PASSWORD` in `.env.local`)
   - Logout functionality
   
 - ✅ **Registration Page** (`src/pages/Registration.tsx`)
@@ -262,8 +262,8 @@ A PostgreSQL trigger automatically handles profile creation. See [TRIGGER_SETUP.
 1. From login page, click "Admin Panel"
 2. Go to `/admin-login`
 3. Enter:
-   - Username: `vallis`
-   - Password: `r300x8aw`
+   - Username: *(viz `VITE_ADMIN_USERNAME` v `.env.local`)*
+   - Password: *(viz `VITE_ADMIN_PASSWORD` v `.env.local`)*
 4. Click "Enter Admin Panel"
 5. Should see **all registered users** in the table (profiles created by trigger)
 6. If table is empty, check that the trigger SQL was run (see [TRIGGER_SETUP.md](TRIGGER_SETUP.md))
@@ -321,7 +321,7 @@ Registration → Email Confirmation → Login → Dashboard
 ```
 
 ```
-Admin Login (vallis/r300x8aw) → Admin Dashboard
+Admin Login (viz .env.local) → Admin Dashboard
                               ↓
                     • User Management
                     • Stat Editing (God Mode)
@@ -344,7 +344,7 @@ Admin Login (vallis/r300x8aw) → Admin Dashboard
 ## 🐛 Known Issues / Reminders
 
 - localStorage is still used for announcements (works for now, can migrate to Supabase table)
-- Admin credentials hardcoded (consider moving to admin table or environment variable in future)
+- Admin credentials stored in `.env.local` as `VITE_ADMIN_USERNAME` and `VITE_ADMIN_PASSWORD`
 
 ---
 
@@ -387,8 +387,8 @@ If you're not seeing data in Supabase after training/fighting:
 ## 📝 Environment Variables
 
 ```
-VITE_SUPABASE_URL=https://vfetkdnqcpqoknzwbxyw.supabase.co
-VITE_SUPABASE_ANON_KEY=sb_publishable_whawmLXCpQjU-i7Pbdt3EA_7J31zIDk
+VITE_SUPABASE_URL=[viz .env.local]
+VITE_SUPABASE_ANON_KEY=[viz .env.local]
 ```
 
 Stored in `.env.local` (ignored by git)

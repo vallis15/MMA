@@ -35,12 +35,9 @@ export const AdminLogin: React.FC = () => {
     console.log('🔵 [ADMIN LOGIN] localStorage.isAdmin after login:', localStorage.getItem('isAdmin'));
 
     if (success) {
-      console.log('✅ [ADMIN LOGIN] Login successful! Navigating to /admin-vallis');
-      console.log('✅ [ADMIN LOGIN] Expected hardcoded admin: username="vallis", password="r300x8aw"');
       navigate('/admin-vallis');
     } else {
       console.error('❌ [ADMIN LOGIN] Login failed! Invalid credentials');
-      console.log('🔵 [ADMIN LOGIN] Check that username is exactly "vallis" and password is "r300x8aw"');
       setError('Invalid admin credentials');
     }
     setLoading(false);

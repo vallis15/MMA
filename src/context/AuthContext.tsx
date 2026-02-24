@@ -118,29 +118,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const adminLogin = async (username: string, password: string) => {
-    console.log('--- ADMIN LOGIN CONTEXT DEBUG ---');
-    console.log('🔵 [ADMIN LOGIN CTX] adminLogin() called');
-    console.log('🔵 [ADMIN LOGIN CTX] Username provided:', username);
-    console.log('🔵 [ADMIN LOGIN CTX] Password length:', password.length);
-    console.log('🔵 [ADMIN LOGIN CTX] Hardcoded expected username: "vallis"');
-    console.log('🔵 [ADMIN LOGIN CTX] Hardcoded expected password: "r300x8aw"');
-    console.log('🔵 [ADMIN LOGIN CTX] Username match:', username === 'vallis');
-    console.log('🔵 [ADMIN LOGIN CTX] Password match:', password === 'r300x8aw');
-    
-    // Simple admin authentication with hardcoded credentials
-    if (username === 'vallis' && password === 'r300x8aw') {
-      console.log('✅ [ADMIN LOGIN CTX] Credentials CORRECT!');
-      console.log('✅ [ADMIN LOGIN CTX] Setting isAdmin to TRUE');
-      console.log('✅ [ADMIN LOGIN CTX] Setting localStorage.isAdmin to "true"');
+    const expectedUsername = import.meta.env.VITE_ADMIN_USERNAME;
+    const expectedPassword = import.meta.env.VITE_ADMIN_PASSWORD;
+
+    if (username === expectedUsername && password === expectedPassword) {
       setIsAdmin(true);
       localStorage.setItem('isAdmin', 'true');
-      console.log('✅ [ADMIN LOGIN CTX] Admin login successful, returning true');
       return true;
     }
-    
-    console.error('❌ [ADMIN LOGIN CTX] Credentials INCORRECT!');
-    console.error('❌ [ADMIN LOGIN CTX] username "' + username + '" !== "vallis"');
-    console.error('❌ [ADMIN LOGIN CTX] password match: ' + (password === 'r300x8aw'));
+
     return false;
   };
 

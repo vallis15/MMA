@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Users, Settings, Bell, LogOut, Zap, Sword, Heart } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Users, Settings, Bell, LogOut, Zap, Sword, Heart, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -35,40 +35,18 @@ const AdminDashboardContent: React.FC = () => {
   const [showEditor, setShowEditor] = useState(false);
   const [adminCheckPassed, setAdminCheckPassed] = useState(false);
   const [redirectReason, setRedirectReason] = useState<string>('');
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetResult, setResetResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  // ✅ HARDCODED ADMIN ID - Change this if your auth.uid() has changed
-  const ADMIN_ID = 'vallis'; // User email or ID that should be admin
-  const HARDCODED_ADMIN_EMAIL = 'admin@admin.com'; // Fallback email to check
-
-  // Ensure admin access with useEffect - with 3-second delay hack
+  // Ensure admin access with useEffect
   useEffect(() => {
-    console.log('--- ADMIN LOGIN DEBUG ---');
-    console.log('🔵 [ADMIN CHECK] Start of admin access verification');
-    console.log('🔵 [ADMIN CHECK] isAdmin state:', isAdmin);
-    console.log('🔵 [ADMIN CHECK] user object:', user ? { id: user.id, email: user.email } : 'null');
-    console.log('🔵 [ADMIN CHECK] Hardcoded expected admin:', ADMIN_ID);
-    
     // Check if user has admin status set in context
     if (!isAdmin) {
-      const reason = `isAdmin is FALSE - user is not authorized as admin`;
-      console.warn(`❌ [ADMIN CHECK] ${reason}`);
-      console.warn('🔵 [ADMIN CHECK] Current user info:', user);
-      console.warn('🔵 [ADMIN CHECK] localStorage.isAdmin:', localStorage.getItem('isAdmin'));
-      console.warn('🔵 [ADMIN CHECK] Redirecting to home page in 3 seconds...');
-      setRedirectReason(reason);
-
-      // 3-second delay so user can see the console message
-      const timeout = setTimeout(() => {
-        console.warn('⏰ [ADMIN CHECK] 3-second delay complete, now redirecting');
-        navigate('/', { replace: true });
-      }, 3000);
-
-      return () => clearTimeout(timeout);
+      navigate('/', { replace: true });
+      return;
     }
 
-    console.log('✅ [ADMIN CHECK] isAdmin is TRUE - admin access confirmed!');
-    console.log('✅ [ADMIN CHECK] User ID:', user?.id);
-    console.log('✅ [ADMIN CHECK] User Email:', user?.email);
     setAdminCheckPassed(true);
   }, [isAdmin, navigate, user]);
 
@@ -176,8 +154,65 @@ const AdminDashboardContent: React.FC = () => {
   };
 
   const handleEnergyRefill = async (userId: string) => {
-    console.log('🔵 [ADMIN REFILL] Refilling energy for user:', userId);
     await handleStatEdit(userId, 'energy', 100);
+  };
+
+  const DEFAULT_PLAYER_STATS = {
+    striking: 40,
+    grappling: 40,
+    speed: 40,
+    strength: 40,
+    cardio: 40,
+    energy: 100,
+    wins: 0,
+    losses: 0,
+    draws: 0,
+    reputation: 0,
+    updated_at: new Date().toISOString(),
+  };
+
+  const handleResetAllPlayers = async () => {
+    setResetLoading(true);
+    setResetResult(null);
+
+    const resetPayload = {
+      ...DEFAULT_PLAYER_STATS,
+      updated_at: new Date().toISOString(),
+    };
+
+    const failed: string[] = [];
+
+    // Update each user individually – batch update is blocked by RLS for anon key
+    for (const u of users) {
+      if (!u.id) continue;
+      const { error } = await supabase
+        .from('profiles')
+        .update(resetPayload)
+        .eq('id', u.id);
+
+      if (error) {
+        failed.push(u.username ?? u.id);
+      }
+    }
+
+    if (failed.length === 0) {
+      // Reflect changes locally so UI updates immediately
+      setUsers((prev) =>
+        prev.map((u) => ({ ...u, ...resetPayload }))
+      );
+      setResetResult({
+        success: true,
+        message: `✅ Resetováno ${users.length} hráčů. Změny jsou okamžitě aktivní.`,
+      });
+    } else {
+      setResetResult({
+        success: false,
+        message: `⚠️ ${users.length - failed.length}/${users.length} hráčů resetováno. Selhalo: ${failed.join(', ')}`,
+      });
+    }
+
+    setResetLoading(false);
+    setShowResetConfirm(false);
   };
 
   const saveAnnouncement = () => {
@@ -459,6 +494,95 @@ const AdminDashboardContent: React.FC = () => {
                   </motion.button>
                   <p className="text-xs text-gray-500">Message will appear on all player dashboards</p>
                 </div>
+              </motion.div>
+
+              {/* Reset All Players */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+                className="bg-dark-secondary border border-alert-red/30 rounded-lg p-6"
+              >
+                <h3 className="text-lg font-bold text-alert-red mb-1 flex items-center gap-2">
+                  <RotateCcw className="w-5 h-5" />
+                  Reset hráčů
+                </h3>
+                <p className="text-xs text-gray-500 mb-4">
+                  Resetuje všem hráčům skóre (W/L/D), statistiky (vše na 40) a energii (100). Pouze pro testovací účely.
+                </p>
+
+                {resetResult && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`mb-3 p-3 rounded text-xs font-semibold ${
+                      resetResult.success
+                        ? 'bg-neon-green/10 text-neon-green border border-neon-green/30'
+                        : 'bg-alert-red/10 text-alert-red border border-alert-red/30'
+                    }`}
+                  >
+                    {resetResult.message}
+                  </motion.div>
+                )}
+
+                <AnimatePresence>
+                  {!showResetConfirm ? (
+                    <motion.button
+                      key="reset-btn"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => { setShowResetConfirm(true); setResetResult(null); }}
+                      className="w-full py-2 px-4 bg-alert-red/20 text-alert-red border border-alert-red/40 font-bold rounded-lg hover:bg-alert-red/30 transition flex items-center justify-center gap-2"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Reset všech hráčů
+                    </motion.button>
+                  ) : (
+                    <motion.div
+                      key="confirm-panel"
+                      initial={{ opacity: 0, scale: 0.97 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.97 }}
+                      className="space-y-3"
+                    >
+                      <div className="flex items-start gap-2 p-3 bg-alert-red/10 border border-alert-red/30 rounded-lg">
+                        <AlertTriangle className="w-4 h-4 text-alert-red flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-alert-red">
+                          Tato akce je nevratná! Opravdu chceš resetovat <span className="font-bold">{users.length} hráčů</span>?
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <motion.button
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
+                          onClick={handleResetAllPlayers}
+                          disabled={resetLoading}
+                          className="flex-1 py-2 px-3 bg-alert-red text-white font-bold rounded-lg hover:bg-alert-red/80 transition text-sm disabled:opacity-50 flex items-center justify-center gap-1"
+                        >
+                          {resetLoading ? (
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </motion.div>
+                          ) : (
+                            'Ano, resetovat'
+                          )}
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() => setShowResetConfirm(false)}
+                          disabled={resetLoading}
+                          className="flex-1 py-2 px-3 bg-dark-tertiary text-gray-300 rounded-lg hover:bg-dark-tertiary/80 transition text-sm"
+                        >
+                          Zrušit
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
 
               {/* User Details / Editor */}

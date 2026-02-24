@@ -195,8 +195,8 @@ CREATE TRIGGER on_auth_user_created
    - Your stats should display in the sidebar
 
 5. **Check Admin Panel** at http://localhost:5175/admin-vallis
-   - Username: `vallis`
-   - Password: `r300x8aw`
+   - Username: *(viz `VITE_ADMIN_USERNAME` v `.env.local`)*
+   - Password: *(viz `VITE_ADMIN_PASSWORD` v `.env.local`)*
    - Should see your new user in the User Management table
 
 ---

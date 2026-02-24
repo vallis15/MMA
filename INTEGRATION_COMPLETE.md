@@ -299,7 +299,7 @@ profiles (
   - Verify current energy matches Supabase
 
 - [ ] Test admin features
-  - Login as admin (vallis / r300x8aw)
+  - Login as admin (viz `VITE_ADMIN_USERNAME` / `VITE_ADMIN_PASSWORD` v `.env.local`)
   - Go to `/admin-vallis`
   - Verify user table loads
   - Use God Mode to edit stats
@@ -334,7 +334,7 @@ profiles (
 ## 🔒 Security
 
 - ✅ RLS policies prevent users from editing others' profiles
-- ✅ Admin access guarded by hardcoded credentials
+- ✅ Admin access guarded via environment variables (`.env.local`)
 - ✅ Session-based authentication with Supabase Auth
 - ✅ Environment variables kept in `.env.local` (gitignored)
 - ✅ No sensitive data exposed in frontend code
@@ -393,7 +393,7 @@ profiles (
 - If still lost, check Supabase connection in Network tab
 
 ### Admin Dashboard shows error?
-- Ensure you're logged in as admin (vallis / r300x8aw)
+- Ensure you're logged in as admin (credentials in `.env.local`)
 - Check `/admin-vallis` has users in Supabase table
 - Look for red error banner with specific error message
 
