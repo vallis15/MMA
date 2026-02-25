@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import { useFighter } from '../context/FighterContext';
 import { useLanguage } from '../context/LanguageContext';
 import { OpponentCard } from '../components/OpponentCard';
+import { FighterSilhouette } from '../components/FighterSilhouette';
 import { AIFighter, FighterStats, DetailedFighterStats } from '../types';
 import { supabase } from '../lib/supabase';
 import { getBattleMessage, BattleCategory, MMA_MOVES, TAKEDOWN_MOVES, SUBMISSION_MOVES } from '../constants/battlePhrases';
@@ -416,6 +417,13 @@ export const Arena: React.FC = () => {
   const [fightPhase, setFightPhase] = useState<FightPhase>('STANDUP');
   const [groundAttackerName, setGroundAttackerName] = useState<string | null>(null);
 
+  // Paper Doll — last hit zone + current attacker (pro silhouette animace)
+  const [lastPlayerHitPart, setLastPlayerHitPart] = useState<BodyPart | null>(null);
+  const [lastOpponentHitPart, setLastOpponentHitPart] = useState<BodyPart | null>(null);
+  const [currentAttacker, setCurrentAttacker] = useState<'player' | 'opponent' | null>(null);
+  // Kdo je na pozici TOP v ground game (pro FighterSilhouette groundPosition)
+  const [groundTopFighter, setGroundTopFighter] = useState<'player' | 'opponent' | null>(null);
+
   // Screen shake
   const [shakeIntensity, setShakeIntensity] = useState(0);
 
@@ -660,9 +668,16 @@ export const Arena: React.FC = () => {
     if (event.phase === 'GROUND' && event.groundAttacker) {
       const topName = event.groundAttacker === 'player' ? fighter!.name : selectedOpponent!.name;
       setGroundAttackerName(topName);
+      setGroundTopFighter(event.groundAttacker);
     } else if (event.phase === 'STANDUP') {
       setGroundAttackerName(null);
+      setGroundTopFighter(null);
     }
+
+    // Nastav aktuálního útčníka pro glow efekt na silhouette
+    setCurrentAttacker(event.attacker);
+    // Zastav glow po 700ms
+    setTimeout(() => setCurrentAttacker(null), 700);
 
     // Add to battle log (typewriter will animate it)
     setBattleLog((log) => [
@@ -693,6 +708,9 @@ export const Arena: React.FC = () => {
           };
           opponentHSRef.current = newOppHS;
           setOpponentHS(newOppHS);
+          // Nastav hit zone na soupeři pro flash animaci siluety
+          setLastOpponentHitPart(tPart);
+          setTimeout(() => setLastOpponentHitPart(null), 400);
           // Drain player stamina, slight recovery for opponent
           playerHSRef.current = { ...playerHSRef.current, stamina: Math.max(5, playerHSRef.current.stamina - drain) };
           setPlayerHS({ ...playerHSRef.current });
@@ -735,6 +753,9 @@ export const Arena: React.FC = () => {
           };
           playerHSRef.current = newPlHS;
           setPlayerHS(newPlHS);
+          // Nastav hit zone na háčeči pro flash animaci siluety
+          setLastPlayerHitPart(tPart);
+          setTimeout(() => setLastPlayerHitPart(null), 400);
           // Drain opponent stamina, slight recovery for player
           opponentHSRef.current = { ...opponentHSRef.current, stamina: Math.max(5, opponentHSRef.current.stamina - drain) };
           setOpponentHS({ ...opponentHSRef.current });
@@ -912,6 +933,10 @@ export const Arena: React.FC = () => {
     setTimeRemaining(60);
     setFightPhase('STANDUP');
     setGroundAttackerName(null);
+    setGroundTopFighter(null);
+    setLastPlayerHitPart(null);
+    setLastOpponentHitPart(null);
+    setCurrentAttacker(null);
 
     setBattleLog((log) => [
       ...log,
@@ -1002,6 +1027,10 @@ export const Arena: React.FC = () => {
     setOpponentHS({ ...resetHS });
     setFightPhase('STANDUP');
     setGroundAttackerName(null);
+    setGroundTopFighter(null);
+    setLastPlayerHitPart(null);
+    setLastOpponentHitPart(null);
+    setCurrentAttacker(null);
     eventsRef.current = [];
     processedEventIds.current.clear();
     displayQueueRef.current = [];
@@ -1045,6 +1074,10 @@ export const Arena: React.FC = () => {
               roundStats={roundStats}
               fightPhase={fightPhase}
               groundAttackerName={groundAttackerName}
+              lastPlayerHitPart={lastPlayerHitPart}
+              lastOpponentHitPart={lastOpponentHitPart}
+              currentAttacker={currentAttacker}
+              groundTopFighter={groundTopFighter}
               t={t}
             />
           ) : (
@@ -1081,98 +1114,13 @@ interface BattleScreenProps {
   roundStats: RoundResult;
   fightPhase: FightPhase;
   groundAttackerName: string | null;
+  /** Paperdoll props */
+  lastPlayerHitPart: BodyPart | null;
+  lastOpponentHitPart: BodyPart | null;
+  currentAttacker: 'player' | 'opponent' | null;
+  groundTopFighter: 'player' | 'opponent' | null;
   t: (key: string) => string;
 }
-
-// ─── Part Bar: single health segment (Head / Body / Legs / Stamina) ──────────
-const PartBar: React.FC<{
-  label: string;
-  value: number;
-  baseGradient: string;
-  height?: string;
-}> = ({ label, value, baseGradient, height = 'h-3' }) => {
-  const isLow  = value < 20;
-  const isMid  = value < 50 && !isLow;
-  const gradient = isLow
-    ? 'from-red-600 to-red-400'
-    : isMid
-    ? 'from-orange-500 to-yellow-400'
-    : baseGradient;
-  const labelColor = isLow ? 'text-red-400' : isMid ? 'text-orange-400' : 'text-gray-400';
-
-  return (
-    <div className="flex items-center gap-2">
-      <span className={`text-[10px] font-bold uppercase w-10 text-right ${labelColor}`}>{label}</span>
-      <div className={`flex-1 ${height} bg-gray-800/80 rounded-full overflow-hidden border border-gray-700/40`}>
-        <motion.div
-          className={`h-full rounded-full bg-gradient-to-r ${gradient} ${isLow ? 'animate-pulse' : ''}`}
-          animate={{ width: `${Math.max(0, value)}%` }}
-          transition={{ type: 'spring', stiffness: 80, damping: 12 }}
-        />
-      </div>
-      <span className={`text-[10px] font-mono w-7 text-right ${isLow ? 'text-red-400 font-bold' : isMid ? 'text-orange-400' : 'text-gray-500'}`}>
-        {Math.ceil(value)}
-      </span>
-    </div>
-  );
-};
-
-// ─── Fighter HUD: compact status card for one fighter ────────────────────────
-const FighterHUD: React.FC<{
-  name: string;
-  hs: HealthStatus;
-  isPlayer: boolean;
-  align?: 'left' | 'right';
-}> = ({ name, hs, isPlayer, align = 'left' }) => {
-  const nameColor  = isPlayer ? 'text-neon-green glow-electric' : 'text-alert-red glow-crimson';
-  const gradient   = isPlayer ? 'from-neon-green to-emerald-400' : 'from-alert-red to-orange-500';
-
-  return (
-    <motion.div
-      className="glass-card rounded-2xl p-4 space-y-2"
-      initial={{ opacity: 0, x: isPlayer ? -20 : 20 }}
-      animate={{ opacity: 1, x: 0 }}
-    >
-      {/* Fighter name */}
-      <div className={`flex items-center justify-between mb-1 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
-        <h3 className={`font-black text-base truncate ${nameColor}`}>{name}</h3>
-        <span className="text-[10px] text-gray-600 uppercase tracking-wider">
-          {isPlayer ? '👊 FIGHTER' : '🥊 OPPONENT'}
-        </span>
-      </div>
-
-      {/* Stamina bar — large, prominent */}
-      <div>
-        <div className="flex justify-between text-[9px] text-gray-500 mb-1">
-          <span className="uppercase tracking-widest font-bold">Stamina</span>
-          <span className={`font-bold ${hs.stamina < 20 ? 'text-red-400 animate-pulse' : hs.stamina < 40 ? 'text-orange-400' : 'text-cyan-400'}`}>
-            {Math.ceil(hs.stamina)}%
-          </span>
-        </div>
-        <div className="h-4 bg-gray-800/80 rounded-full overflow-hidden border border-gray-700/40">
-          <motion.div
-            className={`h-full rounded-full bg-gradient-to-r ${
-              hs.stamina < 20
-                ? 'from-red-600 to-red-400 animate-pulse'
-                : hs.stamina < 40
-                ? 'from-orange-500 to-yellow-400'
-                : 'from-cyan-500 to-blue-400'
-            }`}
-            animate={{ width: `${Math.max(0, hs.stamina)}%` }}
-            transition={{ type: 'spring', stiffness: 80, damping: 12 }}
-          />
-        </div>
-      </div>
-
-      {/* Head / Body / Legs */}
-      <div className="space-y-1.5 pt-1">
-        <PartBar label="HEAD" value={hs.head} baseGradient={gradient} />
-        <PartBar label="BODY" value={hs.body} baseGradient={gradient} />
-        <PartBar label="LEGS" value={hs.legs} baseGradient={gradient} />
-      </div>
-    </motion.div>
-  );
-};
 
 const BattleScreen: React.FC<BattleScreenProps> = ({
   fighter,
@@ -1186,16 +1134,26 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
   roundStats,
   fightPhase,
   groundAttackerName,
+  lastPlayerHitPart,
+  lastOpponentHitPart,
+  currentAttacker,
+  groundTopFighter,
   t,
 }) => {
   const isGround = fightPhase === 'GROUND';
+  const playerGroundPos = isGround
+    ? groundTopFighter === 'player' ? 'TOP' : 'BOTTOM'
+    : null;
+  const opponentGroundPos = isGround
+    ? groundTopFighter === 'opponent' ? 'TOP' : 'BOTTOM'
+    : null;
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="space-y-6"
+      className="space-y-4"
     >
       {/* ROUND & TIMER */}
       <motion.div
@@ -1275,43 +1233,75 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
         )}
       </AnimatePresence>
 
-      {/* ─── PAPER DOLL HUD — Localized Damage Display ─────────────── */}
-      <div className="grid grid-cols-2 gap-6">
-        <FighterHUD name={fighter.name} hs={playerHS}   isPlayer={true}  align="left"  />
-        <FighterHUD name={opponent.name} hs={opponentHS} isPlayer={false} align="right" />
-      </div>
+      {/* ─── 3-COLUMN LAYOUT: Silhouette | Log | Silhouette ────────────────────── */}
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2.5fr)_minmax(0,1fr)] gap-3 items-start">
 
-      {/* BATTLE LOG */}
-      <motion.div
-        className="glass-card-premium rounded-2xl p-6"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-      >
-        <h3 className="section-header text-gray-300 mb-4 sticky top-0 bg-gray-900/90 py-2">
-          {t('live_commentary').toUpperCase()}
-        </h3>
-        <div ref={battleLogRef} className="h-80 overflow-y-auto space-y-2 pr-2">
-          <AnimatePresence>
-            {battleLog.map((entry) => (
-              <LogEntry key={entry.id} entry={entry} />
-            ))}
-          </AnimatePresence>
+        {/* ─ LEFT: Player silhouette ─ */}
+        <div className="glass-card rounded-2xl p-3 flex flex-col items-center">
+          <p className="text-[9px] font-black uppercase tracking-widest text-neon-green mb-2">YOU</p>
+          <FighterSilhouette
+            name={fighter.name}
+            healthStatus={playerHS}
+            lastHitPart={lastPlayerHitPart}
+            isAttacking={currentAttacker === 'player'}
+            isPlayer={true}
+            stance={fightPhase}
+            groundPosition={playerGroundPos as 'TOP' | 'BOTTOM' | null}
+            mirror={false}
+          />
         </div>
-      </motion.div>
 
-      {/* ROUND STATS */}
-      <div className="grid grid-cols-2 gap-4 glass-card rounded-2xl p-6">
-        <div className="text-center">
-          <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">{t('your_damage')}</p>
-          <p className="text-3xl font-bold text-neon-green">{roundStats.playerDamage}</p>
-          <p className="text-xs text-gray-400 mt-1">({roundStats.playerHits} {t('hits')})</p>
+        {/* ─ CENTER: Battle log + Round stats ─ */}
+        <div className="space-y-3">
+          {/* BATTLE LOG */}
+          <motion.div
+            className="glass-card-premium rounded-2xl p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <h3 className="section-header text-gray-300 mb-3 sticky top-0 bg-gray-900/90 py-1 text-xs">
+              {t('live_commentary').toUpperCase()}
+            </h3>
+            <div ref={battleLogRef} className="h-72 overflow-y-auto space-y-2 pr-1">
+              <AnimatePresence>
+                {battleLog.map((entry) => (
+                  <LogEntry key={entry.id} entry={entry} />
+                ))}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+
+          {/* ROUND STATS */}
+          <div className="grid grid-cols-2 gap-3 glass-card rounded-2xl p-4">
+            <div className="text-center">
+              <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">{t('your_damage')}</p>
+              <p className="text-2xl font-bold text-neon-green">{roundStats.playerDamage}</p>
+              <p className="text-xs text-gray-400 mt-1">({roundStats.playerHits} {t('hits')})</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">{t('opponent_damage')}</p>
+              <p className="text-2xl font-bold text-alert-red">{roundStats.opponentDamage}</p>
+              <p className="text-xs text-gray-400 mt-1">({roundStats.opponentHits} {t('hits')})</p>
+            </div>
+          </div>
         </div>
-        <div className="text-center">
-          <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">{t('opponent_damage')}</p>
-          <p className="text-3xl font-bold text-alert-red">{roundStats.opponentDamage}</p>
-          <p className="text-xs text-gray-400 mt-1">({roundStats.opponentHits} {t('hits')})</p>
+
+        {/* ─ RIGHT: Opponent silhouette ─ */}
+        <div className="glass-card rounded-2xl p-3 flex flex-col items-center">
+          <p className="text-[9px] font-black uppercase tracking-widest text-alert-red mb-2">OPP</p>
+          <FighterSilhouette
+            name={opponent.name}
+            healthStatus={opponentHS}
+            lastHitPart={lastOpponentHitPart}
+            isAttacking={currentAttacker === 'opponent'}
+            isPlayer={false}
+            stance={fightPhase}
+            groundPosition={opponentGroundPos as 'TOP' | 'BOTTOM' | null}
+            mirror={true}
+          />
         </div>
+
       </div>
     </motion.div>
   );
