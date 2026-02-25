@@ -401,6 +401,10 @@ export const Arena: React.FC = () => {
     playerHits: 0,
     opponentHits: 0,
   });
+  // Ref zrcadlí roundStats – předchází stale closure v endBattle (judges decision)
+  const roundStatsRef = useRef<RoundResult>({
+    playerDamage: 0, opponentDamage: 0, playerHits: 0, opponentHits: 0,
+  });
 
   // Battle result
   const [battleResult, setBattleResult] = useState<{
@@ -418,6 +422,10 @@ export const Arena: React.FC = () => {
   // Timer control
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const roundStartTime = useRef<number>(0);
+  // Ref zrcadlí currentRound – používá se v timer callbacku aby se předešlo stale closure
+  const currentRoundRef = useRef(1);
+  // Ref pro zrušení FINISHER timeoutů (aby se nezavolal endBattle v dalším kole)
+  const pendingFinishTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const canFight = fighter && fighter.name !== 'Undefined' && fighter.currentEnergy >= 50;
 
@@ -425,6 +433,11 @@ export const Arena: React.FC = () => {
   useEffect(() => {
     isBattlingRef.current = isBattling;
   }, [isBattling]);
+
+  // Sync currentRound to ref – předchází stale closure v setInterval callbacku
+  useEffect(() => {
+    currentRoundRef.current = currentRound;
+  }, [currentRound]);
 
   // ============ MATCHMAKING: FETCH REAL PLAYERS FROM DATABASE ============
 
@@ -554,7 +567,11 @@ export const Arena: React.FC = () => {
     }
 
     timerRef.current = setInterval(() => {
+      // Pokud byl zápas již ukončen finisherem, timer dál nepracuje
+      if (battleEndedRef.current) return;
+
       setTimeRemaining((prev) => {
+        if (prev <= 0) return 0; // Pojistka: nenechej jít záporně
         const newTime = prev - 1;
         const elapsedTime = 60 - newTime;
 
@@ -579,16 +596,6 @@ export const Arena: React.FC = () => {
           });
         });
 
-        // Round time expired (KO/finish handled by queue processor via battleEndedRef)
-        if (newTime <= 0) {
-          if (currentRound >= 3) {
-            endBattle('judges', "Judges' Decision");
-          } else {
-            startNextRound();
-          }
-          return 0;
-        }
-
         return newTime;
       });
     }, 1000);
@@ -596,7 +603,23 @@ export const Arena: React.FC = () => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-}, [isBattling, battleResult, currentRound, fighter, selectedOpponent, language]);
+  }, [isBattling, battleResult, fighter, selectedOpponent, language]);
+
+  // ============ ROUND TRANSITION (separátní effect – netáhne closeures z timeru) ============
+
+  useEffect(() => {
+    // Spustí se pouze když timeRemaining dosáhne přesně 0 a zápas běží
+    if (!isBattling || battleResult || timeRemaining !== 0) return;
+    // Pokud byl zápas již ukončen finisherem, nepřecházíme do dalšího kola
+    if (battleEndedRef.current) return;
+
+    if (currentRoundRef.current >= 3) {
+      endBattle('judges', "Judges' Decision");
+    } else {
+      startNextRound();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeRemaining, isBattling, battleResult]);
 
   // ============ QUEUE PROCESSOR (DRAMATIC TIMING) ============
 
@@ -676,14 +699,33 @@ export const Arena: React.FC = () => {
           opponentHSRef.current = { ...opponentHSRef.current, stamina: Math.min(100, opponentHSRef.current.stamina + 1) };
           setOpponentHS({ ...opponentHSRef.current });
 
-          setRoundStats((stats) => ({ ...stats, playerDamage: stats.playerDamage + event.damage, playerHits: stats.playerHits + 1 }));
+          setRoundStats((stats) => {
+            const next = { ...stats, playerDamage: stats.playerDamage + event.damage, playerHits: stats.playerHits + 1 };
+            roundStatsRef.current = next;
+            return next;
+          });
 
-          // ── Finisher check ──
+          // ── Finisher check: HP zóna dosáhla 0 (KO / TKO) ──
           if (newOppHS[tPart] <= 0 && !battleEndedRef.current) {
             battleEndedRef.current = true;
             const method = tPart === 'head' ? 'Knockout' : tPart === 'body' ? 'TKO — Body Damage' : 'TKO — Leg Damage';
             setBattleLog((log) => [...log, { id: `finish-${Date.now()}`, message: FINISHER_MSGS[tPart](attackerName, defenderName), category: 'FINISHER', displayTime: Date.now() }]);
-            setTimeout(() => endBattle('player', method), 1200);
+            if (pendingFinishTimeoutRef.current) clearTimeout(pendingFinishTimeoutRef.current);
+            pendingFinishTimeoutRef.current = setTimeout(() => endBattle('player', method), 1200);
+          // ── Finisher check: FINISHER event → submise (tap-out/choke-out) nebo drtivý úder ──
+          // Submission finishery VŽDY ukončí zápas – HP nemusí dosáhnout 0
+          } else if (event.category === 'FINISHER' && !battleEndedRef.current) {
+            battleEndedRef.current = true;
+            const isSubmission = event.phase === 'GROUND';
+            const method = isSubmission
+              ? `Submission — ${event.move}`
+              : (tPart === 'head' ? 'Knockout' : tPart === 'body' ? 'TKO — Body Damage' : 'TKO — Leg Damage');
+            const finishMsg = isSubmission
+              ? `🔒 SUBMISSION!! ${defenderName} odklepal! ${attackerName} vítězí przez submission — ${event.move}!`
+              : FINISHER_MSGS[tPart](attackerName, defenderName);
+            setBattleLog((log) => [...log, { id: `finish-sub-${Date.now()}`, message: finishMsg, category: 'FINISHER', displayTime: Date.now() }]);
+            if (pendingFinishTimeoutRef.current) clearTimeout(pendingFinishTimeoutRef.current);
+            pendingFinishTimeoutRef.current = setTimeout(() => endBattle('player', method), 1200);
           }
         } else {
           // ── Damage to player's body part ──
@@ -699,14 +741,32 @@ export const Arena: React.FC = () => {
           playerHSRef.current = { ...playerHSRef.current, stamina: Math.min(100, playerHSRef.current.stamina + 1) };
           setPlayerHS({ ...playerHSRef.current });
 
-          setRoundStats((stats) => ({ ...stats, opponentDamage: stats.opponentDamage + event.damage, opponentHits: stats.opponentHits + 1 }));
+          setRoundStats((stats) => {
+            const next = { ...stats, opponentDamage: stats.opponentDamage + event.damage, opponentHits: stats.opponentHits + 1 };
+            roundStatsRef.current = next;
+            return next;
+          });
 
-          // ── Finisher check ──
+          // ── Finisher check: HP zóna dosáhla 0 (KO / TKO) ──
           if (newPlHS[tPart] <= 0 && !battleEndedRef.current) {
             battleEndedRef.current = true;
             const method = tPart === 'head' ? 'Knockout' : tPart === 'body' ? 'TKO — Body Damage' : 'TKO — Leg Damage';
             setBattleLog((log) => [...log, { id: `finish-${Date.now()}`, message: FINISHER_MSGS[tPart](defenderName, attackerName), category: 'FINISHER', displayTime: Date.now() }]);
-            setTimeout(() => endBattle('opponent', method), 1200);
+            if (pendingFinishTimeoutRef.current) clearTimeout(pendingFinishTimeoutRef.current);
+            pendingFinishTimeoutRef.current = setTimeout(() => endBattle('opponent', method), 1200);
+          // ── Finisher check: FINISHER event → soupeř nasadil submisi (tap-out / choke-out) ──
+          } else if (event.category === 'FINISHER' && !battleEndedRef.current) {
+            battleEndedRef.current = true;
+            const isSubmission = event.phase === 'GROUND';
+            const method = isSubmission
+              ? `Submission — ${event.move}`
+              : (tPart === 'head' ? 'Knockout' : tPart === 'body' ? 'TKO — Body Damage' : 'TKO — Leg Damage');
+            const finishMsg = isSubmission
+              ? `🔒 SUBMISSION!! ${attackerName} odklepal! ${defenderName} vítězí przez submission — ${event.move}!`
+              : FINISHER_MSGS[tPart](defenderName, attackerName);
+            setBattleLog((log) => [...log, { id: `finish-sub-${Date.now()}`, message: finishMsg, category: 'FINISHER', displayTime: Date.now() }]);
+            if (pendingFinishTimeoutRef.current) clearTimeout(pendingFinishTimeoutRef.current);
+            pendingFinishTimeoutRef.current = setTimeout(() => endBattle('opponent', method), 1200);
           }
         }
 
@@ -780,6 +840,9 @@ export const Arena: React.FC = () => {
     playerHSRef.current   = freshHS;
     opponentHSRef.current = freshHS;
     battleEndedRef.current = false;
+    currentRoundRef.current = 1;
+    roundStatsRef.current = { playerDamage: 0, opponentDamage: 0, playerHits: 0, opponentHits: 0 };
+    if (pendingFinishTimeoutRef.current) { clearTimeout(pendingFinishTimeoutRef.current); pendingFinishTimeoutRef.current = null; }
     setPlayerHS({ ...freshHS });
     setOpponentHS({ ...freshHS });
     setIsBattling(true);
@@ -825,19 +888,30 @@ export const Arena: React.FC = () => {
     const carryoverOppStamina    = opponentHSRef.current.stamina;
     playerHSRef.current   = { ...roundFreshHS, stamina: carryoverPlayerStamina };
     opponentHSRef.current = { ...roundFreshHS, stamina: carryoverOppStamina };
+    // Zruš případný nevyřízený FINISHER timeout z předchozího kola
+    if (pendingFinishTimeoutRef.current) {
+      clearTimeout(pendingFinishTimeoutRef.current);
+      pendingFinishTimeoutRef.current = null;
+    }
+    // Zastav starý interval okamžitě – nový spustí useEffect po re-renderu
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     battleEndedRef.current = false;
     setPlayerHS({ ...playerHSRef.current });
     setOpponentHS({ ...opponentHSRef.current });
-    setCurrentRound((r) => r + 1);
+    // Aktualizujeme ref synchronně uvnitř updatru – předchází stale closure v setInterval
+    setCurrentRound((r) => {
+      currentRoundRef.current = r + 1;
+      return r + 1;
+    });
+    // Reset roundStats včetně refu
+    roundStatsRef.current = { playerDamage: 0, opponentDamage: 0, playerHits: 0, opponentHits: 0 };
+    setRoundStats({ playerDamage: 0, opponentDamage: 0, playerHits: 0, opponentHits: 0 });
     setTimeRemaining(60);
     setFightPhase('STANDUP');
     setGroundAttackerName(null);
-    setRoundStats({
-      playerDamage: 0,
-      opponentDamage: 0,
-      playerHits: 0,
-      opponentHits: 0,
-    });
 
     setBattleLog((log) => [
       ...log,
@@ -852,12 +926,18 @@ export const Arena: React.FC = () => {
 
   const endBattle = (winner: 'player' | 'opponent' | 'judges' | 'draw', method: string) => {
     if (timerRef.current) clearInterval(timerRef.current);
+    // Zruš případný nevyřízený FINISHER timeout
+    if (pendingFinishTimeoutRef.current) {
+      clearTimeout(pendingFinishTimeoutRef.current);
+      pendingFinishTimeoutRef.current = null;
+    }
 
     // Determine actual winner for judges' decision
+    // Používáme REF (ne state) aby se předešlo stale closure → remíza 0:0
     let finalWinner = winner;
     if (winner === 'judges') {
-      const playerScore = roundStats.playerDamage + roundStats.playerHits * 5;
-      const opponentScore = roundStats.opponentDamage + roundStats.opponentHits * 5;
+      const playerScore = roundStatsRef.current.playerDamage + roundStatsRef.current.playerHits * 5;
+      const opponentScore = roundStatsRef.current.opponentDamage + roundStatsRef.current.opponentHits * 5;
 
       if (playerScore > opponentScore) {
         finalWinner = 'player';
@@ -901,6 +981,11 @@ export const Arena: React.FC = () => {
       clearTimeout(processingTimeoutRef.current);
       processingTimeoutRef.current = null;
     }
+    if (pendingFinishTimeoutRef.current) {
+      clearTimeout(pendingFinishTimeoutRef.current);
+      pendingFinishTimeoutRef.current = null;
+    }
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     setIsBattling(false);
     setBattleResult(null);
     setSelectedOpponent(null);
@@ -911,6 +996,8 @@ export const Arena: React.FC = () => {
     playerHSRef.current   = resetHS;
     opponentHSRef.current = resetHS;
     battleEndedRef.current = false;
+    currentRoundRef.current = 1;
+    roundStatsRef.current = { playerDamage: 0, opponentDamage: 0, playerHits: 0, opponentHits: 0 };
     setPlayerHS({ ...resetHS });
     setOpponentHS({ ...resetHS });
     setFightPhase('STANDUP');
