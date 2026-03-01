@@ -20,20 +20,24 @@ export interface TrainingResult {
   message: string;
   statChanges?: Partial<Record<keyof DetailedFighterStats, number>>;
   newEnergy?: number;
+  /** True when this session happened to award a bonus skill point (~15% chance). */
+  skillPointAwarded?: boolean;
 }
 
 /**
  * Performs a training exercise for a fighter.
  * 1. Validates energy
- * 2. Applies stat changes (clamped 1–100)
+ * 2. Applies stat changes (clamped 1–250)
  * 3. Deducts energy
- * 4. Upserts Supabase profiles row
+ * 4. 15% chance to award +1 skill point (≈ 1 per 6–7 sessions)
+ * 5. Upserts Supabase profiles row
  */
 export const performTraining = async (
   fighterId: string,
   exerciseId: string,
   currentEnergy: number,
   currentStats: Partial<Record<keyof DetailedFighterStats, number>>,
+  currentSkillPoints: number = 0,
 ): Promise<TrainingResult> => {
   const exercise: GymExercise | undefined = GYM_EXERCISES.find(e => e.id === exerciseId);
 
@@ -53,10 +57,18 @@ export const performTraining = async (
   for (const key of STAT_KEYS) {
     const current = currentStats[key] ?? 10;
     const delta = exercise.statChanges[key] ?? 0;
-    updatedStats[key] = Math.min(100, Math.max(1, current + delta));
+    updatedStats[key] = Math.min(250, Math.max(1, current + delta));
   }
 
   const newEnergy = Math.max(0, currentEnergy - exercise.energyCost);
+  
+  // ~15% chance per session of earning a bonus skill point (≈ 1 per 6-7 sessions).
+  // This keeps skill points genuinely scarce — a consistent trainer earns roughly
+  // one point per real-world day of play.
+  const SKILL_POINT_CHANCE = 0.15;
+  const awardSkillPoint = Math.random() < SKILL_POINT_CHANCE;
+  const newSkillPoints = currentSkillPoints + (awardSkillPoint ? 1 : 0);
+
   const now = new Date().toISOString();
 
   const { error } = await supabase
@@ -64,6 +76,7 @@ export const performTraining = async (
     .update({
       ...updatedStats,
       energy: newEnergy,
+      skill_points: newSkillPoints,
       updated_at: now,
     })
     .eq('id', fighterId);
@@ -84,5 +97,6 @@ export const performTraining = async (
     message: `${exercise.name} complete!`,
     statChanges: deltaResults,
     newEnergy,
+    skillPointAwarded: awardSkillPoint || undefined,
   };
 };

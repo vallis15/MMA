@@ -81,6 +81,12 @@ const TrainingToast: React.FC<{ toast: Toast; onRemove: (id: number) => void }> 
           {toast.exerciseName}
         </p>
         <p className="text-xs text-gray-400 mt-0.5">{result.message}</p>
+        {result.success && result.skillPointAwarded && (
+          <div className="flex items-center gap-1.5 mt-2 px-2 py-1 rounded-lg bg-yellow-900/50 border border-yellow-500/40">
+            <span className="text-base leading-none">⭐</span>
+            <span className="text-[11px] font-bold text-yellow-300 uppercase tracking-widest">+1 Skill Point!</span>
+          </div>
+        )}
         {result.success && result.statChanges && (
           <div className="flex flex-wrap gap-1 mt-1.5">
             {Object.entries(result.statChanges).map(([k, v]) => (
@@ -107,9 +113,10 @@ const ExerciseCard: React.FC<{
   exercise: GymExercise;
   currentEnergy: number;
   currentStats: Partial<Record<keyof DetailedFighterStats, number>>;
+  currentSkillPoints: number;
   fighterId: string;
   onTrainingDone: (result: TrainingResult, exerciseName: string) => void;
-}> = ({ exercise, currentEnergy, currentStats, fighterId, onTrainingDone }) => {
+}> = ({ exercise, currentEnergy, currentStats, currentSkillPoints, fighterId, onTrainingDone }) => {
   const [loading, setLoading] = useState(false);
   const catCfg  = CATEGORY_CONFIG[exercise.category];
   const tierCfg = TIER_CONFIG[exercise.tier];
@@ -119,7 +126,7 @@ const ExerciseCard: React.FC<{
     if (loading || !canAfford) return;
     setLoading(true);
     try {
-      const result = await performTraining(fighterId, exercise.id, currentEnergy, currentStats);
+      const result = await performTraining(fighterId, exercise.id, currentEnergy, currentStats, currentSkillPoints);
       onTrainingDone(result, exercise.name);
     } finally {
       setLoading(false);
@@ -230,9 +237,10 @@ export const Gym: React.FC = () => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  const currentEnergy = Math.ceil(fighter?.currentEnergy ?? 0);
-  const currentStats  = (fighter?.detailedStats ?? {}) as Partial<Record<keyof DetailedFighterStats, number>>;
-  const fighterId     = fighter?.id ?? '';
+  const currentEnergy      = Math.ceil(fighter?.currentEnergy ?? 0);
+  const currentStats       = (fighter?.detailedStats ?? {}) as Partial<Record<keyof DetailedFighterStats, number>>;
+  const currentSkillPoints = fighter?.skill_points ?? 0;
+  const fighterId          = fighter?.id ?? '';
 
   return (
     <div className="relative p-6 min-h-screen">
@@ -418,6 +426,7 @@ export const Gym: React.FC = () => {
                       exercise={exercise}
                       currentEnergy={currentEnergy}
                       currentStats={currentStats}
+                      currentSkillPoints={currentSkillPoints}
                       fighterId={fighterId}
                       onTrainingDone={handleTrainingDone}
                     />

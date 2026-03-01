@@ -65,6 +65,10 @@ export interface Fighter {
   health: number;
   maxHealth: number;
   createdAt: Date;
+  /** Unspent skill points available to unlock new skills. */
+  skill_points: number;
+  /** Array of unlocked skill node ids, e.g. ["striking_1_jab_mastery"]. */
+  unlocked_skills: string[];
 }
 
 export interface AIFighter {
@@ -73,7 +77,7 @@ export interface AIFighter {
   nickname: string;
   record: FighterRecord;
   stats: FighterStats;
-  level: number;
+  level?: number;
   avatar: string;
   health?: number;
   maxHealth?: number;
@@ -160,6 +164,8 @@ export interface TrainingDrill {
 
 export interface FighterContextType {
   fighter: Fighter | null;
+  /** DetailedFighterStats with all passive skill bonuses applied. */
+  enhancedDetailedStats: DetailedFighterStats | null;
   timeSinceLastRegen?: number;
   updateFighterStats: (stats: Partial<FighterStats>) => void;
   updateFighterEnergy: (amount: number) => void;
@@ -169,4 +175,8 @@ export interface FighterContextType {
   fight: (opponent: AIFighter) => { success: boolean; message: string; result?: FightResult };
   resetCareer: () => void;
   reloadFighter: () => Promise<void>;
+  /** Check if the current fighter can unlock a skill. */
+  canLearnSkill: (skillId: string) => { canLearn: boolean; reason?: string };
+  /** Unlock a skill: deducts 1 skill_point, persists to Supabase. */
+  learnSkill: (skillId: string) => Promise<{ success: boolean; message: string }>;
 }

@@ -8,6 +8,7 @@ export const translations: Record<string, Record<Language, string>> = {
   arena: { en: 'Arena', cs: 'Aréna', pl: 'Arena' },
   pvp_arena: { en: 'PvP Arena', cs: 'PvP Aréna', pl: 'Arena PvP' },
   rankings: { en: 'Rankings', cs: 'Žebříček', pl: 'Ranking' },
+  skills: { en: 'Skill Tree', cs: 'Strom dovedností', pl: 'Drzewo umiejętności' },
   admin: { en: 'Admin', cs: 'Admin', pl: 'Admin' },
   logout: { en: 'Logout', cs: 'Odhlásit', pl: 'Wyloguj' },
   
@@ -17,6 +18,7 @@ export const translations: Record<string, Record<Language, string>> = {
   gym_description: { en: 'Training', cs: 'Trénink', pl: 'Trening' },
   arena_description: { en: 'Fights', cs: 'Boje', pl: 'Walki' },
   rankings_description: { en: 'Leaderboards', cs: 'Žebříčky', pl: 'Rankingi' },
+  skills_description: { en: 'Abilities', cs: 'Schopnosti', pl: 'Zdolności' },
 
   // Fighter Stats
   name: { en: 'Name', cs: 'Jméno', pl: 'Imię' },

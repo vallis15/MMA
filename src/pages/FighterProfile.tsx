@@ -282,11 +282,6 @@ export const FighterProfile: React.FC = () => {
                 <div className="text-2xl font-black text-gray-400">{record.draws}</div>
                 <div className="text-xs text-gray-500 uppercase tracking-wider">Draws</div>
               </div>
-              <div className="w-px bg-gray-700" />
-              <div className="text-center">
-                <div className="text-2xl font-black text-neon-green">{fighter?.level ?? 1}</div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider">Level</div>
-              </div>
             </div>
           </div>
 

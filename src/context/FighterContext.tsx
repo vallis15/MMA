@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useMemo, ReactNode, useEffect, useRef } from 'react';
 import { Fighter, FighterStats, FighterContextType, TrainingDrill, AIFighter, FightResult, FightRound, FightLog, DetailedFighterStats } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
+import { calculateEnhancedStats, canLearnSkill as checkCanLearnSkill } from '../utils/stats';
+import { ALL_SKILLS } from '../constants/skillTree';
 
 // ─── Energy recovery constants ────────────────────────────────────────────────
 // 10 stamina per minute = 1 stamina every 6 seconds
@@ -56,6 +58,8 @@ const createDefaultFighter = (): Fighter => ({
   health: 100,
   maxHealth: 100,
   createdAt: new Date(),
+  skill_points: 1,
+  unlocked_skills: [],
 });
 
 interface FighterProviderProps {
@@ -69,6 +73,18 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
   
   // Track last manual update to prevent energy regen from overwriting it
   const lastManualUpdateRef = useRef<number>(0);
+
+  // ─── Enhanced stats (memoized) ─────────────────────────────────────────────
+  // Re-computed only when base detailedStats or unlocked_skills change.
+  // This is the object that all UI components should read for display.
+  const enhancedDetailedStats = useMemo<DetailedFighterStats | null>(() => {
+    if (!fighter.detailedStats) return null;
+    return calculateEnhancedStats(
+      fighter.detailedStats,
+      fighter.unlocked_skills,
+      ALL_SKILLS,
+    );
+  }, [fighter.detailedStats, fighter.unlocked_skills]);
 
   // Load fighter from Supabase when user logs in
   useEffect(() => {
@@ -165,6 +181,9 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
             maxHealth: 100,
             createdAt: data.created_at ? new Date(data.created_at) : new Date(),
             detailedStats,
+            // ── Skill Tree ────────────────────────────────────────────────────
+            skill_points: typeof data.skill_points === 'number' ? data.skill_points : 0,
+            unlocked_skills: Array.isArray(data.unlocked_skills) ? (data.unlocked_skills as string[]) : [],
           };
 
           // ── Offline energy recovery ──────────────────────────────────────────
@@ -279,6 +298,9 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
           maxHealth: 100,
           createdAt: data.created_at ? new Date(data.created_at) : new Date(),
           detailedStats,
+          // ── Skill Tree ──────────────────────────────────────────────────
+          skill_points: typeof data.skill_points === 'number' ? data.skill_points : 0,
+          unlocked_skills: Array.isArray(data.unlocked_skills) ? (data.unlocked_skills as string[]) : [],
         };
 
         console.log('✅ [FIGHTER RELOAD] Fighter object updated:', fighterData);
@@ -685,6 +707,51 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
     return { success: true, message: `Training complete! +${drill.benefits.map(b => b.amount).join(', ')} stats!` };
   };
 
+  // ─── Skill Tree: canLearnSkill ─────────────────────────────────────────────
+  const canLearnSkill = (skillId: string) =>
+    checkCanLearnSkill(fighter, skillId, ALL_SKILLS);
+
+  // ─── Skill Tree: learnSkill ────────────────────────────────────────────────
+  const learnSkill = async (skillId: string): Promise<{ success: boolean; message: string }> => {
+    const check = checkCanLearnSkill(fighter, skillId, ALL_SKILLS);
+    if (!check.canLearn) {
+      return { success: false, message: check.reason ?? 'Cannot learn this skill.' };
+    }
+
+    if (!user) return { success: false, message: 'Not authenticated.' };
+
+    const newUnlocked = [...fighter.unlocked_skills, skillId];
+
+    // Optimistic local update first for instant UI feedback
+    setFighter(prev => ({
+      ...prev,
+      unlocked_skills: newUnlocked,
+    }));
+
+    console.log('🔵 [SKILL] Unlocking skill:', skillId);
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        unlocked_skills: newUnlocked,
+        updated_at:      new Date().toISOString(),
+      })
+      .eq('id', user.id);
+
+    if (error) {
+      // Rollback optimistic update on failure
+      console.error('❌ [SKILL] Supabase update failed:', error.message);
+      setFighter(prev => ({
+        ...prev,
+        unlocked_skills: fighter.unlocked_skills,
+      }));
+      return { success: false, message: 'Failed to save skill – please try again.' };
+    }
+
+    console.log('✅ [SKILL] Skill unlocked and persisted:', skillId);
+    return { success: true, message: `Skill unlocked!` };
+  };
+
   const resetCareer = () => {
     const newFighter = createDefaultFighter();
     newFighter.name = fighter.name;
@@ -703,6 +770,7 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
 
   const value: FighterContextType = {
     fighter,
+    enhancedDetailedStats,
     timeSinceLastRegen,
     updateFighterStats,
     updateFighterEnergy,
@@ -712,6 +780,8 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
     fight,
     resetCareer,
     reloadFighter,
+    canLearnSkill,
+    learnSkill,
   };
 
   return (

@@ -273,7 +273,6 @@ export const Dashboard: React.FC = () => {
                       { label: 'Wins', val: fighter.record.wins, cls: 'text-neon-green' },
                       { label: 'Losses', val: fighter.record.losses, cls: 'text-alert-red' },
                       { label: 'Draws', val: fighter.record.draws, cls: 'text-gray-400' },
-                      { label: 'Level', val: fighter.level, cls: 'text-yellow-400' },
                       { label: 'Rep', val: fighter.reputation, cls: 'text-purple-400' },
                     ].map(({ label, val, cls }) => (
                       <div key={label} className="text-center">

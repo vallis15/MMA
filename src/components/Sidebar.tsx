@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Home, Dumbbell, Zap, Trophy, LogOut, UserCog } from 'lucide-react';
+import { Menu, X, Home, Dumbbell, Zap, Trophy, LogOut, UserCog, GitBranch } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -22,6 +22,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard', onTab
     { id: 'gym', icon: Dumbbell, path: '/gym' },
     { id: 'arena', icon: Zap, path: '/arena' },
     { id: 'rankings', icon: Trophy, path: '/rankings' },
+    { id: 'skills', icon: GitBranch, path: '/skills' },
   ];
 
   const handleNavClick = (itemId: string, path: string) => {

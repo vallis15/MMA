@@ -9,6 +9,8 @@ import { FighterSilhouette } from '../components/FighterSilhouette';
 import { AIFighter, FighterStats, DetailedFighterStats } from '../types';
 import { supabase } from '../lib/supabase';
 import { getBattleMessage, BattleCategory, MMA_MOVES, TAKEDOWN_MOVES, SUBMISSION_MOVES } from '../constants/battlePhrases';
+import { getSkillById } from '../constants/skillTree';
+import type { SkillDomain, MechanicTrigger, MechanicEffect } from '../types/skills';
 
 // ============ TYPES ============
 
@@ -44,6 +46,20 @@ interface BattleLogEntry {
   message: string;
   category: BattleCategory;
   displayTime: number;
+  /** When true this entry represents a skill activation – rendered with neon domain colour + pulse. */
+  isSkillTrigger?: boolean;
+  /** Which domain the triggered skill belongs to (for colour coding). */
+  skillDomain?: SkillDomain;
+}
+
+/** Shape of a resolved skill trigger result returned by evaluateSkillTriggers(). */
+interface SkillTriggerResult {
+  skillId: string;
+  skillName: string;
+  domain: SkillDomain;
+  effect: MechanicEffect;
+  effectValue?: number;
+  logText: string;
 }
 
 interface QueuedEvent {
@@ -137,6 +153,73 @@ const partLabel = (part: BodyPart): string =>
 
 const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 const randItem = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+// ============ SKILL TRIGGER ENGINE ============
+
+/** Neon accent colours per skill domain – used in the battle log. */
+const DOMAIN_COLORS: Record<SkillDomain, string> = {
+  striking:  '#ff1744',   // red
+  wrestling: '#ffd600',   // gold
+  bjj:       '#ce93d8',   // purple
+  defense:   '#00e5ff',   // cyan
+};
+
+/**
+ * Evaluates which skills fire for the current combat event.
+ *
+ * Trigger routing:
+ *  • on_attack / on_takedown_attempt  → attacker's skills only
+ *  • on_defend / on_low_health        → defender's skills only
+ *  • legacy symmetric triggers        → both sides, filtered by mechanic.isDefensive
+ *
+ * Chance normalisation: values > 1 are treated as 0–100 integers (÷ 100).
+ */
+const evaluateSkillTriggers = (
+  attackerSkillIds: string[],
+  defenderSkillIds: string[],
+  triggerType: MechanicTrigger,
+  _currentPhase: FightPhase,
+): SkillTriggerResult[] => {
+  const results: SkillTriggerResult[] = [];
+
+  const tryFire = (id: string, isDefender: boolean) => {
+    const node = getSkillById(id);
+    if (!node?.mechanic) return;
+    const m = node.mechanic;
+    if (m.trigger !== triggerType) return;
+    // Respect explicit isDefensive flag when set
+    if (m.isDefensive === true  && !isDefender) return;
+    if (m.isDefensive === false &&  isDefender) return;
+    // Normalise chance: new skills use 0-100 int, legacy use 0-1 decimal
+    const normalizedChance = m.chance > 1 ? m.chance / 100 : m.chance;
+    if (Math.random() < normalizedChance) {
+      results.push({
+        skillId:     id,
+        skillName:   node.name,
+        domain:      node.domain,
+        effect:      m.effect,
+        effectValue: m.effectValue,
+        logText:     m.logText,
+      });
+    }
+  };
+
+  if (triggerType === 'on_attack' || triggerType === 'on_takedown_attempt') {
+    attackerSkillIds.forEach(id => tryFire(id, false));
+  } else if (
+    triggerType === 'on_defend' ||
+    triggerType === 'on_low_health' ||
+    triggerType === 'on_miss_received'
+  ) {
+    defenderSkillIds.forEach(id => tryFire(id, true));
+  } else {
+    // Legacy / symmetric triggers – let isDefensive flag filter direction
+    attackerSkillIds.forEach(id => tryFire(id, false));
+    defenderSkillIds.forEach(id => tryFire(id, true));
+  }
+
+  return results;
+};
 
 const generateBattleEvents = (
   roundDuration: number = 60,
@@ -376,6 +459,13 @@ export const Arena: React.FC = () => {
   const opponentHSRef = useRef<HealthStatus>(defaultHS());
   const battleEndedRef = useRef(false);
 
+  // ── Skill system: stun turns remaining + permanent fracture debuff ──────
+  const stunRef      = useRef<{ player: number; opponent: number }>({ player: 0, opponent: 0 });
+  const fractureRef  = useRef<{ player: boolean; opponent: boolean }>({ player: false, opponent: false });
+  // Mirror of fighter.unlocked_skills – kept in a ref so the queue processor
+  // always reads the latest value without stale-closure issues.
+  const playerSkillsRef = useRef<string[]>([]);
+
   // Battle state
   const [isBattling, setIsBattling] = useState(false);
   const [currentRound, setCurrentRound] = useState(1);
@@ -410,6 +500,8 @@ export const Arena: React.FC = () => {
   // Ref zrcadlí fighter – předchází stale closure při zápisu výsledku do Supabase
   const fighterRef = useRef(fighter);
   useEffect(() => { fighterRef.current = fighter; }, [fighter]);
+  // Keep skill ref in sync with fighter state
+  useEffect(() => { playerSkillsRef.current = fighter?.unlocked_skills ?? []; }, [fighter]);
 
   // Battle result
   const [battleResult, setBattleResult] = useState<{
@@ -432,6 +524,14 @@ export const Arena: React.FC = () => {
 
   // Screen shake
   const [shakeIntensity, setShakeIntensity] = useState(0);
+
+  // Floating skill activation popup
+  const [activeSkillPopup, setActiveSkillPopup] = useState<{
+    skillName: string;
+    logText: string;
+    domain: SkillDomain;
+  } | null>(null);
+  const skillPopupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Timer control
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -470,7 +570,7 @@ export const Arena: React.FC = () => {
         // Fetch all players from database sorted by reputation
         const { data: allPlayers, error: fetchError } = await supabase
           .from('profiles')
-          .select('id, username, reputation, wins, losses, draws, level, strength, speed, cardio, striking, grappling')
+          .select('id, username, reputation, wins, losses, draws, strength, speed, cardio, striking, grappling')
           .order('reputation', { ascending: false });
 
         if (fetchError) {
@@ -542,7 +642,6 @@ export const Arena: React.FC = () => {
             striking: p.striking || 50,
             grappling: p.grappling || 50,
           },
-          level: p.level || 1,
           avatar: '🥊',
           health: 100,
           maxHealth: 100,
@@ -657,6 +756,25 @@ export const Arena: React.FC = () => {
 
     const { event, attackerName, defenderName } = queuedEvent;
 
+    // ── STUN CHECK: skip this event if the attacker is stunned ───────────────
+    if (stunRef.current[event.attacker] > 0) {
+      stunRef.current = {
+        ...stunRef.current,
+        [event.attacker]: stunRef.current[event.attacker] - 1,
+      };
+      const stunMsg = `🌀 ${attackerName} is still stunned — turn skipped!`;
+      setBattleLog(log => [
+        ...log,
+        { id: `stun-skip-${event.id}`, message: stunMsg, category: 'DODGE' as BattleCategory, displayTime: Date.now() },
+      ]);
+      const skipPause = 900 + Math.random() * 500;
+      setTimeout(() => {
+        isProcessingQueueRef.current = false;
+        processNextQueuedEvent();
+      }, skipPause);
+      return;
+    }
+
     // ── Build message with body-part location ──────────────────
     const baseMsg = getBattleMessage(event.category, attackerName, defenderName, event.move, language);
     const isStrike = event.damage > 0 && (
@@ -706,11 +824,91 @@ export const Arena: React.FC = () => {
         const isPlayerAttacking = event.attacker === 'player';
         const drain = STAMINA_DRAIN[event.category] ?? 5;
 
+        // ── SKILL TRIGGER EVALUATION ─────────────────────────────────────────
+        // attackerSkillIds: player's skills when player attacks; [] when AI attacks
+        // defenderSkillIds: player's skills when player defends; [] when player attacks
+        const attackerSkillIds = event.attacker === 'player' ? playerSkillsRef.current : [];
+        const defenderSkillIds = event.attacker === 'player' ? [] : playerSkillsRef.current;
+        let effectiveDamage = event.damage;
+        const skillLogEntries: BattleLogEntry[] = [];
+
+        // 1. on_defend — defender skills fire FIRST; DODGE can zero out damage
+        const defendResults = evaluateSkillTriggers(attackerSkillIds, defenderSkillIds, 'on_defend', event.phase);
+        for (const r of defendResults) {
+          skillLogEntries.push({
+            id: `sk-def-${r.skillId}-${Date.now()}`,
+            message: `[SKILL: ${r.skillName}] ${r.logText}`,
+            category: event.category,
+            displayTime: Date.now(),
+            isSkillTrigger: true,
+            skillDomain: r.domain,
+          });
+          if (r.effect === 'reflect_damage' || r.effect === 'intercept') {
+            // Defender negates the incoming damage
+            effectiveDamage = 0;
+          } else if (r.effect === 'counter' || r.effect === 'auto_counter') {
+            // Immediately queue a counter-strike at the front of the display queue
+            const ctrAtk: 'player' | 'opponent' = event.attacker === 'player' ? 'opponent' : 'player';
+            const ctrAtkName = ctrAtk === 'player' ? fighter!.name : selectedOpponent!.name;
+            const ctrDefName = ctrAtk === 'player' ? selectedOpponent!.name : fighter!.name;
+            const ctrDmg = Math.round(10 + Math.random() * 12 + (r.effectValue ?? 0));
+            const counterEv: BattleEvent = {
+              id: `ctr-${Date.now()}`,
+              timestamp: event.timestamp,
+              attacker: ctrAtk,
+              category: 'MEDIUM_HIT',
+              move: 'counter strike',
+              damage: ctrDmg,
+              targetPart: 'head',
+              phase: event.phase,
+            };
+            displayQueueRef.current.unshift({
+              event: counterEv,
+              attackerName: ctrAtkName,
+              defenderName: ctrDefName,
+            });
+          }
+        }
+
+        // 2. on_attack / on_takedown_attempt — attacker skills fire next
+        const attackTrigger: MechanicTrigger =
+          event.category === 'TAKEDOWN_ATTEMPT' ? 'on_takedown_attempt' : 'on_attack';
+        const attackResults = evaluateSkillTriggers(attackerSkillIds, defenderSkillIds, attackTrigger, event.phase);
+        for (const r of attackResults) {
+          skillLogEntries.push({
+            id: `sk-atk-${r.skillId}-${Date.now()}`,
+            message: `[SKILL: ${r.skillName}] ${r.logText}`,
+            category: event.category,
+            displayTime: Date.now(),
+            isSkillTrigger: true,
+            skillDomain: r.domain,
+          });
+          if (r.effect === 'extra_damage' || r.effect === 'knockdown') {
+            effectiveDamage += r.effectValue ?? 10;
+          } else if (r.effect === 'stun') {
+            const defKey: 'player' | 'opponent' = event.attacker === 'player' ? 'opponent' : 'player';
+            stunRef.current[defKey] = Math.max(stunRef.current[defKey], r.effectValue ?? 1);
+          } else if (r.effect === 'fracture') {
+            const defKey: 'player' | 'opponent' = event.attacker === 'player' ? 'opponent' : 'player';
+            fractureRef.current[defKey] = true;
+          } else if (r.effect === 'leg_catch' || r.effect === 'intercept') {
+            effectiveDamage += r.effectValue ?? 8;
+          } else if (r.effect === 'slam') {
+            effectiveDamage += r.effectValue ?? 12;
+          }
+        }
+
+        // 3. Fracture: permanently fractured fighters deal 30 % less damage
+        if (fractureRef.current[event.attacker as 'player' | 'opponent']) {
+          effectiveDamage = Math.round(effectiveDamage * 0.7);
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         if (isPlayerAttacking) {
           // ── Damage to opponent's body part ──
           const newOppHS = {
             ...opponentHSRef.current,
-            [tPart]: Math.max(0, opponentHSRef.current[tPart] - event.damage),
+            [tPart]: Math.max(0, opponentHSRef.current[tPart] - effectiveDamage),
           };
           opponentHSRef.current = newOppHS;
           setOpponentHS(newOppHS);
@@ -726,7 +924,7 @@ export const Arena: React.FC = () => {
           setOpponentHS({ ...opponentHSRef.current });
 
           setRoundStats((stats) => {
-            const next = { ...stats, playerDamage: stats.playerDamage + event.damage, playerHits: stats.playerHits + 1 };
+            const next = { ...stats, playerDamage: stats.playerDamage + effectiveDamage, playerHits: stats.playerHits + 1 };
             roundStatsRef.current = next;
             return next;
           });
@@ -757,7 +955,7 @@ export const Arena: React.FC = () => {
           // ── Damage to player's body part ──
           const newPlHS = {
             ...playerHSRef.current,
-            [tPart]: Math.max(0, playerHSRef.current[tPart] - event.damage),
+            [tPart]: Math.max(0, playerHSRef.current[tPart] - effectiveDamage),
           };
           playerHSRef.current = newPlHS;
           setPlayerHS(newPlHS);
@@ -774,10 +972,45 @@ export const Arena: React.FC = () => {
           setPlayerHS({ ...playerHSRef.current });
 
           setRoundStats((stats) => {
-            const next = { ...stats, opponentDamage: stats.opponentDamage + event.damage, opponentHits: stats.opponentHits + 1 };
+            const next = { ...stats, opponentDamage: stats.opponentDamage + effectiveDamage, opponentHits: stats.opponentHits + 1 };
             roundStatsRef.current = next;
             return next;
           });
+
+          // ── on_low_health: player survival skills (Zombie Mode etc.) ─────────
+          const playerTotalHP = newPlHS.head + newPlHS.body + newPlHS.legs;
+          if (playerTotalHP <= 105 && !battleEndedRef.current) {
+            const lowHpResults = evaluateSkillTriggers(
+              attackerSkillIds, defenderSkillIds, 'on_low_health', event.phase,
+            );
+            for (const r of lowHpResults) {
+              skillLogEntries.push({
+                id: `sk-lh-${r.skillId}-${Date.now()}`,
+                message: `[SKILL: ${r.skillName}] ${r.logText}`,
+                category: 'HEAVY_HIT',
+                displayTime: Date.now(),
+                isSkillTrigger: true,
+                skillDomain: r.domain,
+              });
+              // zombie_mode: survive a lethal hit by restoring the damaged body part
+              if (r.effect === 'zombie_mode' && newPlHS[tPart] <= 0) {
+                const restoreAmt = r.effectValue ?? 15;
+                const zombieHS: HealthStatus = { ...playerHSRef.current, [tPart]: restoreAmt };
+                playerHSRef.current = zombieHS;
+                setPlayerHS(zombieHS);
+              }
+              // stamina_restore: recover some stamina on the brink
+              if (r.effect === 'stamina_restore') {
+                const restoreAmt = r.effectValue ?? 20;
+                const recoveredHS: HealthStatus = {
+                  ...playerHSRef.current,
+                  stamina: Math.min(100, playerHSRef.current.stamina + restoreAmt),
+                };
+                playerHSRef.current = recoveredHS;
+                setPlayerHS(recoveredHS);
+              }
+            }
+          }
 
           // ── Finisher check: HP zóna dosáhla 0 (KO / TKO) ──
           if (newPlHS[tPart] <= 0 && !battleEndedRef.current) {
@@ -799,6 +1032,20 @@ export const Arena: React.FC = () => {
             setBattleLog((log) => [...log, { id: `finish-sub-${Date.now()}`, message: finishMsg, category: 'FINISHER', displayTime: Date.now() }]);
             if (pendingFinishTimeoutRef.current) clearTimeout(pendingFinishTimeoutRef.current);
             pendingFinishTimeoutRef.current = setTimeout(() => endBattle('opponent', method), 1200);
+          }
+        }
+
+        // ── Flush skill trigger log entries to battle log ─────────────────────
+        if (skillLogEntries.length > 0) {
+          setBattleLog(log => [...log, ...skillLogEntries]);
+          // Show floating overlay popup for the first triggered skill
+          const first = skillLogEntries.find(e => e.isSkillTrigger && e.skillDomain);
+          if (first && first.skillDomain) {
+            if (skillPopupTimeoutRef.current) clearTimeout(skillPopupTimeoutRef.current);
+            const rawName = first.message.match(/\[SKILL:\s*([^\]]+)\]/)?.[1]?.trim() ?? '';
+            const rawText = first.message.replace(/^\[SKILL:[^\]]+\]\s*/, '');
+            setActiveSkillPopup({ skillName: rawName, logText: rawText, domain: first.skillDomain });
+            skillPopupTimeoutRef.current = setTimeout(() => setActiveSkillPopup(null), 2800);
           }
         }
 
@@ -872,6 +1119,8 @@ export const Arena: React.FC = () => {
     playerHSRef.current   = freshHS;
     opponentHSRef.current = freshHS;
     battleEndedRef.current = false;
+    stunRef.current = { player: 0, opponent: 0 };
+    fractureRef.current = { player: false, opponent: false };
     currentRoundRef.current = 1;
     roundStatsRef.current = { playerDamage: 0, opponentDamage: 0, playerHits: 0, opponentHits: 0 };
     if (pendingFinishTimeoutRef.current) { clearTimeout(pendingFinishTimeoutRef.current); pendingFinishTimeoutRef.current = null; }
@@ -931,6 +1180,8 @@ export const Arena: React.FC = () => {
       timerRef.current = null;
     }
     battleEndedRef.current = false;
+    stunRef.current = { player: 0, opponent: 0 };
+    fractureRef.current = { player: false, opponent: false };
     setPlayerHS({ ...playerHSRef.current });
     setOpponentHS({ ...opponentHSRef.current });
     // Aktualizujeme ref synchronně uvnitř updatru – předchází stale closure v setInterval
@@ -1122,6 +1373,7 @@ export const Arena: React.FC = () => {
               lastOpponentHitCategory={lastOpponentHitCategory}
               currentAttacker={currentAttacker}
               groundTopFighter={groundTopFighter}
+              activeSkillPopup={activeSkillPopup}
               t={t}
             />
           ) : (
@@ -1165,6 +1417,7 @@ interface BattleScreenProps {
   lastOpponentHitCategory: string | null;
   currentAttacker: 'player' | 'opponent' | null;
   groundTopFighter: 'player' | 'opponent' | null;
+  activeSkillPopup: { skillName: string; logText: string; domain: SkillDomain } | null;
   t: (key: string) => string;
 }
 
@@ -1186,6 +1439,7 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
   lastOpponentHitCategory,
   currentAttacker,
   groundTopFighter,
+  activeSkillPopup,
   t,
 }) => {
   const isGround = fightPhase === 'GROUND';
@@ -1277,6 +1531,68 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
               <p className="text-gray-500 text-xs mt-0.5">fighters on their feet</p>
             </div>
             <span className="text-3xl">🥊</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── SKILL ACTIVATION POPUP OVERLAY ───────────────────────────────────── */}
+      <AnimatePresence>
+        {activeSkillPopup && (
+          <motion.div
+            key="skill-popup"
+            initial={{ opacity: 0, scale: 0.75, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.88, y: -10 }}
+            transition={{ type: 'spring', stiffness: 480, damping: 28 }}
+            className="pointer-events-none"
+          >
+            <motion.div
+              animate={{
+                boxShadow: [
+                  `0 0 18px ${DOMAIN_COLORS[activeSkillPopup.domain]}44`,
+                  `0 0 38px ${DOMAIN_COLORS[activeSkillPopup.domain]}88`,
+                  `0 0 18px ${DOMAIN_COLORS[activeSkillPopup.domain]}44`,
+                ],
+              }}
+              transition={{ duration: 0.75, repeat: 2 }}
+              className="rounded-2xl px-5 py-3 flex items-center gap-4"
+              style={{
+                background: 'linear-gradient(135deg, #080810, #10101a)',
+                border: `2px solid ${DOMAIN_COLORS[activeSkillPopup.domain]}`,
+                boxShadow: `0 0 28px ${DOMAIN_COLORS[activeSkillPopup.domain]}50`,
+              }}
+            >
+              {/* Pulsing icon */}
+              <motion.div
+                animate={{ scale: [1, 1.35, 1], opacity: [0.85, 1, 0.85] }}
+                transition={{ duration: 0.55, repeat: Infinity }}
+                className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+                style={{
+                  background: `${DOMAIN_COLORS[activeSkillPopup.domain]}18`,
+                  border: `2px solid ${DOMAIN_COLORS[activeSkillPopup.domain]}`,
+                }}
+              >
+                <Zap size={17} style={{ color: DOMAIN_COLORS[activeSkillPopup.domain] }} />
+              </motion.div>
+              {/* Text */}
+              <div className="flex-1 min-w-0">
+                <p
+                  className="text-[10px] font-black uppercase tracking-[0.28em] mb-0.5"
+                  style={{ color: `${DOMAIN_COLORS[activeSkillPopup.domain]}99` }}
+                >
+                  ⚡ SKILL AKTIVOVÁN — {activeSkillPopup.skillName}
+                </p>
+                <p
+                  className="text-sm font-bold leading-snug"
+                  style={{
+                    color: DOMAIN_COLORS[activeSkillPopup.domain],
+                    textShadow: `0 0 10px ${DOMAIN_COLORS[activeSkillPopup.domain]}`,
+                  }}
+                >
+                  {activeSkillPopup.logText}
+                </p>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1396,16 +1712,22 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
 
 const LogEntry: React.FC<{ entry: BattleLogEntry }> = ({ entry }) => {
   const [displayedText, setDisplayedText] = useState('');
-  const isCritical  = entry.category === 'CRITICAL_HIT' || entry.category === 'FINISHER';
-  const isNegative  = entry.category === 'MISS' || entry.category === 'DODGE';
-  const isTakedown  = entry.category === 'TAKEDOWN_ATTEMPT' || entry.category === 'TAKEDOWN_DEFENSE';
-  const isGndControl = entry.category === 'GROUND_CONTROL';
-  const isSub       = entry.category === 'SUBMISSION_ATTEMPT';
-  const isSubEscape = entry.category === 'SUBMISSION_ESCAPE';
+
+  // ── Skill trigger gets its own rendering path ────────────────────────────
+  const isSkill     = entry.isSkillTrigger === true;
+  const skillColor  = isSkill && entry.skillDomain ? DOMAIN_COLORS[entry.skillDomain] : null;
+
+  const isCritical  = !isSkill && (entry.category === 'CRITICAL_HIT' || entry.category === 'FINISHER');
+  const isNegative  = !isSkill && (entry.category === 'MISS' || entry.category === 'DODGE');
+  const isTakedown  = !isSkill && (entry.category === 'TAKEDOWN_ATTEMPT' || entry.category === 'TAKEDOWN_DEFENSE');
+  const isGndControl = !isSkill && entry.category === 'GROUND_CONTROL';
+  const isSub       = !isSkill && entry.category === 'SUBMISSION_ATTEMPT';
+  const isSubEscape = !isSkill && entry.category === 'SUBMISSION_ESCAPE';
   const isRoundSep  = entry.message.startsWith('═══');
 
   // Neon accent color per category
-  const accentColor = isCritical  ? '#ff1744'
+  const accentColor = isSkill     ? (skillColor ?? '#ffd600')
+    : isCritical  ? '#ff1744'
     : isTakedown   ? '#ffd600'
     : isSub        ? '#ff6d00'
     : isSubEscape  ? '#00e5ff'
@@ -1414,7 +1736,8 @@ const LogEntry: React.FC<{ entry: BattleLogEntry }> = ({ entry }) => {
     : isRoundSep   ? '#00e5ff'
     : 'rgba(0,229,255,0.25)';
 
-  const textColor = isCritical  ? '#ff4444'
+  const textColor = isSkill      ? (skillColor ?? '#ffd600')
+    : isCritical  ? '#ff4444'
     : isTakedown   ? '#ffd600'
     : isSub        ? '#ff9100'
     : isSubEscape  ? '#00e5ff'
@@ -1426,7 +1749,7 @@ const LogEntry: React.FC<{ entry: BattleLogEntry }> = ({ entry }) => {
   useEffect(() => {
     let currentIndex = 0;
     const fullText = entry.message;
-    const tickDuration = isCritical ? 45 : 60;
+    const tickDuration = isSkill ? 30 : isCritical ? 45 : 60;
 
     const typewriter = setInterval(() => {
       if (currentIndex < fullText.length) {
@@ -1449,6 +1772,81 @@ const LogEntry: React.FC<{ entry: BattleLogEntry }> = ({ entry }) => {
         style={{ color: '#00e5ff88', borderTop: '1px solid rgba(0,229,255,0.15)', borderBottom: '1px solid rgba(0,229,255,0.15)', padding: '6px 0' }}
       >
         {entry.message}
+      </motion.div>
+    );
+  }
+
+  // ── SKILL TRIGGER — special neon-pulse card ──────────────────────────────
+  if (isSkill) {
+    const col = skillColor ?? '#ffd600';
+    // Split "[SKILL: Name]" prefix from the rest of the message
+    const prefixMatch = displayedText.match(/^(\[SKILL:[^\]]+\])(.*)/s);
+    const prefix = prefixMatch ? prefixMatch[1] : '';
+    const rest   = prefixMatch ? prefixMatch[2] : displayedText;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, x: -8 }}
+        animate={{ opacity: 1, scale: 1, x: 0 }}
+        exit={{ opacity: 0, x: 8 }}
+        transition={{ duration: 0.2 }}
+        style={{
+          borderLeft: `3px solid ${col}`,
+          paddingLeft: 8,
+          paddingTop: 5,
+          paddingBottom: 5,
+          borderRadius: 4,
+          background: `${col}12`,
+          boxShadow: `0 0 10px ${col}22, inset 0 0 8px ${col}0a`,
+          marginTop: 2,
+          marginBottom: 2,
+        }}
+      >
+        {/* Pulsing dot indicator */}
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <motion.span
+            animate={{ opacity: [1, 0.3, 1], scale: [1, 1.4, 1] }}
+            transition={{ duration: 0.7, repeat: Infinity }}
+            style={{
+              display: 'inline-block',
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: col,
+              boxShadow: `0 0 6px ${col}`,
+              flexShrink: 0,
+            }}
+          />
+          <span
+            className="text-[8px] font-black uppercase tracking-[0.25em]"
+            style={{ color: `${col}99` }}
+          >
+            skill activated
+          </span>
+        </div>
+        <p className="text-xs font-mono font-bold leading-relaxed" style={{ color: col }}>
+          {prefix && (
+            <span
+              style={{
+                color: col,
+                textShadow: `0 0 8px ${col}`,
+                fontWeight: 900,
+                letterSpacing: '0.03em',
+              }}
+            >
+              {prefix}
+            </span>
+          )}
+          <span style={{ color: `${col}cc`, fontWeight: 700 }}>{rest}</span>
+          {displayedText.length < entry.message.length && (
+            <motion.span
+              animate={{ opacity: [1, 0] }}
+              transition={{ duration: 0.25, repeat: Infinity }}
+              className="inline-block w-1.5 h-3 ml-0.5 align-middle"
+              style={{ background: col }}
+            />
+          )}
+        </p>
       </motion.div>
     );
   }

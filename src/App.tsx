@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components';
-import { Dashboard, Gym, Arena, Rankings, Registration, Login, AdminLogin, FighterProfile } from './pages';
+import { Dashboard, Gym, Arena, Rankings, Registration, Login, AdminLogin, FighterProfile, SkillTree } from './pages';
 import { FighterProvider } from './context/FighterContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { AuthProvider } from './context/AuthContext';
@@ -72,6 +72,18 @@ function AppContent() {
           <ProtectedRoute>
             <Layout activeTab={activeTab} onTabChange={setActiveTab}>
               <FighterProfile />
+            </Layout>
+            <NotificationCenter />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/skills"
+        element={
+          <ProtectedRoute>
+            <Layout activeTab={activeTab} onTabChange={setActiveTab}>
+              <SkillTree />
             </Layout>
             <NotificationCenter />
           </ProtectedRoute>
