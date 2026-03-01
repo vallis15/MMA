@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import type { HealthStatus } from '../pages/Arena';
 import type { BodyPart } from '../pages/Arena';
 
@@ -10,119 +10,124 @@ interface FighterSilhouetteProps {
   name: string;
   /** Current health status for all zones */
   healthStatus: HealthStatus;
-  /** Which body part was just hit (triggers flash animation) */
+  /** Which body part was just hit (triggers ping animation) */
   lastHitPart: BodyPart | null;
-  /** Whether this fighter is currently attacking (glow effect) */
+  /** Category of last hit — CRITICAL_HIT / FINISHER triggers full shake */
+  lastHitCategory?: string | null;
+  /** Whether this fighter is currently attacking (glow pulse) */
   isAttacking: boolean;
-  /** Whether this is the player or opponent (affects glow color) */
+  /** Whether this is the player or opponent (affects accent color) */
   isPlayer: boolean;
-  /** Combat phase — affects silhouette orientation */
+  /** Combat phase — GROUND rotates silhouette 90° smoothly */
   stance: 'STANDUP' | 'GROUND';
-  /** For ground: is this fighter on top or bottom? */
+  /** For ground phase: is this fighter on top or bottom? */
   groundPosition?: 'TOP' | 'BOTTOM' | null;
-  /** Mirror the silhouette horizontally (opponent faces player) */
+  /** Mirror horizontally so opponent faces the player */
   mirror?: boolean;
 }
 
-// ─── Health → Color mapping ───────────────────────────────────────────────────
+// ─── Neon color palette mapped to HP ─────────────────────────────────────────
 
-const getZoneColor = (hp: number): string => {
-  if (hp <= 0)  return '#1a0505';   // black-red — incapacitated
-  if (hp <= 20) return '#7f1d1d';   // deep crimson — critical
-  if (hp <= 40) return '#dc2626';   // red — serious damage
-  if (hp <= 60) return '#ea580c';   // burnt orange — moderate
-  if (hp <= 80) return '#d97706';   // amber — light damage
-  return '#16a34a';                  // vivid green — healthy
+const getNeonStroke = (hp: number): string => {
+  if (hp <= 0)  return '#2a0000';
+  if (hp <= 20) return '#ff1744'; // Neon Red
+  if (hp <= 40) return '#ff3d00'; // Neon Orange-Red
+  if (hp <= 60) return '#ff9100'; // Orange
+  if (hp <= 80) return '#c6ff00'; // Neon Yellow-Green
+  return '#00e5ff';               // Cyan / Electric Blue
 };
 
-const getZoneGlow = (hp: number): string => {
+const getNeonFill = (hp: number): string => {
+  if (hp <= 0)  return 'rgba(28, 0, 0, 0.92)';
+  if (hp <= 20) return 'rgba(40, 4, 4, 0.82)';
+  if (hp <= 40) return 'rgba(38, 14, 4, 0.78)';
+  if (hp <= 60) return 'rgba(32, 20, 4, 0.75)';
+  return 'rgba(6, 14, 24, 0.72)';
+};
+
+const getNeonGlowFilter = (hp: number): string => {
   if (hp <= 0)  return 'none';
-  if (hp <= 20) return '0 0 12px #dc2626aa';
-  if (hp <= 40) return '0 0 8px #ea580c88';
-  if (hp <= 60) return '0 0 6px #d9770666';
-  return 'none';
+  if (hp <= 20) return 'drop-shadow(0 0 6px #ff174488) drop-shadow(0 0 14px #ff174433)';
+  if (hp <= 40) return 'drop-shadow(0 0 5px #ff3d0066) drop-shadow(0 0 10px #ff3d0033)';
+  if (hp <= 60) return 'drop-shadow(0 0 5px #ff910055) drop-shadow(0 0 8px #ff910022)';
+  if (hp <= 80) return 'drop-shadow(0 0 4px #c6ff0044) drop-shadow(0 0 8px #c6ff0022)';
+  return 'drop-shadow(0 0 6px #00e5ff55) drop-shadow(0 0 12px #00e5ff22)';
 };
 
-const isZonePulsing = (hp: number): boolean => hp > 0 && hp <= 20;
+// ─── Keyframe CSS ─────────────────────────────────────────────────────────────
 
-// ─── Hit flash animation variants ────────────────────────────────────────────
+const KEYFRAMES_CSS = `
+  @keyframes neonPulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.42; }
+  }
+`;
 
-const hitFlashVariants = {
-  idle: {
-    filter: 'brightness(1)',
-    scale: 1,
-    x: 0,
-  },
+// ─── Zone Hit "Ping" variants ─────────────────────────────────────────────────
+
+const pingVariants = {
+  idle: { scale: 1, filter: 'brightness(1)' },
   hit: {
-    filter: ['brightness(1)', 'brightness(3.5)', 'brightness(1.6)', 'brightness(1)'],
-    scale: [1, 1.04, 0.97, 1],
-    x: [0, -3, 3, -2, 0],
-    transition: { duration: 0.35, ease: 'easeOut' },
+    scale:  [1, 1.12, 0.95, 1.04, 1],
+    filter: ['brightness(1)', 'brightness(7)', 'brightness(2.5)', 'brightness(1.5)', 'brightness(1)'],
+    transition: { duration: 0.30, ease: 'easeOut' },
+  },
+};
+
+// Full-silhouette shake on CRITICAL / FINISHER
+const shakeVariants = {
+  idle: { x: 0, y: 0 },
+  shake: {
+    x: [0, -9, 11, -11, 9, -7, 7, -4, 4, 0],
+    y: [0, 4, -5, 4, -3, 3, -2, 2, -1, 0],
+    transition: { duration: 0.20, ease: 'linear' },
   },
 };
 
 // ─── SVG Zone Component ───────────────────────────────────────────────────────
 
-const SvgZone: React.FC<{
-  d: string;
+interface ZoneProps {
   zone: BodyPart;
   hp: number;
   isHit: boolean;
   isCircle?: boolean;
-  cx?: number;
-  cy?: number;
-  rx?: number;
-  ry?: number;
-}> = ({ d, zone, hp, isHit, isCircle, cx, cy, rx, ry }) => {
-  const color      = getZoneColor(hp);
-  const glowStyle  = getZoneGlow(hp);
-  const pulsing    = isZonePulsing(hp);
+  cx?: number; cy?: number; rx?: number; ry?: number;
+  d?: string;
+  strokeWidth?: number;
+}
+
+const SvgZone: React.FC<ZoneProps> = ({ zone, hp, isHit, isCircle, cx, cy, rx, ry, d, strokeWidth = 1.8 }) => {
+  const stroke    = getNeonStroke(hp);
+  const fill      = getNeonFill(hp);
+  const glowF     = getNeonGlowFilter(hp);
+  const isPulsing = hp > 0 && hp <= 20;
+
+  const shapeStyle: React.CSSProperties = {
+    filter: glowF !== 'none' ? glowF : undefined,
+    animation: isPulsing ? 'neonPulse 1.1s ease-in-out infinite' : undefined,
+    transition: 'stroke 0.5s ease, fill 0.5s ease, filter 0.5s ease',
+  };
+
+  const commonProps = {
+    fill,
+    stroke,
+    strokeWidth,
+    strokeLinejoin: 'round' as const,
+    strokeLinecap:  'round' as const,
+    style: shapeStyle,
+  };
 
   return (
     <motion.g
-      key={`zone-${zone}`}
-      variants={hitFlashVariants}
+      variants={pingVariants}
       initial="idle"
       animate={isHit ? 'hit' : 'idle'}
+      key={`zone-${zone}-${isHit}`}
     >
-      {/* Subtle dark outline for zone separation */}
       {isCircle ? (
-        <ellipse
-          cx={cx} cy={cy} rx={rx} ry={ry}
-          fill={color}
-          stroke="rgba(0,0,0,0.55)"
-          strokeWidth="1.2"
-          style={{
-            filter: glowStyle !== 'none' ? `drop-shadow(${glowStyle})` : undefined,
-            animation: pulsing ? 'silhouettePulse 1.2s ease-in-out infinite' : undefined,
-          }}
-        />
+        <ellipse cx={cx} cy={cy} rx={rx} ry={ry} {...commonProps} />
       ) : (
-        <path
-          d={d}
-          fill={color}
-          stroke="rgba(0,0,0,0.55)"
-          strokeWidth="1.2"
-          strokeLinejoin="round"
-          style={{
-            filter: glowStyle !== 'none' ? `drop-shadow(${glowStyle})` : undefined,
-            animation: pulsing ? 'silhouettePulse 1.2s ease-in-out infinite' : undefined,
-          }}
-        />
-      )}
-      {/* HP label overlay */}
-      {hp <= 40 && hp > 0 && (
-        <text
-          x={isCircle ? cx : undefined}
-          y={isCircle ? (cy ?? 0) + 4 : undefined}
-          fontSize="7"
-          fill="rgba(255,255,255,0.75)"
-          textAnchor="middle"
-          fontWeight="bold"
-          style={{ pointerEvents: 'none', fontFamily: 'monospace' }}
-        >
-          {Math.ceil(hp)}
-        </text>
+        <path d={d} {...commonProps} />
       )}
     </motion.g>
   );
@@ -134,6 +139,7 @@ export const FighterSilhouette: React.FC<FighterSilhouetteProps> = ({
   name,
   healthStatus,
   lastHitPart,
+  lastHitCategory,
   isAttacking,
   isPlayer,
   stance,
@@ -141,8 +147,9 @@ export const FighterSilhouette: React.FC<FighterSilhouetteProps> = ({
   mirror = false,
 }) => {
   const [hitPart, setHitPart] = useState<BodyPart | null>(null);
+  const shakeControls = useAnimation();
 
-  // Briefly set the hit zone, then clear (triggers animation once)
+  // Briefly set the hit zone, then clear (triggers ping once)
   useEffect(() => {
     if (!lastHitPart) return;
     setHitPart(lastHitPart);
@@ -150,230 +157,248 @@ export const FighterSilhouette: React.FC<FighterSilhouetteProps> = ({
     return () => clearTimeout(t);
   }, [lastHitPart]);
 
-  const attackingGlowColor = isPlayer ? '#00ff41' : '#dc143c';
-  const nameColor = isPlayer ? '#00ff41' : '#dc143c';
-  const isGround  = stance === 'GROUND';
+  // Full-silhouette shake on CRITICAL_HIT or FINISHER
+  useEffect(() => {
+    if (!lastHitCategory) return;
+    if (lastHitCategory === 'CRITICAL_HIT' || lastHitCategory === 'FINISHER') {
+      shakeControls.start('shake').then(() => shakeControls.start('idle'));
+    }
+  }, [lastHitCategory, shakeControls]);
 
-  // ── SVG PATHS — anatomical MMA fighter (viewBox 0 0 100 270) ──────────────
-  //
-  //  HEAD  — ellipse (drawn separately for clean circle)
-  //  TORSO — shoulders, chest, flanks, integrated guard-up arms
-  //  LEFT LEG  — hip through foot, left side
-  //  RIGHT LEG — hip through foot, right side
-  //
-  // Coordinate origin: top-center of head at (50, 8)
-  // Total height: ~270 units; width: ~100 units
+  const accentColor = isPlayer ? '#00e5ff' : '#ff1744';
+  const nameColor   = isPlayer ? '#00e5ff' : '#ff4444';
+  const isGround    = stance === 'GROUND';
+  const isDominant  = isGround && groundPosition === 'TOP';
 
-  // HEAD ellipse params
-  const headCx = 50, headCy = 26, headRx = 16, headRy = 19;
+  // ── SVG PATHS — realistic human silhouette (viewBox 0 0 100 275) ──────────
+  // Head: slightly oval, narrower at top (like a real skull)
+  const headCx = 50, headCy = 25, headRx = 13, headRy = 17;
 
-  // TORSO — fighting stance, arms raised slightly in guard
+  // Torso: neck → broad shoulders → slight waist → hips
+  // All corners use cubic beziers for smooth, ring-like edges
   const torsoPath = [
-    'M 44,44',             // left neck join
-    'C 30,46 18,51 10,64', // left shoulder slope
-    'L 4,82',              // left outer arm going down
-    'C 2,92 4,104 8,110',  // left elbow area
-    'L 16,130',            // left forearm inner
-    'C 20,140 24,148 26,155', // left hip/flank
-    'L 34,157',            // left crotch
-    'L 66,157',            // right crotch
-    'C 76,155 80,148 84,140', // right hip/flank
-    'L 84,130',
-    'C 88,120 94,110 92,104', // right forearm
-    'L 96,82',             // right outer arm
-    'C 90,51 74,46 56,44', // right shoulder slope
+    'M 44,42',                          // left neck base
+    'C 38,42 20,50 13,64',             // sweep to left shoulder
+    'C 9,72  9,84  11,98',             // upper-left side
+    'C 13,112 17,126 21,140',          // waist left (slight inward)
+    'C 23,150 24,158 26,164',          // hip swell left
+    'C 36,166 44,166 50,166',          // across left hip floor
+    'C 56,166 64,166 74,164',          // across right hip floor
+    'C 76,158 77,150 79,140',          // hip swell right
+    'C 83,126 87,112 89,98',           // waist right
+    'C 91,84  91,72  87,64',           // upper-right side
+    'C 80,50  62,42  56,42',           // sweep to right shoulder
+    'C 54,41  52,40  50,40',           // neck top right
+    'C 48,40  46,41  44,42',           // neck top left
     'Z',
   ].join(' ');
 
-  // LEFT LEG — natural slightly-bent stance
+  // Left leg: outer thigh → knee → calf bulge → ankle → foot (toes left)
   const leftLegPath = [
-    'M 34,157',
-    'C 30,162 26,168 24,178',
-    'L 20,210',
-    'C 18,224 16,238 14,252',
-    'L 12,265',
-    'L 26,265',
-    'L 34,252',
-    'C 38,240 40,228 42,212',
-    'L 48,178',
-    'C 50,168 50,162 50,157',
+    'M 26,164',                        // left hip outer
+    'C 21,168 14,178 12,194',         // outer upper thigh
+    'C 10,207 12,216 16,222',         // outer knee
+    'C 19,228 20,238 18,248',         // outer calf
+    'C 16,254 12,258  8,262',         // outer ankle to heel
+    'C  7,265  7,268 10,269',         // heel curve
+    'C 14,270 22,270 30,269',         // heel to midfoot
+    'C 37,268 44,266 48,263',         // midfoot to toes
+    'C 50,261 50,258 48,255',         // toe tip
+    'C 46,251 42,248 39,244',         // inner ankle
+    'C 37,236 36,226 38,218',         // inner calf
+    'C 40,210 42,202 43,192',         // inner knee area
+    'C 45,178 47,168 50,164',         // inner thigh to groin
     'Z',
   ].join(' ');
 
-  // RIGHT LEG — mirror of left
+  // Right leg: mirror of left leg
   const rightLegPath = [
-    'M 66,157',
-    'C 70,162 74,168 76,178',
-    'L 80,212',
-    'C 82,228 86,240 90,252',
-    'L 98,265',
-    'L 84,265',
-    'L 80,252',
-    'C 76,238 74,224 72,210',
-    'L 66,178',
-    'C 62,168 52,162 50,157',
+    'M 74,164',                        // right hip outer
+    'C 79,168 86,178 88,194',         // outer upper thigh
+    'C 90,207 88,216 84,222',         // outer knee
+    'C 81,228 80,238 82,248',         // outer calf
+    'C 84,254 88,258 92,262',         // outer ankle to heel
+    'C 93,265 93,268 90,269',         // heel curve
+    'C 86,270 78,270 70,269',         // heel to midfoot
+    'C 63,268 56,266 52,263',         // midfoot to toes
+    'C 50,261 50,258 52,255',         // toe tip
+    'C 54,251 58,248 61,244',         // inner ankle
+    'C 63,236 64,226 62,218',         // inner calf
+    'C 60,210 58,202 57,192',         // inner knee area
+    'C 55,178 53,168 50,164',         // inner thigh to groin
     'Z',
   ].join(' ');
 
-  // ── Ground stance: rotate 90°, scale down ─────────────────────────────────
-  const groundTransform = isGround
-    ? mirror
-      ? 'rotate(90, 50, 137) scale(0.88)'
-      : 'rotate(-90, 50, 137) scale(0.88)'
-    : '';
+  // Ground rotation angle — with smooth CSS transition
+  const groundAngle = mirror ? 90 : -90;
 
   return (
-    <div className="flex flex-col items-center gap-2 select-none">
+    <div className="flex flex-col items-center gap-2 select-none w-full">
+      <style>{KEYFRAMES_CSS}</style>
 
       {/* Ground position badge */}
-      {isGround && groundPosition && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`text-[9px] font-black tracking-widest uppercase px-3 py-1 rounded-full border ${
-            groundPosition === 'TOP'
-              ? 'bg-emerald-900/60 border-emerald-500/60 text-emerald-300'
-              : 'bg-red-900/60 border-red-600/50 text-red-300'
-          }`}
-        >
-          {groundPosition === 'TOP' ? '▲ TOP' : '▼ BOTTOM'}
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {isGround && groundPosition && (
+          <motion.div
+            key="ground-badge"
+            initial={{ opacity: 0, y: -8, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.8 }}
+            className={`text-[9px] font-black tracking-widest uppercase px-3 py-0.5 rounded-full border ${
+              groundPosition === 'TOP'
+                ? 'bg-cyan-950/60 border-cyan-400/50 text-cyan-300'
+                : 'bg-red-950/60 border-red-500/40 text-red-300'
+            }`}
+          >
+            {groundPosition === 'TOP' ? '▲ TOP' : '▼ BOTTOM'}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* SVG silhouette wrapper */}
+      {/* ── SVG wrapper: whole-silhouette shake + attacker glow ── */}
       <motion.div
+        variants={shakeVariants}
+        animate={shakeControls}
         className="relative"
-        animate={
-          isAttacking
-            ? {
-                filter: [
-                  `drop-shadow(0 0 0px ${attackingGlowColor}00)`,
-                  `drop-shadow(0 0 14px ${attackingGlowColor}cc)`,
-                  `drop-shadow(0 0 8px ${attackingGlowColor}88)`,
-                ],
-              }
-            : { filter: 'drop-shadow(0 0 0px transparent)' }
-        }
-        transition={{ duration: 0.4, ease: 'easeOut' }}
         style={{
+          filter: isAttacking
+            ? `drop-shadow(0 0 18px ${accentColor}bb) drop-shadow(0 0 8px ${accentColor}66)`
+            : undefined,
+          transition: 'filter 0.3s ease',
+          // Mirror for opponent
           transform: mirror ? 'scaleX(-1)' : undefined,
         }}
       >
+        {/* Dominant ground position pulse ring */}
+        {isDominant && (
+          <motion.div
+            className="absolute inset-0 pointer-events-none rounded-full"
+            animate={{
+              boxShadow: [
+                `0 0 0 0 ${accentColor}00`,
+                `0 0 0 14px ${accentColor}44`,
+                `0 0 0 0 ${accentColor}00`,
+              ],
+            }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        )}
+
         <svg
-          viewBox="0 0 100 275"
+          viewBox="0 0 100 280"
           width="100%"
           height="100%"
-          style={{ maxWidth: 110, minWidth: 72 }}
+          style={{ maxWidth: 118, minWidth: 80, display: 'block' }}
           xmlns="http://www.w3.org/2000/svg"
         >
-          <style>{`
-            @keyframes silhouettePulse {
-              0%,100% { opacity: 1; }
-              50%      { opacity: 0.55; }
-            }
-          `}</style>
+          <defs>
+            <linearGradient id={`scanFade-${isPlayer ? 'p' : 'o'}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stopColor="rgba(0,0,0,0)" />
+              <stop offset="50%"  stopColor={isPlayer ? 'rgba(0,229,255,0.03)' : 'rgba(255,23,68,0.03)'} />
+              <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+            </linearGradient>
+          </defs>
 
-          {/* Background subtle fill so zones "pop" against dark bg */}
-          <rect
-            x="0" y="0" width="100" height="275"
-            fill="rgba(0,0,0,0.0)"
-          />
+          {/* Ground-stance rotation with CSS transition */}
+          <g
+            style={{
+              transformOrigin: '50px 140px',
+              transform: isGround
+                ? `rotate(${groundAngle}deg) scale(0.86)`
+                : 'rotate(0deg) scale(1)',
+              transition: 'transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            }}
+          >
+            {/* Right Leg */}
+            <SvgZone d={rightLegPath} zone="legs"
+              hp={healthStatus.legs} isHit={hitPart === 'legs'} />
 
-          <g transform={groundTransform}>
-            {/* RIGHT LEG */}
-            <SvgZone
-              d={rightLegPath}
-              zone="legs"
-              hp={healthStatus.legs}
-              isHit={hitPart === 'legs'}
-            />
+            {/* Left Leg */}
+            <SvgZone d={leftLegPath} zone="legs"
+              hp={healthStatus.legs} isHit={hitPart === 'legs'} />
 
-            {/* LEFT LEG */}
-            <SvgZone
-              d={leftLegPath}
-              zone="legs"
-              hp={healthStatus.legs}
-              isHit={hitPart === 'legs'}
-            />
+            {/* Torso */}
+            <SvgZone d={torsoPath} zone="body"
+              hp={healthStatus.body} isHit={hitPart === 'body'} strokeWidth={2} />
 
-            {/* TORSO */}
-            <SvgZone
-              d={torsoPath}
-              zone="body"
-              hp={healthStatus.body}
-              isHit={hitPart === 'body'}
-            />
-
-            {/* HEAD */}
-            <SvgZone
-              d=""
-              zone="head"
-              hp={healthStatus.head}
-              isHit={hitPart === 'head'}
-              isCircle
-              cx={headCx}
-              cy={headCy}
-              rx={headRx}
-              ry={headRy}
-            />
+            {/* Head */}
+            <SvgZone zone="head" hp={healthStatus.head}
+              isHit={hitPart === 'head'} isCircle
+              cx={headCx} cy={headCy} rx={headRx} ry={headRy} strokeWidth={2.2} />
           </g>
 
-          {/* HP zero markers */}
+          {/* KO X marker */}
           {healthStatus.head <= 0 && (
-            <text x="50" y="30" textAnchor="middle" fontSize="14" fill="rgba(255,50,50,0.9)">✖</text>
+            <text x="50" y="32" textAnchor="middle" fontSize="16"
+              fill="rgba(255,23,68,0.9)"
+              style={{ filter: 'drop-shadow(0 0 6px #ff1744aa)' }}>
+              ✖
+            </text>
           )}
+
+          {/* Subtle scanline shimmer overlay */}
+          <rect x="0" y="0" width="100" height="280"
+            fill={`url(#scanFade-${isPlayer ? 'p' : 'o'})`}
+            pointerEvents="none" opacity="0.7" />
         </svg>
       </motion.div>
 
-      {/* Stamina strip */}
-      <div className="w-full max-w-[110px] space-y-1">
-        <div className="flex justify-between text-[8px] font-bold uppercase tracking-wider"
-             style={{ color: nameColor }}>
-          <span>{name.length > 9 ? name.slice(0, 9) + '…' : name}</span>
-          <span className={healthStatus.stamina < 25 ? 'text-red-400 animate-pulse' : 'text-cyan-400'}>
+      {/* ── Name + Stamina ── */}
+      <div className="w-full" style={{ maxWidth: 118 }}>
+        <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-widest mb-1">
+          <span style={{ color: nameColor, textShadow: `0 0 8px ${nameColor}88` }}>
+            {name.length > 10 ? name.slice(0, 10) + '…' : name}
+          </span>
+          <span
+            className={healthStatus.stamina < 25 ? 'animate-pulse' : ''}
+            style={{ color: healthStatus.stamina < 25 ? '#ff1744' : '#00e5ff' }}
+          >
             ⚡{Math.ceil(healthStatus.stamina)}
           </span>
         </div>
-        {/* Stamina bar */}
-        <div className="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
+        <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
           <motion.div
             className="h-full rounded-full"
             style={{
               background: healthStatus.stamina < 25
-                ? '#dc2626'
+                ? 'linear-gradient(90deg,#ff1744,#ff4444)'
                 : healthStatus.stamina < 50
-                  ? '#d97706'
-                  : '#06b6d4',
+                  ? 'linear-gradient(90deg,#ff9100,#ffab40)'
+                  : 'linear-gradient(90deg,#00b8d9,#00e5ff)',
+              boxShadow: healthStatus.stamina < 25 ? '0 0 6px #ff174488' : '0 0 4px #00e5ff55',
             }}
             animate={{ width: `${Math.max(0, healthStatus.stamina)}%` }}
-            transition={{ type: 'spring', stiffness: 70, damping: 14 }}
+            transition={{ type: 'spring', stiffness: 80, damping: 16 }}
           />
         </div>
       </div>
 
-      {/* Zone HP mini-legend */}
-      <div className="w-full max-w-[110px] space-y-0.5">
+      {/* ── Zone HP mini-bars ── */}
+      <div className="w-full space-y-0.5" style={{ maxWidth: 118 }}>
         {(['head', 'body', 'legs'] as BodyPart[]).map((zone) => {
-          const hp = healthStatus[zone];
-          const color = getZoneColor(hp);
-          const label = zone === 'head' ? 'HEAD' : zone === 'body' ? 'BODY' : 'LEGS';
+          const hp     = healthStatus[zone];
+          const stroke = getNeonStroke(hp);
+          const label  = zone === 'head' ? 'HEAD' : zone === 'body' ? 'BODY' : 'LEGS';
           return (
             <div key={zone} className="flex items-center gap-1">
-              <span className="text-[8px] font-bold w-7 uppercase" style={{ color: 'rgba(150,150,150,0.8)' }}>
+              <span className="text-[8px] font-bold w-7 uppercase"
+                    style={{ color: 'rgba(130,140,150,0.7)' }}>
                 {label}
               </span>
-              <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
+              <div className="flex-1 h-[3px] rounded-full overflow-hidden"
+                   style={{ background: 'rgba(255,255,255,0.05)' }}>
                 <motion.div
                   className="h-full rounded-full"
-                  style={{ background: color }}
+                  style={{
+                    background: stroke,
+                    boxShadow: `0 0 4px ${stroke}66`,
+                  }}
                   animate={{ width: `${Math.max(0, hp)}%` }}
-                  transition={{ type: 'spring', stiffness: 80, damping: 14 }}
+                  transition={{ type: 'spring', stiffness: 90, damping: 15 }}
                 />
               </div>
-              <span
-                className="text-[8px] font-mono w-5 text-right"
-                style={{ color: hp <= 20 ? '#f87171' : 'rgba(150,150,150,0.7)' }}
-              >
+              <span className="text-[8px] font-mono w-5 text-right"
+                    style={{ color: hp <= 20 ? '#ff1744' : 'rgba(130,140,150,0.6)' }}>
                 {Math.ceil(hp)}
               </span>
             </div>

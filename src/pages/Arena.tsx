@@ -407,6 +407,10 @@ export const Arena: React.FC = () => {
     playerDamage: 0, opponentDamage: 0, playerHits: 0, opponentHits: 0,
   });
 
+  // Ref zrcadlí fighter – předchází stale closure při zápisu výsledku do Supabase
+  const fighterRef = useRef(fighter);
+  useEffect(() => { fighterRef.current = fighter; }, [fighter]);
+
   // Battle result
   const [battleResult, setBattleResult] = useState<{
     winner: 'player' | 'opponent' | 'draw';
@@ -417,9 +421,11 @@ export const Arena: React.FC = () => {
   const [fightPhase, setFightPhase] = useState<FightPhase>('STANDUP');
   const [groundAttackerName, setGroundAttackerName] = useState<string | null>(null);
 
-  // Paper Doll — last hit zone + current attacker (pro silhouette animace)
+  // Paper Doll — last hit zone + hit category + current attacker
   const [lastPlayerHitPart, setLastPlayerHitPart] = useState<BodyPart | null>(null);
   const [lastOpponentHitPart, setLastOpponentHitPart] = useState<BodyPart | null>(null);
+  const [lastPlayerHitCategory, setLastPlayerHitCategory] = useState<string | null>(null);
+  const [lastOpponentHitCategory, setLastOpponentHitCategory] = useState<string | null>(null);
   const [currentAttacker, setCurrentAttacker] = useState<'player' | 'opponent' | null>(null);
   // Kdo je na pozici TOP v ground game (pro FighterSilhouette groundPosition)
   const [groundTopFighter, setGroundTopFighter] = useState<'player' | 'opponent' | null>(null);
@@ -711,7 +717,9 @@ export const Arena: React.FC = () => {
           // Nastav hit zone na soupeři pro flash animaci siluety
           setLastOpponentHitPart(tPart);
           setTimeout(() => setLastOpponentHitPart(null), 400);
-          // Drain player stamina, slight recovery for opponent
+          // Track hit category for critical shake
+          setLastOpponentHitCategory(event.category);
+          setTimeout(() => setLastOpponentHitCategory(null), 400);
           playerHSRef.current = { ...playerHSRef.current, stamina: Math.max(5, playerHSRef.current.stamina - drain) };
           setPlayerHS({ ...playerHSRef.current });
           opponentHSRef.current = { ...opponentHSRef.current, stamina: Math.min(100, opponentHSRef.current.stamina + 1) };
@@ -756,6 +764,9 @@ export const Arena: React.FC = () => {
           // Nastav hit zone na háčeči pro flash animaci siluety
           setLastPlayerHitPart(tPart);
           setTimeout(() => setLastPlayerHitPart(null), 400);
+          // Track hit category for critical shake
+          setLastPlayerHitCategory(event.category);
+          setTimeout(() => setLastPlayerHitCategory(null), 400);
           // Drain opponent stamina, slight recovery for player
           opponentHSRef.current = { ...opponentHSRef.current, stamina: Math.max(5, opponentHSRef.current.stamina - drain) };
           setOpponentHS({ ...opponentHSRef.current });
@@ -936,6 +947,8 @@ export const Arena: React.FC = () => {
     setGroundTopFighter(null);
     setLastPlayerHitPart(null);
     setLastOpponentHitPart(null);
+    setLastPlayerHitCategory(null);
+    setLastOpponentHitCategory(null);
     setCurrentAttacker(null);
 
     setBattleLog((log) => [
@@ -975,28 +988,55 @@ export const Arena: React.FC = () => {
 
     setBattleResult({ winner: finalWinner as 'player' | 'opponent' | 'draw', method });
 
-    // Update database ONLY NOW
-    if (fighter) {
-      const energyAfter = Math.max(0, fighter.currentEnergy - 50);
+    // Update database ONLY NOW — use fighterRef.current to avoid stale closure
+    const currentFighter = fighterRef.current;
+    if (currentFighter) {
+      // ── Dynamic energy cost based on fight difficulty ──────────────────────
+      // Player zone HP at fight end (refs are always fresh)
+      const totalPlayerHPLeft = playerHSRef.current.head + playerHSRef.current.body + playerHSRef.current.legs;
+      const hpLostFraction = (300 - totalPlayerHPLeft) / 300; // 0.0 = untouched, 1.0 = destroyed
+
+      // Base energy costs per outcome, scaled by damage taken
+      let energyCost: number;
+      const isKO = method.includes('Knockout') || method.includes('TKO') || method.includes('Submission');
       if (finalWinner === 'player') {
-        const xpGain = 50 + roundStats.playerDamage;
-        const reputationGain = 10 + roundStats.playerHits * 2;
+        // Easy win (little damage taken) → ~20; survived a brutal war win → ~55
+        energyCost = Math.round(20 + hpLostFraction * 55);
+        if (isKO) energyCost = Math.min(55, Math.round(energyCost * 1.1));
+      } else if (finalWinner === 'opponent') {
+        // Loss: always heavier; got finished hard → up to 80
+        energyCost = Math.round(45 + hpLostFraction * 45);
+        if (isKO) energyCost = Math.min(80, Math.round(energyCost * 1.2));
+      } else {
+        // Draw: moderate
+        energyCost = Math.round(30 + hpLostFraction * 30);
+      }
+      // Hard cap 15–80
+      energyCost = Math.max(15, Math.min(80, energyCost));
+
+      const energyAfter = Math.max(0, currentFighter.currentEnergy - energyCost);
+
+      // Use roundStatsRef (not stale state) for XP/rep
+      const xpGain = 50 + roundStatsRef.current.playerDamage;
+      const reputationGain = 10 + roundStatsRef.current.playerHits * 2;
+
+      if (finalWinner === 'player') {
         supabase.from('profiles').update({
-          wins: (fighter.record.wins || 0) + 1,
-          reputation: (fighter.reputation || 0) + reputationGain,
-          experience: (fighter.experience || 0) + xpGain,
+          wins: (currentFighter.record.wins || 0) + 1,
+          reputation: (currentFighter.reputation || 0) + reputationGain,
+          experience: (currentFighter.experience || 0) + xpGain,
           energy: energyAfter,
-        }).eq('id', fighter.id).then(() => reloadFighter());
+        }).eq('id', currentFighter.id).then(() => reloadFighter());
       } else if (finalWinner === 'opponent') {
         supabase.from('profiles').update({
-          losses: (fighter.record.losses || 0) + 1,
+          losses: (currentFighter.record.losses || 0) + 1,
           energy: energyAfter,
-        }).eq('id', fighter.id).then(() => reloadFighter());
+        }).eq('id', currentFighter.id).then(() => reloadFighter());
       } else {
         supabase.from('profiles').update({
-          draws: (fighter.record.draws || 0) + 1,
+          draws: (currentFighter.record.draws || 0) + 1,
           energy: energyAfter,
-        }).eq('id', fighter.id).then(() => reloadFighter());
+        }).eq('id', currentFighter.id).then(() => reloadFighter());
       }
     }
   };
@@ -1030,6 +1070,8 @@ export const Arena: React.FC = () => {
     setGroundTopFighter(null);
     setLastPlayerHitPart(null);
     setLastOpponentHitPart(null);
+    setLastPlayerHitCategory(null);
+    setLastOpponentHitCategory(null);
     setCurrentAttacker(null);
     eventsRef.current = [];
     processedEventIds.current.clear();
@@ -1076,6 +1118,8 @@ export const Arena: React.FC = () => {
               groundAttackerName={groundAttackerName}
               lastPlayerHitPart={lastPlayerHitPart}
               lastOpponentHitPart={lastOpponentHitPart}
+              lastPlayerHitCategory={lastPlayerHitCategory}
+              lastOpponentHitCategory={lastOpponentHitCategory}
               currentAttacker={currentAttacker}
               groundTopFighter={groundTopFighter}
               t={t}
@@ -1117,6 +1161,8 @@ interface BattleScreenProps {
   /** Paperdoll props */
   lastPlayerHitPart: BodyPart | null;
   lastOpponentHitPart: BodyPart | null;
+  lastPlayerHitCategory: string | null;
+  lastOpponentHitCategory: string | null;
   currentAttacker: 'player' | 'opponent' | null;
   groundTopFighter: 'player' | 'opponent' | null;
   t: (key: string) => string;
@@ -1136,6 +1182,8 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
   groundAttackerName,
   lastPlayerHitPart,
   lastOpponentHitPart,
+  lastPlayerHitCategory,
+  lastOpponentHitCategory,
   currentAttacker,
   groundTopFighter,
   t,
@@ -1234,15 +1282,25 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
       </AnimatePresence>
 
       {/* ─── 3-COLUMN LAYOUT: Silhouette | Log | Silhouette ────────────────────── */}
-      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2.5fr)_minmax(0,1fr)] gap-3 items-start">
+      <div className="grid grid-cols-[1fr_2fr_1fr] gap-4 items-start">
 
         {/* ─ LEFT: Player silhouette ─ */}
-        <div className="glass-card rounded-2xl p-3 flex flex-col items-center">
-          <p className="text-[9px] font-black uppercase tracking-widest text-neon-green mb-2">YOU</p>
+        <div className="rounded-2xl p-3 flex flex-col items-center"
+             style={{
+               background: 'rgba(0,229,255,0.03)',
+               border: '1px solid rgba(0,229,255,0.18)',
+               boxShadow: '0 0 20px rgba(0,229,255,0.06) inset',
+             }}>
+          <div className="flex items-center gap-1.5 mb-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" style={{ boxShadow: '0 0 6px #00e5ff' }} />
+            <p className="text-[9px] font-black uppercase tracking-[0.2em]"
+               style={{ color: '#00e5ff', textShadow: '0 0 8px #00e5ff88' }}>YOU</p>
+          </div>
           <FighterSilhouette
             name={fighter.name}
             healthStatus={playerHS}
             lastHitPart={lastPlayerHitPart}
+            lastHitCategory={lastPlayerHitCategory}
             isAttacking={currentAttacker === 'player'}
             isPlayer={true}
             stance={fightPhase}
@@ -1254,23 +1312,40 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
         {/* ─ CENTER: Battle log + Round stats ─ */}
         <div className="space-y-3">
           {/* BATTLE LOG */}
-          <motion.div
-            className="glass-card-premium rounded-2xl p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
+          <div
+            style={{
+              background: 'rgba(0,0,0,0.55)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: 16,
+              boxShadow: '0 0 30px rgba(0,229,255,0.04) inset',
+              overflow: 'hidden',
+            }}
           >
-            <h3 className="section-header text-gray-300 mb-3 sticky top-0 bg-gray-900/90 py-1 text-xs">
-              {t('live_commentary').toUpperCase()}
-            </h3>
-            <div ref={battleLogRef} className="h-72 overflow-y-auto space-y-2 pr-1">
+            {/* Log header bar */}
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b"
+                 style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.3)' }}>
+              <motion.span
+                className="w-2 h-2 rounded-full bg-cyan-400"
+                animate={{ opacity: [1, 0.3, 1] }}
+                transition={{ duration: 0.9, repeat: Infinity }}
+                style={{ boxShadow: '0 0 6px #00e5ff' }}
+              />
+              <span className="text-[9px] font-black uppercase tracking-[0.25em] text-cyan-400/70">
+                LIVE FEED
+              </span>
+              <span className="ml-auto text-[8px] font-mono text-gray-600 uppercase tracking-widest">
+                {t('live_commentary')}
+              </span>
+            </div>
+            <div ref={battleLogRef} className="h-72 overflow-y-auto space-y-1.5 p-4"
+                 style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(0,229,255,0.2) transparent' }}>
               <AnimatePresence>
                 {battleLog.map((entry) => (
                   <LogEntry key={entry.id} entry={entry} />
                 ))}
               </AnimatePresence>
             </div>
-          </motion.div>
+          </div>
 
           {/* ROUND STATS */}
           <div className="grid grid-cols-2 gap-3 glass-card rounded-2xl p-4">
@@ -1288,12 +1363,22 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
         </div>
 
         {/* ─ RIGHT: Opponent silhouette ─ */}
-        <div className="glass-card rounded-2xl p-3 flex flex-col items-center">
-          <p className="text-[9px] font-black uppercase tracking-widest text-alert-red mb-2">OPP</p>
+        <div className="rounded-2xl p-3 flex flex-col items-center"
+             style={{
+               background: 'rgba(255,23,68,0.03)',
+               border: '1px solid rgba(255,23,68,0.18)',
+               boxShadow: '0 0 20px rgba(255,23,68,0.06) inset',
+             }}>
+          <div className="flex items-center gap-1.5 mb-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" style={{ boxShadow: '0 0 6px #ff1744' }} />
+            <p className="text-[9px] font-black uppercase tracking-[0.2em]"
+               style={{ color: '#ff4444', textShadow: '0 0 8px #ff174488' }}>OPP</p>
+          </div>
           <FighterSilhouette
             name={opponent.name}
             healthStatus={opponentHS}
             lastHitPart={lastOpponentHitPart}
+            lastHitCategory={lastOpponentHitCategory}
             isAttacking={currentAttacker === 'opponent'}
             isPlayer={false}
             stance={fightPhase}
@@ -1311,24 +1396,41 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
 
 const LogEntry: React.FC<{ entry: BattleLogEntry }> = ({ entry }) => {
   const [displayedText, setDisplayedText] = useState('');
-  const isCritical = entry.category === 'CRITICAL_HIT' || entry.category === 'FINISHER';
-  const isNegative = entry.category === 'MISS' || entry.category === 'DODGE';
-  const isGround = (
-    entry.category === 'GROUND_CONTROL' ||
-    entry.category === 'SUBMISSION_ATTEMPT' ||
-    entry.category === 'SUBMISSION_ESCAPE'
-  );
-  const isTakedown = entry.category === 'TAKEDOWN_ATTEMPT' || entry.category === 'TAKEDOWN_DEFENSE';
+  const isCritical  = entry.category === 'CRITICAL_HIT' || entry.category === 'FINISHER';
+  const isNegative  = entry.category === 'MISS' || entry.category === 'DODGE';
+  const isTakedown  = entry.category === 'TAKEDOWN_ATTEMPT' || entry.category === 'TAKEDOWN_DEFENSE';
+  const isGndControl = entry.category === 'GROUND_CONTROL';
+  const isSub       = entry.category === 'SUBMISSION_ATTEMPT';
+  const isSubEscape = entry.category === 'SUBMISSION_ESCAPE';
+  const isRoundSep  = entry.message.startsWith('═══');
+
+  // Neon accent color per category
+  const accentColor = isCritical  ? '#ff1744'
+    : isTakedown   ? '#ffd600'
+    : isSub        ? '#ff6d00'
+    : isSubEscape  ? '#00e5ff'
+    : isGndControl ? '#ff9100'
+    : isNegative   ? 'rgba(80,80,80,0.5)'
+    : isRoundSep   ? '#00e5ff'
+    : 'rgba(0,229,255,0.25)';
+
+  const textColor = isCritical  ? '#ff4444'
+    : isTakedown   ? '#ffd600'
+    : isSub        ? '#ff9100'
+    : isSubEscape  ? '#00e5ff'
+    : isGndControl ? '#ffab40'
+    : isNegative   ? 'rgba(100,100,110,0.8)'
+    : isRoundSep   ? '#00e5ff'
+    : 'rgba(200,210,220,0.9)';
 
   useEffect(() => {
     let currentIndex = 0;
     const fullText = entry.message;
-    const charactersPerTick = 1;
-    const tickDuration = 60; // 60ms per character for dramatic pacing
+    const tickDuration = isCritical ? 45 : 60;
 
     const typewriter = setInterval(() => {
       if (currentIndex < fullText.length) {
-        currentIndex += charactersPerTick;
+        currentIndex += 1;
         setDisplayedText(fullText.substring(0, currentIndex));
       } else {
         clearInterval(typewriter);
@@ -1338,36 +1440,51 @@ const LogEntry: React.FC<{ entry: BattleLogEntry }> = ({ entry }) => {
     return () => clearInterval(typewriter);
   }, [entry.message]);
 
+  if (isRoundSep) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="my-2 text-center text-[9px] font-black tracking-[0.3em] uppercase"
+        style={{ color: '#00e5ff88', borderTop: '1px solid rgba(0,229,255,0.15)', borderBottom: '1px solid rgba(0,229,255,0.15)', padding: '6px 0' }}
+      >
+        {entry.message}
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
-      initial={{ opacity: 0, x: -20 }}
+      initial={{ opacity: 0, x: -12 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      transition={{ duration: 0.3 }}
-      className={`text-sm font-mono leading-relaxed ${
-        isCritical
-          ? 'font-bold text-alert-red glow-crimson text-base'
-          : isNegative
-            ? 'italic text-gray-500'
-          : isTakedown
-            ? 'font-semibold text-yellow-400'
-          : isGround && entry.category === 'SUBMISSION_ATTEMPT'
-            ? 'font-bold text-orange-400'
-          : isGround && entry.category === 'SUBMISSION_ESCAPE'
-            ? 'italic text-cyan-400'
-          : isGround
-            ? 'text-orange-300'
-            : 'text-gray-300'
-      }`}
+      exit={{ opacity: 0, x: 12 }}
+      transition={{ duration: 0.25 }}
+      style={{
+        borderLeft: `2px solid ${accentColor}`,
+        paddingLeft: 8,
+        paddingTop: 3,
+        paddingBottom: 3,
+        background: isCritical
+          ? 'rgba(255,23,68,0.06)'
+          : isSub
+            ? 'rgba(255,109,0,0.05)'
+            : 'transparent',
+      }}
     >
-      {displayedText}
-      {displayedText.length < entry.message.length && (
-        <motion.span
-          animate={{ opacity: [1, 0] }}
-          transition={{ duration: 0.5, repeat: Infinity }}
-          className="inline-block w-2 h-4 bg-neon-green ml-1"
-        />
-      )}
+      <p
+        className={`text-xs font-mono leading-relaxed ${isCritical ? 'font-bold' : ''}`}
+        style={{ color: textColor }}
+      >
+        {displayedText}
+        {displayedText.length < entry.message.length && (
+          <motion.span
+            animate={{ opacity: [1, 0] }}
+            transition={{ duration: 0.4, repeat: Infinity }}
+            className="inline-block w-1.5 h-3 ml-0.5 align-middle"
+            style={{ background: accentColor }}
+          />
+        )}
+      </p>
     </motion.div>
   );
 };

@@ -3,6 +3,29 @@ import { Fighter, FighterStats, FighterContextType, TrainingDrill, AIFighter, Fi
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
+// ─── Energy recovery constants ────────────────────────────────────────────────
+// 10 stamina per minute = 1 stamina every 6 seconds
+const ENERGY_REGEN_PER_MINUTE = 10;
+const ENERGY_REGEN_INTERVAL_S = 60 / ENERGY_REGEN_PER_MINUTE; // 6 seconds
+
+// ─── localStorage helpers for offline energy recovery ─────────────────────────
+const energyTsKey = (userId: string) => `mma_energy_ts_${userId}`;
+
+const saveEnergyTs = (userId: string, energy: number): void => {
+  try {
+    localStorage.setItem(energyTsKey(userId), JSON.stringify({ energy, ts: Date.now() }));
+  } catch { /* ignore storage errors */ }
+};
+
+const loadEnergyTs = (userId: string): { energy: number; ts: number } | null => {
+  try {
+    const raw = localStorage.getItem(energyTsKey(userId));
+    return raw ? (JSON.parse(raw) as { energy: number; ts: number }) : null;
+  } catch {
+    return null;
+  }
+};
+
 const FighterContext = createContext<FighterContextType | undefined>(undefined);
 
 export const useFighter = () => {
@@ -143,9 +166,38 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
             createdAt: data.created_at ? new Date(data.created_at) : new Date(),
             detailedStats,
           };
-          
+
+          // ── Offline energy recovery ──────────────────────────────────────────
+          // Calculate how much energy recovered while the user was logged out
+          const storedEnergyTs = loadEnergyTs(user.id);
+          const baseEnergy = fighterData.currentEnergy;
+          if (storedEnergyTs && baseEnergy < fighterData.maxEnergy) {
+            const elapsedSec = (Date.now() - storedEnergyTs.ts) / 1000;
+            const offlineRecovered = Math.floor(elapsedSec / ENERGY_REGEN_INTERVAL_S);
+            if (offlineRecovered > 0) {
+              fighterData.currentEnergy = Math.min(
+                fighterData.maxEnergy,
+                baseEnergy + offlineRecovered,
+              );
+              console.log(`✅ [OFFLINE REGEN] Recovered ${offlineRecovered} energy after ${Math.round(elapsedSec)}s offline. New energy: ${fighterData.currentEnergy}`);
+            }
+          }
+
           console.log('✅ [FIGHTER LOAD] Fighter object created:', fighterData);
           setFighter(fighterData);
+          saveEnergyTs(user.id, fighterData.currentEnergy);
+
+          // Persist offline-recovered energy back to Supabase
+          if (fighterData.currentEnergy !== baseEnergy) {
+            supabase
+              .from('profiles')
+              .update({ energy: fighterData.currentEnergy, updated_at: new Date().toISOString() })
+              .eq('id', user.id)
+              .then(({ error: updateErr }) => {
+                if (updateErr) console.error('❌ [OFFLINE REGEN] Failed to save recovered energy:', updateErr.message);
+                else console.log('✅ [OFFLINE REGEN] Recovered energy saved to Supabase:', fighterData.currentEnergy);
+              });
+          }
         } else {
           console.warn('⚠️ [FIGHTER LOAD] No data returned, using default fighter');
           setFighter(createDefaultFighter());
@@ -288,50 +340,55 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
     }
   };
 
-  // Energy regeneration effect - +1 energy every 10 seconds WITH immediate sync
+  // Energy regeneration – 10 stamina/min = +1 every 6 seconds, synced to Supabase
   useEffect(() => {
     if (!user) {
       console.log('🔵 [ENERGY REGEN] User not available, skipping energy regeneration');
       return;
     }
 
-    console.log('🔵 [ENERGY REGEN] Energy regeneration interval started for user:', user.id);
+    console.log(`🔵 [ENERGY REGEN] Energy regeneration started for user ${user.id} (${ENERGY_REGEN_PER_MINUTE}/min, +1 every ${ENERGY_REGEN_INTERVAL_S}s)`);
 
     const regenInterval = setInterval(() => {
       setTimeSinceLastRegen((prev) => {
         const newTime = prev + 1;
-        
-        // Check if a manual update happened recently (within last 5 seconds)
-        const timeSinceManualUpdate = Date.now() - lastManualUpdateRef.current;
-        const recentlyUpdatedManually = timeSinceManualUpdate < 5000;
 
-        if (recentlyUpdatedManually) {
-          console.log('🔵 [ENERGY REGEN] Skipping regen for 5s after manual update. Time since update:', Math.round(timeSinceManualUpdate / 1000) + 's');
-          return newTime; // Don't regen yet
+        // Skip regen for 5 seconds after any manual update to avoid race conditions
+        const timeSinceManualUpdate = Date.now() - lastManualUpdateRef.current;
+        if (timeSinceManualUpdate < 5000) {
+          return newTime;
         }
-        
-        // Regenerate energy every 10 seconds
-        if (newTime >= 10) {
+
+        // +1 energy every ENERGY_REGEN_INTERVAL_S seconds (10 per minute)
+        if (newTime >= ENERGY_REGEN_INTERVAL_S) {
           setFighter((prevFighter) => {
+            if (prevFighter.currentEnergy >= prevFighter.maxEnergy) {
+              // Already full – just update the timestamp so offline calc stays correct
+              saveEnergyTs(user.id, prevFighter.currentEnergy);
+              return prevFighter;
+            }
+
             const updated = {
               ...prevFighter,
               currentEnergy: Math.min(prevFighter.maxEnergy, prevFighter.currentEnergy + 1),
             };
-            
-            // Immediately sync regenerated energy to Supabase
-            console.log('🔵 [ENERGY REGEN] Syncing regenerated energy:', updated.currentEnergy);
-            updateFighter(updated).catch(error => 
-              console.error('❌ [ENERGY REGEN] Error syncing regenerated energy:', error)
+
+            console.log('🔵 [ENERGY REGEN] +1 energy →', updated.currentEnergy);
+            // Persist to Supabase
+            updateFighter(updated).catch(err =>
+              console.error('❌ [ENERGY REGEN] Sync error:', err),
             );
-            
+            // Persist timestamp locally so offline recovery works on next login
+            saveEnergyTs(user.id, updated.currentEnergy);
+
             return updated;
           });
-          return 0; // Reset the timer
+          return 0; // reset counter
         }
-        
+
         return newTime;
       });
-    }, 1000); // Update every second
+    }, 1000); // tick every second
 
     return () => {
       console.log('🔵 [ENERGY REGEN] Cleaning up energy regeneration interval');
@@ -362,21 +419,24 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
 
   const updateFighterEnergy = async (amount: number) => {
     console.log('🔵 [ENERGY UPDATE] Updating energy by:', amount);
-    
+
     // Mark this as a manual update to prevent energy regen from immediately overwriting
     lastManualUpdateRef.current = Date.now();
-    
+
     setFighter((prev) => {
       const updated = {
         ...prev,
         currentEnergy: Math.max(0, Math.min(prev.maxEnergy, prev.currentEnergy + amount)),
       };
-      
+
+      // Persist timestamp locally so offline recovery knows current energy
+      if (user) saveEnergyTs(user.id, updated.currentEnergy);
+
       // Fire and forget sync to Supabase
-      updateFighter(updated).catch(error => 
-        console.error('❌ [ENERGY UPDATE] Error syncing energy to Supabase:', error)
+      updateFighter(updated).catch(error =>
+        console.error('❌ [ENERGY UPDATE] Error syncing energy to Supabase:', error),
       );
-      
+
       return updated;
     });
   };
