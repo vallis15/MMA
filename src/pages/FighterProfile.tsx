@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Swords, Atom, Brain, ChevronRight, TrendingUp, LucideIcon } from 'lucide-react';
+import { Shield, Swords, Atom, Brain, ChevronRight, TrendingUp, History, LucideIcon } from 'lucide-react';
 import { useFighter } from '../context/FighterContext';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import { DetailedFighterStats } from '../types';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -196,7 +198,42 @@ const StatRow: React.FC<StatRowProps> = ({ stat, value, barBg, delay }) => (
 
 export const FighterProfile: React.FC = () => {
   const { fighter } = useFighter();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('striking');
+
+  // ─── Fight history ──────────────────────────────────────────────────────
+  interface FightHistoryRow {
+    id: string;
+    opponent_name: string;
+    opponent_nickname: string | null;
+    result: 'win' | 'loss' | 'draw';
+    method: string;
+    method_category: string;
+    rounds_completed: number;
+    damage_dealt: number;
+    damage_taken: number;
+    hits_landed: number;
+    reputation_gain: number;
+    xp_gain: number;
+    created_at: string;
+  }
+  const [fightHistory, setFightHistory]       = useState<FightHistoryRow[]>([]);
+  const [historyLoading, setHistoryLoading]   = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    setHistoryLoading(true);
+    supabase
+      .from('fight_history')
+      .select('id, opponent_name, opponent_nickname, result, method, method_category, rounds_completed, damage_dealt, damage_taken, hits_landed, reputation_gain, xp_gain, created_at')
+      .eq('fighter_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(15)
+      .then(({ data, error }) => {
+        if (!error && data) setFightHistory(data as FightHistoryRow[]);
+        setHistoryLoading(false);
+      });
+  }, [user]);
 
   // Build defaulted stats (null → 10)
   const ds: DetailedFighterStats = fighter?.detailedStats ?? {
@@ -419,6 +456,95 @@ export const FighterProfile: React.FC = () => {
             </div>
           );
         })}
+      </motion.div>
+
+      {/* ── Fight History ─────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="rounded-2xl border border-gray-700/40 bg-dark-secondary/50 p-5"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <History size={18} className="text-cyan-400" />
+          <h2 className="font-oswald font-bold text-base uppercase tracking-widest text-cyan-400">
+            Fight History
+          </h2>
+          <span className="ml-auto text-xs text-gray-600 font-mono">last 15 fights</span>
+        </div>
+
+        {historyLoading && (
+          <div className="flex justify-center py-6">
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}>
+              <div className="w-8 h-8 border-2 border-cyan-500/20 border-t-cyan-400 rounded-full" />
+            </motion.div>
+          </div>
+        )}
+
+        {!historyLoading && fightHistory.length === 0 && (
+          <p className="text-center text-gray-600 text-sm uppercase tracking-widest py-6">
+            No fights recorded yet. Go to Arena and earn your first victory!
+          </p>
+        )}
+
+        {!historyLoading && fightHistory.length > 0 && (
+          <div className="space-y-2">
+            {fightHistory.map((fight, idx) => {
+              const isWin  = fight.result === 'win';
+              const isLoss = fight.result === 'loss';
+              const resultColor = isWin ? 'text-green-400 border-green-500/50 bg-green-900/20'
+                : isLoss ? 'text-red-400 border-red-500/50 bg-red-900/20'
+                : 'text-gray-400 border-gray-600/50 bg-gray-800/20';
+              const resultLabel = isWin ? 'W' : isLoss ? 'L' : 'D';
+              const dateStr = new Date(fight.created_at).toLocaleDateString('cs', { day: '2-digit', month: '2-digit', year: '2-digit' });
+
+              return (
+                <motion.div
+                  key={fight.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.04 }}
+                  className="flex items-center gap-3 p-3 rounded-xl border border-gray-700/30 bg-dark-tertiary/30 hover:bg-dark-tertiary/50 transition-colors"
+                >
+                  {/* Result badge */}
+                  <div className={`w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center font-black text-sm border ${resultColor}`}>
+                    {resultLabel}
+                  </div>
+
+                  {/* Opponent info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-white truncate">
+                      vs. {fight.opponent_name}
+                      {fight.opponent_nickname && (
+                        <span className="text-gray-500 font-normal text-xs ml-1 italic">"{fight.opponent_nickname}"</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {fight.method} · R{fight.rounds_completed}
+                    </p>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="flex gap-3 flex-shrink-0 text-right">
+                    <div className="hidden sm:block">
+                      <p className="text-[10px] text-gray-600 uppercase">Dmg</p>
+                      <p className="text-xs font-bold text-orange-400">{fight.damage_dealt}</p>
+                    </div>
+                    {fight.reputation_gain > 0 && (
+                      <div>
+                        <p className="text-[10px] text-gray-600 uppercase">Rep</p>
+                        <p className="text-xs font-bold text-yellow-400">+{fight.reputation_gain}</p>
+                      </div>
+                    )}
+                    <div className="text-[10px] text-gray-600 self-center">
+                      {dateStr}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
       </motion.div>
 
       <p className="text-center text-xs text-gray-600 pb-4 uppercase tracking-widest">

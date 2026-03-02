@@ -31,6 +31,8 @@ export interface TrainingResult {
  * 3. Deducts energy
  * 4. 15% chance to award +1 skill point (≈ 1 per 6–7 sessions)
  * 5. Upserts Supabase profiles row
+ * 6. Inserts training_sessions log row
+ * @param fighterLevel Optional: current fighter level (stored in session log).
  */
 export const performTraining = async (
   fighterId: string,
@@ -38,6 +40,8 @@ export const performTraining = async (
   currentEnergy: number,
   currentStats: Partial<Record<keyof DetailedFighterStats, number>>,
   currentSkillPoints: number = 0,
+  currentTotalSessions: number = 0,
+  fighterLevel: number = 1,
 ): Promise<TrainingResult> => {
   const exercise: GymExercise | undefined = GYM_EXERCISES.find(e => e.id === exerciseId);
 
@@ -75,15 +79,37 @@ export const performTraining = async (
     .from('profiles')
     .update({
       ...updatedStats,
-      energy: newEnergy,
-      skill_points: newSkillPoints,
-      updated_at: now,
+      energy:                  newEnergy,
+      skill_points:            newSkillPoints,
+      total_training_sessions: currentTotalSessions + 1,
+      last_training_at:        now,
+      updated_at:              now,
     })
     .eq('id', fighterId);
 
   if (error) {
     console.error('[performTraining] Supabase error:', error);
     return { success: false, message: `Training failed: ${error.message}` };
+  }
+
+  // ── Log the training session ──────────────────────────────────────────────
+  const { error: logErr } = await supabase
+    .from('training_sessions')
+    .insert({
+      fighter_id:           fighterId,
+      exercise_id:          exercise.id,
+      exercise_name:        exercise.name,
+      category:             exercise.category,
+      tier:                 exercise.tier,
+      energy_cost:          exercise.energyCost,
+      money_cost:           exercise.moneyCost,
+      stat_changes:         exercise.statChanges,
+      skill_point_awarded:  awardSkillPoint,
+      fighter_level:        fighterLevel,
+    });
+
+  if (logErr) {
+    console.error('[performTraining] training_sessions insert error:', logErr);
   }
 
   // Return the actual delta (what changed) for display

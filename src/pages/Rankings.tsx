@@ -16,6 +16,9 @@ interface DatabasePlayer {
   losses?: number;
   draws?: number;
   level?: number;
+  nickname?: string;
+  avatarEmoji?: string;
+  isAI?: boolean;
 }
 
 type SortBy = 'reputation' | 'wins' | 'level';
@@ -30,43 +33,67 @@ export const Rankings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch real players from Supabase
+  // Fetch real players + AI fighters from Supabase
   useEffect(() => {
     const fetchPlayers = async () => {
       try {
-        console.log('🔵 [RANKINGS] Fetching players from Supabase...');
+        console.log('🔵 [RANKINGS] Fetching players + AI fighters from Supabase...');
         setLoading(true);
         setError(null);
 
-        const { data, error: supabaseError } = await supabase
-          .from('profiles')
-          .select('id, username, reputation, wins, losses, draws, level')
-          .order('reputation', { ascending: false });
+        // Fetch real players and AI fighters in parallel
+        const [playersRes, aiRes] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('id, username, reputation, wins, losses, draws, level, nickname')
+            .order('reputation', { ascending: false }),
+          supabase
+            .from('leaderboard_fighters')
+            .select('id, name, nickname, avatar_emoji, reputation, wins, losses, draws, level')
+            .eq('is_active', true),
+        ]);
 
-        if (supabaseError) {
-          console.error('❌ [RANKINGS] Supabase error:', supabaseError.message);
-          setError(`Database error: ${supabaseError.message}`);
+        if (playersRes.error) {
+          console.error('❌ [RANKINGS] Profiles error:', playersRes.error.message);
+          setError(`Database error: ${playersRes.error.message}`);
           setPlayers([]);
-        } else if (data) {
-          console.log('✅ [RANKINGS] Loaded players:', data.length);
-          // Filter out invalid records
-          const validPlayers = data.filter((player) => {
-            if (!player.id || !player.username) {
-              console.warn('⚠️ [RANKINGS] Skipping corrupted player record:', player);
-              return false;
-            }
-            return true;
-          });
-          console.log('✅ [RANKINGS] Valid players after filtering:', validPlayers.length);
-          setPlayers(validPlayers);
-        } else {
-          console.warn('⚠️ [RANKINGS] No data returned from Supabase');
-          setPlayers([]);
+          return;
         }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.error('❌ [RANKINGS] Connection error:', errorMessage);
-        setError(`Connection error: ${errorMessage}`);
+
+        const realPlayers: DatabasePlayer[] = (playersRes.data ?? [])
+          .filter(p => p.id && p.username)
+          .map(p => ({
+            id:         p.id,
+            username:   p.username ?? undefined,
+            reputation: p.reputation ?? 0,
+            wins:       p.wins ?? 0,
+            losses:     p.losses ?? 0,
+            draws:      p.draws ?? 0,
+            level:      p.level ?? 1,
+            nickname:   p.nickname ?? undefined,
+            isAI:       false,
+          }));
+
+        const aiFighters: DatabasePlayer[] = (aiRes.data ?? []).map(ai => ({
+          id:          ai.id,
+          username:    ai.name,
+          reputation:  ai.reputation ?? 0,
+          wins:        ai.wins ?? 0,
+          losses:      ai.losses ?? 0,
+          draws:       ai.draws ?? 0,
+          level:       ai.level ?? 1,
+          nickname:    ai.nickname ?? undefined,
+          avatarEmoji: ai.avatar_emoji ?? '🥊',
+          isAI:        true,
+        }));
+
+        const combined = [...realPlayers, ...aiFighters];
+        console.log('✅ [RANKINGS] Loaded:', realPlayers.length, 'players +', aiFighters.length, 'AI fighters');
+        setPlayers(combined);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        console.error('❌ [RANKINGS] Connection error:', msg);
+        setError(`Connection error: ${msg}`);
         setPlayers([]);
       } finally {
         setLoading(false);
@@ -142,26 +169,28 @@ export const Rankings: React.FC = () => {
       return;
     }
 
+    const rank = sortedPlayers.findIndex((p) => p.id === player.id) + 1;
+
     // Convert player to opponent format
     const opponent = {
       id: player.id,
       name: player.username || 'Unknown Fighter',
-      nickname: `Rank #${sortedPlayers.findIndex((p) => p.id === player.id) + 1}`,
+      nickname: player.nickname ?? `Rank #${rank}`,
       record: {
-        wins: player.wins || 0,
+        wins:   player.wins   || 0,
         losses: player.losses || 0,
-        draws: player.draws || 0,
+        draws:  player.draws  || 0,
       },
       stats: {
-        strength: 50,
-        speed: 50,
-        cardio: 50,
-        striking: 50,
+        strength:  50,
+        speed:     50,
+        cardio:    50,
+        striking:  50,
         grappling: 50,
       },
-      level: player.level || 1,
-      avatar: '🥊',
-      health: 100,
+      level:     player.level || 1,
+      avatar:    player.avatarEmoji ?? '🥊',
+      health:    100,
       maxHealth: 100,
     };
 
@@ -289,15 +318,20 @@ export const Rankings: React.FC = () => {
 
                   {/* Fighter Info */}
                   <div className="md:col-span-2 flex items-center gap-3">
-                    <span className="text-2xl">🥊</span>
+                    <span className="text-2xl">{player.avatarEmoji ?? '🥊'}</span>
                     <div>
-                      <div className="font-bold text-white">
+                      <div className="font-bold text-white flex items-center gap-2">
                         {player.username}
                         {isCurrentPlayer && (
-                          <span className="ml-2 text-neon-green text-xs font-semibold">({t('you').toUpperCase()})</span>
+                          <span className="text-neon-green text-xs font-semibold">({t('you').toUpperCase()})</span>
+                        )}
+                        {player.isAI && (
+                          <span className="px-1.5 py-0.5 bg-purple-900/60 border border-purple-500/40 text-purple-300 text-[9px] font-bold uppercase tracking-widest rounded">AI</span>
                         )}
                       </div>
-                      <div className="text-gray-400 text-sm">Lv. {level}</div>
+                      {player.nickname && (
+                        <div className="text-gray-500 text-xs italic">"{player.nickname}"</div>
+                      )}
                     </div>
                   </div>
 

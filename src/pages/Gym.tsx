@@ -114,9 +114,11 @@ const ExerciseCard: React.FC<{
   currentEnergy: number;
   currentStats: Partial<Record<keyof DetailedFighterStats, number>>;
   currentSkillPoints: number;
+  totalTrainingSessions: number;
+  fighterLevel: number;
   fighterId: string;
   onTrainingDone: (result: TrainingResult, exerciseName: string) => void;
-}> = ({ exercise, currentEnergy, currentStats, currentSkillPoints, fighterId, onTrainingDone }) => {
+}> = ({ exercise, currentEnergy, currentStats, currentSkillPoints, totalTrainingSessions, fighterLevel, fighterId, onTrainingDone }) => {
   const [loading, setLoading] = useState(false);
   const catCfg  = CATEGORY_CONFIG[exercise.category];
   const tierCfg = TIER_CONFIG[exercise.tier];
@@ -126,7 +128,15 @@ const ExerciseCard: React.FC<{
     if (loading || !canAfford) return;
     setLoading(true);
     try {
-      const result = await performTraining(fighterId, exercise.id, currentEnergy, currentStats, currentSkillPoints);
+      const result = await performTraining(
+        fighterId,
+        exercise.id,
+        currentEnergy,
+        currentStats,
+        currentSkillPoints,
+        totalTrainingSessions,
+        fighterLevel,
+      );
       onTrainingDone(result, exercise.name);
     } finally {
       setLoading(false);
@@ -237,10 +247,12 @@ export const Gym: React.FC = () => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  const currentEnergy      = Math.ceil(fighter?.currentEnergy ?? 0);
-  const currentStats       = (fighter?.detailedStats ?? {}) as Partial<Record<keyof DetailedFighterStats, number>>;
-  const currentSkillPoints = fighter?.skill_points ?? 0;
-  const fighterId          = fighter?.id ?? '';
+  const currentEnergy           = Math.ceil(fighter?.currentEnergy ?? 0);
+  const currentStats            = (fighter?.detailedStats ?? {}) as Partial<Record<keyof DetailedFighterStats, number>>;
+  const currentSkillPoints      = fighter?.skill_points ?? 0;
+  const totalTrainingSessions   = (fighter as any)?.total_training_sessions ?? 0;
+  const fighterLevel            = fighter?.level ?? 1;
+  const fighterId               = fighter?.id ?? '';
 
   return (
     <div className="relative p-6 min-h-screen">
@@ -427,6 +439,8 @@ export const Gym: React.FC = () => {
                       currentEnergy={currentEnergy}
                       currentStats={currentStats}
                       currentSkillPoints={currentSkillPoints}
+                      totalTrainingSessions={totalTrainingSessions}
+                      fighterLevel={fighterLevel}
                       fighterId={fighterId}
                       onTrainingDone={handleTrainingDone}
                     />

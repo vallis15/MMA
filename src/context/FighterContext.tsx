@@ -318,18 +318,20 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
     }
 
     const updateData = {
-      striking: updates.stats?.striking ?? fighter.stats.striking,
-      grappling: updates.stats?.grappling ?? fighter.stats.grappling,
-      speed: updates.stats?.speed ?? fighter.stats.speed,
-      strength: updates.stats?.strength ?? fighter.stats.strength,
-      cardio: updates.stats?.cardio ?? fighter.stats.cardio,
-      energy: updates.currentEnergy ?? fighter.currentEnergy,
-      wins: updates.record?.wins ?? fighter.record.wins,
-      losses: updates.record?.losses ?? fighter.record.losses,
-      draws: updates.record?.draws ?? fighter.record.draws,
-      reputation: updates.reputation ?? fighter.reputation,
-      level: updates.level ?? fighter.level,
-      updated_at: new Date().toISOString(),
+      striking:    updates.stats?.striking   ?? fighter.stats.striking,
+      grappling:   updates.stats?.grappling  ?? fighter.stats.grappling,
+      speed:       updates.stats?.speed      ?? fighter.stats.speed,
+      strength:    updates.stats?.strength   ?? fighter.stats.strength,
+      cardio:      updates.stats?.cardio     ?? fighter.stats.cardio,
+      energy:      updates.currentEnergy     ?? fighter.currentEnergy,
+      wins:        updates.record?.wins      ?? fighter.record.wins,
+      losses:      updates.record?.losses    ?? fighter.record.losses,
+      draws:       updates.record?.draws     ?? fighter.record.draws,
+      reputation:  updates.reputation        ?? fighter.reputation,
+      level:       updates.level             ?? fighter.level,
+      experience:  updates.experience        ?? fighter.experience,
+      nickname:    updates.nickname          ?? fighter.nickname,
+      updated_at:  new Date().toISOString(),
     };
 
     console.log('🔵 [FIGHTER UPDATE] Updating profile ID:', user.id);
@@ -720,20 +722,28 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
 
     if (!user) return { success: false, message: 'Not authenticated.' };
 
-    const newUnlocked = [...fighter.unlocked_skills, skillId];
+    // Ověř, že hráč má alespoň 1 skill point k útratě
+    if ((fighter.skill_points ?? 0) < 1) {
+      return { success: false, message: 'Not enough skill points. Keep training!' };
+    }
+
+    const newUnlocked   = [...fighter.unlocked_skills, skillId];
+    const newSP         = (fighter.skill_points ?? 0) - 1;
 
     // Optimistic local update first for instant UI feedback
     setFighter(prev => ({
       ...prev,
       unlocked_skills: newUnlocked,
+      skill_points:    newSP,
     }));
 
-    console.log('🔵 [SKILL] Unlocking skill:', skillId);
+    console.log('🔵 [SKILL] Unlocking skill:', skillId, '| remaining SP:', newSP);
 
     const { error } = await supabase
       .from('profiles')
       .update({
         unlocked_skills: newUnlocked,
+        skill_points:    newSP,
         updated_at:      new Date().toISOString(),
       })
       .eq('id', user.id);
@@ -744,12 +754,13 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
       setFighter(prev => ({
         ...prev,
         unlocked_skills: fighter.unlocked_skills,
+        skill_points:    fighter.skill_points,
       }));
       return { success: false, message: 'Failed to save skill – please try again.' };
     }
 
-    console.log('✅ [SKILL] Skill unlocked and persisted:', skillId);
-    return { success: true, message: `Skill unlocked!` };
+    console.log('✅ [SKILL] Skill unlocked and persisted:', skillId, '| SP remaining:', newSP);
+    return { success: true, message: 'Skill unlocked!' };
   };
 
   const resetCareer = () => {

@@ -1243,51 +1243,108 @@ export const Arena: React.FC = () => {
     const currentFighter = fighterRef.current;
     if (currentFighter) {
       // ── Dynamic energy cost based on fight difficulty ──────────────────────
-      // Player zone HP at fight end (refs are always fresh)
       const totalPlayerHPLeft = playerHSRef.current.head + playerHSRef.current.body + playerHSRef.current.legs;
-      const hpLostFraction = (300 - totalPlayerHPLeft) / 300; // 0.0 = untouched, 1.0 = destroyed
+      const hpLostFraction = (300 - totalPlayerHPLeft) / 300;
 
-      // Base energy costs per outcome, scaled by damage taken
       let energyCost: number;
       const isKO = method.includes('Knockout') || method.includes('TKO') || method.includes('Submission');
       if (finalWinner === 'player') {
-        // Easy win (little damage taken) → ~20; survived a brutal war win → ~55
         energyCost = Math.round(20 + hpLostFraction * 55);
         if (isKO) energyCost = Math.min(55, Math.round(energyCost * 1.1));
       } else if (finalWinner === 'opponent') {
-        // Loss: always heavier; got finished hard → up to 80
         energyCost = Math.round(45 + hpLostFraction * 45);
         if (isKO) energyCost = Math.min(80, Math.round(energyCost * 1.2));
       } else {
-        // Draw: moderate
         energyCost = Math.round(30 + hpLostFraction * 30);
       }
-      // Hard cap 15–80
       energyCost = Math.max(15, Math.min(80, energyCost));
 
-      const energyAfter = Math.max(0, currentFighter.currentEnergy - energyCost);
+      const energyAfter    = Math.max(0, currentFighter.currentEnergy - energyCost);
+      const xpGain         = 50 + roundStatsRef.current.playerDamage;
+      const reputationGain = finalWinner === 'player'
+        ? 10 + roundStatsRef.current.playerHits * 2
+        : finalWinner === 'draw' ? 2 : 0;
 
-      // Use roundStatsRef (not stale state) for XP/rep
-      const xpGain = 50 + roundStatsRef.current.playerDamage;
-      const reputationGain = 10 + roundStatsRef.current.playerHits * 2;
+      // ── Determine method category for stats ───────────────────────────────
+      const methodCat: 'ko' | 'submission' | 'decision' =
+        method.toLowerCase().includes('submission') ? 'submission' :
+        (method.includes('Knockout') || method.includes('TKO')) ? 'ko' : 'decision';
+
+      // ── Build profile update payload ──────────────────────────────────────
+      const profileUpdate: Record<string, unknown> = {
+        energy:              energyAfter,
+        experience:          (currentFighter.experience || 0) + xpGain,
+        total_fights:        (currentFighter.record.wins + currentFighter.record.losses + currentFighter.record.draws) + 1,
+        total_damage_dealt:  roundStatsRef.current.playerDamage,
+        total_damage_taken:  roundStatsRef.current.opponentDamage,
+        total_hits_landed:   roundStatsRef.current.playerHits,
+        last_fight_at:       new Date().toISOString(),
+        updated_at:          new Date().toISOString(),
+      };
 
       if (finalWinner === 'player') {
-        supabase.from('profiles').update({
-          wins: (currentFighter.record.wins || 0) + 1,
-          reputation: (currentFighter.reputation || 0) + reputationGain,
-          experience: (currentFighter.experience || 0) + xpGain,
-          energy: energyAfter,
-        }).eq('id', currentFighter.id).then(() => reloadFighter());
+        profileUpdate.wins         = (currentFighter.record.wins || 0) + 1;
+        profileUpdate.reputation   = (currentFighter.reputation || 0) + reputationGain;
+        if (methodCat === 'ko')          profileUpdate.wins_by_ko         = 1;
+        else if (methodCat === 'submission') profileUpdate.wins_by_submission = 1;
+        else                             profileUpdate.wins_by_decision   = 1;
       } else if (finalWinner === 'opponent') {
-        supabase.from('profiles').update({
-          losses: (currentFighter.record.losses || 0) + 1,
-          energy: energyAfter,
-        }).eq('id', currentFighter.id).then(() => reloadFighter());
+        profileUpdate.losses       = (currentFighter.record.losses || 0) + 1;
+        if (methodCat === 'ko')          profileUpdate.losses_by_ko         = 1;
+        else if (methodCat === 'submission') profileUpdate.losses_by_submission = 1;
+        else                             profileUpdate.losses_by_decision   = 1;
       } else {
-        supabase.from('profiles').update({
-          draws: (currentFighter.record.draws || 0) + 1,
-          energy: energyAfter,
-        }).eq('id', currentFighter.id).then(() => reloadFighter());
+        profileUpdate.draws        = (currentFighter.record.draws || 0) + 1;
+      }
+
+      // ── Write profile update ──────────────────────────────────────────────
+      supabase
+        .from('profiles')
+        .update(profileUpdate)
+        .eq('id', currentFighter.id)
+        .then(() => reloadFighter());
+
+      // ── Insert fight_history row ──────────────────────────────────────────
+      const opponentRef = selectedOpponent;
+      if (opponentRef) {
+        const isAIOpponent = opponentRef.id.startsWith('ai_');
+        supabase
+          .from('fight_history')
+          .insert({
+            fighter_id:          currentFighter.id,
+            opponent_id:         isAIOpponent ? null : opponentRef.id,
+            opponent_name:       opponentRef.name,
+            opponent_nickname:   opponentRef.nickname ?? null,
+            result:              finalWinner === 'player' ? 'win' : finalWinner === 'opponent' ? 'loss' : 'draw',
+            method,
+            method_category:     methodCat,
+            rounds_completed:    currentRoundRef.current,
+            damage_dealt:        roundStatsRef.current.playerDamage,
+            damage_taken:        roundStatsRef.current.opponentDamage,
+            hits_landed:         roundStatsRef.current.playerHits,
+            hits_received:       roundStatsRef.current.opponentHits,
+            energy_cost:         energyCost,
+            reputation_gain:     reputationGain,
+            xp_gain:             xpGain,
+            fighter_level:       currentFighter.level,
+            fighter_reputation:  currentFighter.reputation,
+            // Fighter stats snapshot
+            snap_strength:   currentFighter.stats?.strength  ?? null,
+            snap_speed:      currentFighter.stats?.speed     ?? null,
+            snap_cardio:     currentFighter.stats?.cardio    ?? null,
+            snap_striking:   currentFighter.stats?.striking  ?? null,
+            snap_grappling:  currentFighter.stats?.grappling ?? null,
+            // Opponent stats snapshot
+            opp_snap_strength:   opponentRef.stats?.strength  ?? null,
+            opp_snap_speed:      opponentRef.stats?.speed     ?? null,
+            opp_snap_cardio:     opponentRef.stats?.cardio    ?? null,
+            opp_snap_striking:   opponentRef.stats?.striking  ?? null,
+            opp_snap_grappling:  opponentRef.stats?.grappling ?? null,
+          })
+          .then(({ error: insErr }) => {
+            if (insErr) console.error('❌ [FIGHT HISTORY] Insert error:', insErr.message);
+            else console.log('✅ [FIGHT HISTORY] Fight saved to history');
+          });
       }
     }
   };
