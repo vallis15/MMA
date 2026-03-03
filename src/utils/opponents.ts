@@ -12,7 +12,6 @@ const OPPONENT_POOL: Omit<AIFighter, 'id'>[] = [
       striking: 78,
       grappling: 72,
     },
-    level: 5,
     avatar: '🐻',
   },
   {
@@ -26,7 +25,6 @@ const OPPONENT_POOL: Omit<AIFighter, 'id'>[] = [
       striking: 85,
       grappling: 65,
     },
-    level: 4,
     avatar: '🐉',
   },
   {
@@ -40,7 +38,6 @@ const OPPONENT_POOL: Omit<AIFighter, 'id'>[] = [
       striking: 72,
       grappling: 78,
     },
-    level: 5,
     avatar: '⚙️',
   },
   {
@@ -54,7 +51,6 @@ const OPPONENT_POOL: Omit<AIFighter, 'id'>[] = [
       striking: 80,
       grappling: 70,
     },
-    level: 4,
     avatar: '❄️',
   },
   {
@@ -68,7 +64,6 @@ const OPPONENT_POOL: Omit<AIFighter, 'id'>[] = [
       striking: 81,
       grappling: 80,
     },
-    level: 6,
     avatar: '🌊',
   },
   {
@@ -82,7 +77,6 @@ const OPPONENT_POOL: Omit<AIFighter, 'id'>[] = [
       striking: 79,
       grappling: 68,
     },
-    level: 3,
     avatar: '🔥',
   },
 ];

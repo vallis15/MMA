@@ -15,13 +15,12 @@ interface DatabasePlayer {
   wins?: number;
   losses?: number;
   draws?: number;
-  level?: number;
   nickname?: string;
   avatarEmoji?: string;
   isAI?: boolean;
 }
 
-type SortBy = 'reputation' | 'wins' | 'level';
+type SortBy = 'reputation' | 'wins';
 
 export const Rankings: React.FC = () => {
   const { fighter, resetCareer } = useFighter();
@@ -45,11 +44,11 @@ export const Rankings: React.FC = () => {
         const [playersRes, aiRes] = await Promise.all([
           supabase
             .from('profiles')
-            .select('id, username, reputation, wins, losses, draws, level, nickname')
+            .select('id, username, reputation, wins, losses, draws, nickname')
             .order('reputation', { ascending: false }),
           supabase
             .from('leaderboard_fighters')
-            .select('id, name, nickname, avatar_emoji, reputation, wins, losses, draws, level')
+            .select('id, name, nickname, avatar_emoji, reputation, wins, losses, draws')
             .eq('is_active', true),
         ]);
 
@@ -69,7 +68,6 @@ export const Rankings: React.FC = () => {
             wins:       p.wins ?? 0,
             losses:     p.losses ?? 0,
             draws:      p.draws ?? 0,
-            level:      p.level ?? 1,
             nickname:   p.nickname ?? undefined,
             isAI:       false,
           }));
@@ -81,7 +79,6 @@ export const Rankings: React.FC = () => {
           wins:        ai.wins ?? 0,
           losses:      ai.losses ?? 0,
           draws:       ai.draws ?? 0,
-          level:       ai.level ?? 1,
           nickname:    ai.nickname ?? undefined,
           avatarEmoji: ai.avatar_emoji ?? '🥊',
           isAI:        true,
@@ -111,8 +108,6 @@ export const Rankings: React.FC = () => {
       sorted.sort((a, b) => (b.reputation ?? 0) - (a.reputation ?? 0));
     } else if (sortBy === 'wins') {
       sorted.sort((a, b) => (b.wins ?? 0) - (a.wins ?? 0));
-    } else if (sortBy === 'level') {
-      sorted.sort((a, b) => (b.level ?? 0) - (a.level ?? 0));
     }
 
     return sorted;
@@ -153,10 +148,6 @@ export const Rankings: React.FC = () => {
     return `${((w / total) * 100).toFixed(1)}%`;
   };
 
-  const calculateLevel = (reputation?: number) => {
-    return Math.floor((reputation ?? 0) / 100) + 1;
-  };
-
   const handleChallenge = (player: DatabasePlayer) => {
     // Safety check: can't challenge yourself
     if (fighter && player.username === fighter.name) {
@@ -188,7 +179,6 @@ export const Rankings: React.FC = () => {
         striking:  50,
         grappling: 50,
       },
-      level:     player.level || 1,
       avatar:    player.avatarEmoji ?? '🥊',
       health:    100,
       maxHealth: 100,
@@ -227,7 +217,7 @@ export const Rankings: React.FC = () => {
 
         {/* Sort Controls */}
         <div className="flex flex-wrap gap-2">
-          {(['reputation', 'wins', 'level'] as const).map((sort) => (
+          {(['reputation', 'wins'] as const).map((sort) => (
             <motion.button
               key={sort}
               onClick={() => setSortBy(sort)}
@@ -241,7 +231,6 @@ export const Rankings: React.FC = () => {
             >
               {sort === 'reputation' && t('sort_by_reputation')}
               {sort === 'wins' && t('sort_by_wins')}
-              {sort === 'level' && t('sort_by_level')}
             </motion.button>
           ))}
         </div>
@@ -277,13 +266,12 @@ export const Rankings: React.FC = () => {
           className="space-y-0 rounded-2xl overflow-hidden glass-card-premium border border-dark-secondary/30"
         >
           {/* Header Row */}
-          <div className="bg-dark-secondary/40 grid grid-cols-1 md:grid-cols-8 gap-4 p-4 font-bold text-gray-400 text-xs uppercase tracking-widest sticky top-0 z-10 backdrop-blur-sm">
+          <div className="bg-dark-secondary/40 grid grid-cols-1 md:grid-cols-7 gap-4 p-4 font-bold text-gray-400 text-xs uppercase tracking-widest sticky top-0 z-10 backdrop-blur-sm">
             <div className="md:col-span-1 text-center">{t('rank')}</div>
             <div className="md:col-span-2">{t('fighter')}</div>
             <div className="text-right">{t('reputation')}</div>
             <div className="text-right">{t('record')}</div>
             <div className="text-right">{t('win_rate')}</div>
-            <div className="text-right">{t('level')}</div>
             <div className="text-center">{t('action')}</div>
           </div>
 
@@ -295,19 +283,18 @@ export const Rankings: React.FC = () => {
             </div>
           ) : (
             sortedPlayers.map((player, index) => {
-              const isCurrentPlayer = fighter && fighter.name === player.username;
+              const isCurrentPlayer = !!(fighter && fighter.name === player.username);
               const wins = player.wins ?? 0;
               const losses = player.losses ?? 0;
               const draws = player.draws ?? 0;
               const reputation = player.reputation ?? 0;
-              const level = player.level ?? calculateLevel(reputation);
               const league = getLeagueFromReputation(reputation);
 
               return (
                 <motion.div
                   key={player.id}
                   variants={rowVariants}
-                  className={`grid grid-cols-1 md:grid-cols-8 gap-4 p-4 border-t border-dark-secondary/30 transition-all table-row-stripe ${getRowHighlight(
+                  className={`grid grid-cols-1 md:grid-cols-7 gap-4 p-4 border-t border-dark-secondary/30 transition-all table-row-stripe ${getRowHighlight(
                     isCurrentPlayer
                   )}`}
                 >
@@ -354,11 +341,6 @@ export const Rankings: React.FC = () => {
                     <span className="text-yellow-400 font-semibold">
                       {getWinRate(wins, losses, draws)}
                     </span>
-                  </div>
-
-                  {/* Level */}
-                  <div className="text-right">
-                    <span className="text-blue-400 font-bold">Lv. {level}</span>
                   </div>
 
                   {/* Challenge Button */}

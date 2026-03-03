@@ -20,9 +20,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard', onTab
     { id: 'dashboard', icon: Home, path: '/' },
     { id: 'profile', icon: UserCog, path: '/profile' },
     { id: 'gym', icon: Dumbbell, path: '/gym' },
+    { id: 'skills', icon: GitBranch, path: '/skills' },
     { id: 'arena', icon: Zap, path: '/arena' },
     { id: 'rankings', icon: Trophy, path: '/rankings' },
-    { id: 'skills', icon: GitBranch, path: '/skills' },
   ];
 
   const handleNavClick = (itemId: string, path: string) => {

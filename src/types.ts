@@ -59,7 +59,6 @@ export interface Fighter {
   detailedStats?: DetailedFighterStats;
   currentEnergy: number;
   maxEnergy: number;
-  level: number;
   experience: number;
   reputation: number;
   health: number;
@@ -77,7 +76,6 @@ export interface AIFighter {
   nickname: string;
   record: FighterRecord;
   stats: FighterStats;
-  level?: number;
   avatar: string;
   health?: number;
   maxHealth?: number;
@@ -89,7 +87,6 @@ export interface LeaderboardEntry {
   nickname: string;
   record: FighterRecord;
   reputation: number;
-  level: number;
   league: 'Amateur' | 'Regional Pro' | 'MMA Legend';
   avatarEmoji?: string;
   isPlayer?: boolean;
@@ -164,6 +161,8 @@ export interface TrainingDrill {
 
 export interface FighterContextType {
   fighter: Fighter | null;
+  /** True while the fighter profile is being fetched from Supabase after login. */
+  fighterLoading: boolean;
   /** DetailedFighterStats with all passive skill bonuses applied. */
   enhancedDetailedStats: DetailedFighterStats | null;
   timeSinceLastRegen?: number;

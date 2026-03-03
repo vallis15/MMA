@@ -41,7 +41,6 @@ export const performTraining = async (
   currentStats: Partial<Record<keyof DetailedFighterStats, number>>,
   currentSkillPoints: number = 0,
   currentTotalSessions: number = 0,
-  fighterLevel: number = 1,
 ): Promise<TrainingResult> => {
   const exercise: GymExercise | undefined = GYM_EXERCISES.find(e => e.id === exerciseId);
 
@@ -105,7 +104,6 @@ export const performTraining = async (
       money_cost:           exercise.moneyCost,
       stat_changes:         exercise.statChanges,
       skill_point_awarded:  awardSkillPoint,
-      fighter_level:        fighterLevel,
     });
 
   if (logErr) {

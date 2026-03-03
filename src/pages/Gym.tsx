@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dumbbell, Zap, Star, TrendingUp, TrendingDown, CheckCircle, XCircle } from 'lucide-react';
+import { Dumbbell, Zap, TrendingUp, TrendingDown, CheckCircle, XCircle } from 'lucide-react';
 import { useFighter } from '../context/FighterContext';
 import { useLanguage } from '../context/LanguageContext';
 import { GYM_EXERCISES, GymExercise, ExerciseCategory, ExerciseTier } from '../data/gymExercises';
@@ -115,10 +115,9 @@ const ExerciseCard: React.FC<{
   currentStats: Partial<Record<keyof DetailedFighterStats, number>>;
   currentSkillPoints: number;
   totalTrainingSessions: number;
-  fighterLevel: number;
   fighterId: string;
   onTrainingDone: (result: TrainingResult, exerciseName: string) => void;
-}> = ({ exercise, currentEnergy, currentStats, currentSkillPoints, totalTrainingSessions, fighterLevel, fighterId, onTrainingDone }) => {
+}> = ({ exercise, currentEnergy, currentStats, currentSkillPoints, totalTrainingSessions, fighterId, onTrainingDone }) => {
   const [loading, setLoading] = useState(false);
   const catCfg  = CATEGORY_CONFIG[exercise.category];
   const tierCfg = TIER_CONFIG[exercise.tier];
@@ -135,7 +134,6 @@ const ExerciseCard: React.FC<{
         currentStats,
         currentSkillPoints,
         totalTrainingSessions,
-        fighterLevel,
       );
       onTrainingDone(result, exercise.name);
     } finally {
@@ -251,7 +249,6 @@ export const Gym: React.FC = () => {
   const currentStats            = (fighter?.detailedStats ?? {}) as Partial<Record<keyof DetailedFighterStats, number>>;
   const currentSkillPoints      = fighter?.skill_points ?? 0;
   const totalTrainingSessions   = (fighter as any)?.total_training_sessions ?? 0;
-  const fighterLevel            = fighter?.level ?? 1;
   const fighterId               = fighter?.id ?? '';
 
   return (
@@ -289,7 +286,7 @@ export const Gym: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
-            className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8"
+            className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8"
           >
             {/* Energy */}
             <div className="glass-card-premium rounded-xl p-4 border border-cyan-500/30 bg-cyan-900/10">
@@ -306,15 +303,6 @@ export const Gym: React.FC = () => {
                   transition={{ duration: 0.6 }}
                 />
               </div>
-            </div>
-
-            {/* Level */}
-            <div className="glass-card-premium rounded-xl p-4 border border-neon-green/30 bg-green-900/10">
-              <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1">{t('level') ?? 'Level'}</p>
-              <span className="text-2xl font-black text-neon-green flex items-center gap-1">
-                <Star size={16} />
-                {fighter?.level ?? 1}
-              </span>
             </div>
 
             {/* Reputation */}
@@ -440,7 +428,6 @@ export const Gym: React.FC = () => {
                       currentStats={currentStats}
                       currentSkillPoints={currentSkillPoints}
                       totalTrainingSessions={totalTrainingSessions}
-                      fighterLevel={fighterLevel}
                       fighterId={fighterId}
                       onTrainingDone={handleTrainingDone}
                     />

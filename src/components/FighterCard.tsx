@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Trophy, TrendingUp } from 'lucide-react';
+import { Zap, Trophy } from 'lucide-react';
 import { Fighter } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { StatBar } from './StatBar';
@@ -14,12 +14,6 @@ export const FighterCard: React.FC<FighterCardProps> = ({ fighter }) => {
   const { t } = useLanguage();
   const totalWins = fighter.record.wins + fighter.record.losses + fighter.record.draws;
   const winRate = totalWins > 0 ? ((fighter.record.wins / totalWins) * 100).toFixed(1) : 0;
-
-  // Calculate XP progress to next level
-  const expPerLevel = 100;
-  const currentLevelExp = (fighter.level - 1) * expPerLevel;
-  const nextLevelExp = fighter.level * expPerLevel;
-  const levelProgress = ((fighter.experience - currentLevelExp) / (nextLevelExp - currentLevelExp)) * 100;
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -96,24 +90,11 @@ export const FighterCard: React.FC<FighterCardProps> = ({ fighter }) => {
         </div>
       </motion.div>
 
-      {/* Energy & Level Section */}
+      {/* Energy & Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {/* Energy */}
         <motion.div variants={itemVariants} className="md:col-span-2">
           <EnergyBar />
-        </motion.div>
-
-        {/* Level & XP */}
-        <motion.div variants={itemVariants} className="bg-dark-secondary border border-neon-green/30 rounded-lg p-6 shadow-lg shadow-neon-green/10">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={24} className="text-neon-green" />
-            <h3 className="text-lg font-bold text-neon-green">{t('level_number').replace('{level}', fighter.level.toString())}</h3>
-          </div>
-          <StatBar
-            label={t('level_progress_xp').replace('{xp}', (fighter.experience % 100).toString())}
-            value={Math.round(levelProgress)}
-            maxValue={100}
-          />
         </motion.div>
       </div>
 

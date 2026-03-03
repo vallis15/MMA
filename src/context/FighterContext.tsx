@@ -52,7 +52,6 @@ const createDefaultFighter = (): Fighter => ({
   },
   currentEnergy: 100,
   maxEnergy: 100,
-  level: 1,
   experience: 0,
   reputation: 0,
   health: 100,
@@ -69,6 +68,7 @@ interface FighterProviderProps {
 export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
   const [fighter, setFighter] = useState<Fighter>(createDefaultFighter());
+  const [fighterLoading, setFighterLoading] = useState(true);
   const [timeSinceLastRegen, setTimeSinceLastRegen] = useState<number>(0);
   
   // Track last manual update to prevent energy regen from overwriting it
@@ -91,11 +91,13 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
     if (!user || authLoading) {
       console.log('🔵 [FIGHTER LOAD] User not ready. user:', user, 'authLoading:', authLoading);
       setFighter(createDefaultFighter());
+      if (!authLoading) setFighterLoading(false);
       return;
     }
 
     console.log('🔵 [FIGHTER LOAD] User authenticated:', user.id);
 
+    setFighterLoading(true);
     const loadFighterFromSupabase = async () => {
       try {
         console.log('🔵 [FIGHTER LOAD] Querying Supabase for profile ID:', user.id);
@@ -174,7 +176,6 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
             },
             currentEnergy: data.energy || 100,
             maxEnergy: 100,
-            level: data.level || 1,
             experience: 0,
             reputation: data.reputation || 0,
             health: 100,
@@ -204,6 +205,7 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
 
           console.log('✅ [FIGHTER LOAD] Fighter object created:', fighterData);
           setFighter(fighterData);
+          setFighterLoading(false);
           saveEnergyTs(user.id, fighterData.currentEnergy);
 
           // Persist offline-recovered energy back to Supabase
@@ -220,10 +222,12 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
         } else {
           console.warn('⚠️ [FIGHTER LOAD] No data returned, using default fighter');
           setFighter(createDefaultFighter());
+          setFighterLoading(false);
         }
       } catch (error) {
         console.error('❌ [FIGHTER LOAD] Exception:', error);
         setFighter(createDefaultFighter());
+        setFighterLoading(false);
       }
     };
 
@@ -291,7 +295,6 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
           },
           currentEnergy: data.energy || 100,
           maxEnergy: 100,
-          level: data.level || 1,
           experience: fighter?.experience || 0,
           reputation: data.reputation || 0,
           health: 100,
@@ -328,7 +331,6 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
       losses:      updates.record?.losses    ?? fighter.record.losses,
       draws:       updates.record?.draws     ?? fighter.record.draws,
       reputation:  updates.reputation        ?? fighter.reputation,
-      level:       updates.level             ?? fighter.level,
       experience:  updates.experience        ?? fighter.experience,
       nickname:    updates.nickname          ?? fighter.nickname,
       updated_at:  new Date().toISOString(),
@@ -476,17 +478,10 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
   };
 
   const addExperience = (amount: number) => {
-    setFighter((prev) => {
-      const newExp = prev.experience + amount;
-      const expPerLevel = 100;
-      const newLevel = Math.floor(newExp / expPerLevel) + 1;
-
-      return {
-        ...prev,
-        experience: newExp,
-        level: newLevel,
-      };
-    });
+    setFighter((prev) => ({
+      ...prev,
+      experience: prev.experience + amount,
+    }));
   };
 
   const fight = (opponent: AIFighter): { success: boolean; message: string; result?: FightResult } => {
@@ -781,6 +776,7 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
 
   const value: FighterContextType = {
     fighter,
+    fighterLoading,
     enhancedDetailedStats,
     timeSinceLastRegen,
     updateFighterStats,

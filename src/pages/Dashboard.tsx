@@ -5,6 +5,7 @@ import { useFighter } from '../context/FighterContext';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { FighterInitialization } from '../components/FighterInitialization';
+import { LoadingScreen } from '../components/LoadingScreen';
 import { useNavigate } from 'react-router-dom';
 import { DetailedFighterStats } from '../types';
 
@@ -13,7 +14,7 @@ import { DetailedFighterStats } from '../types';
 const d10 = (v: number | undefined | null) => (typeof v === 'number' && !isNaN(v) ? v : 10);
 
 const avg = (vals: (number | undefined | null)[]) =>
-  Math.round(vals.reduce((s, v) => s + d10(v), 0) / vals.length);
+  Math.round(vals.reduce<number>((s, v) => s + d10(v), 0) / vals.length);
 
 const getIndices = (ds?: DetailedFighterStats) => ({
   striking: avg([
@@ -160,7 +161,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ label, value, max, color, bgClass
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export const Dashboard: React.FC = () => {
-  const { fighter, createFighter, reloadFighter } = useFighter();
+  const { fighter, createFighter, reloadFighter, fighterLoading } = useFighter();
   const { user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -200,6 +201,11 @@ export const Dashboard: React.FC = () => {
 
   const indices = getIndices(fighter?.detailedStats);
   const overallRating = Math.round((indices.striking + indices.grappling + indices.bjj + indices.physical) / 4);
+
+  // Show a themed loading screen while fighter profile is being fetched
+  if (fighterLoading) {
+    return <LoadingScreen message="Checking Fighter Profile..." />;
+  }
 
   const totalFights = (fighter?.record.wins ?? 0) + (fighter?.record.losses ?? 0) + (fighter?.record.draws ?? 0);
   const winRate = totalFights > 0 ? Math.round((fighter!.record.wins / totalFights) * 100) : 0;

@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Layout } from './components';
 import { Dashboard, Gym, Arena, Rankings, Registration, Login, AdminLogin, FighterProfile, SkillTree } from './pages';
 import { FighterProvider } from './context/FighterContext';
+import { FightProvider } from './context/FightContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
@@ -113,7 +114,9 @@ function App() {
         <AuthProvider>
           <NotificationProvider>
             <FighterProvider>
-              <AppContent />
+              <FightProvider>
+                <AppContent />
+              </FightProvider>
             </FighterProvider>
           </NotificationProvider>
         </AuthProvider>

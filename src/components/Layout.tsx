@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { Sidebar } from './Sidebar';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { CombatWidget } from './CombatWidget';
 
 interface LayoutProps {
   children: ReactNode;
@@ -62,6 +63,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
           {children}
         </motion.div>
       </motion.main>
+
+      {/* Persistent Combat Widget — visible across all routes except /arena */}
+      <CombatWidget />
     </div>
   );
 };
