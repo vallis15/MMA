@@ -111,6 +111,8 @@ export interface FightContextType {
   lastOpponentHitCategory: string | null;
   currentAttacker: 'player' | 'opponent' | null;
   roundStats: RoundResult;
+  /** Cumulative stats for the whole fight (never resets until fight ends). */
+  totalStats: RoundResult;
   activeSkillPopup: { skillName: string; logText: string; domain: SkillDomain } | null;
   selectedOpponent: AIFighter | null;
   shakeIntensity: number;
@@ -399,6 +401,7 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const isBattlingRef         = useRef(false);
   const currentRoundRef       = useRef(1);
   const roundStatsRef         = useRef<RoundResult>(defaultRoundStats());
+  const totalStatsRef          = useRef<RoundResult>(defaultRoundStats());
   const timerRef              = useRef<ReturnType<typeof setInterval> | null>(null);
   const pendingFinishTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skillPopupTimeoutRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -426,6 +429,7 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [lastOpponentHitCategory, setLastOpponentHitCategory] = useState<string | null>(null);
   const [currentAttacker,       setCurrentAttacker]       = useState<'player' | 'opponent' | null>(null);
   const [roundStats,            setRoundStats]            = useState<RoundResult>(defaultRoundStats());
+  const [totalStats,            setTotalStats]            = useState<RoundResult>(defaultRoundStats());
   const [activeSkillPopup, setActiveSkillPopup] = useState<{ skillName: string; logText: string; domain: SkillDomain } | null>(null);
   const [selectedOpponent, setSelectedOpponent] = useState<AIFighter | null>(null);
   const [shakeIntensity,        setShakeIntensity]        = useState(0);
@@ -473,9 +477,10 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     energyCost = Math.max(15, Math.min(80, energyCost));
 
     const energyAfter    = Math.max(0, currentFighter.currentEnergy - energyCost);
-    const xpGain         = 50 + roundStatsRef.current.playerDamage;
+    // XP and rep are based on total fight performance, not just last round
+    const xpGain         = 50 + totalStatsRef.current.playerDamage;
     const reputationGain = finalWinner === 'player'
-      ? 10 + roundStatsRef.current.playerHits * 2
+      ? 10 + totalStatsRef.current.playerHits * 2
       : finalWinner === 'draw' ? 2 : 0;
 
     const methodCat: 'ko' | 'submission' | 'decision' =
@@ -486,9 +491,9 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       energy:             energyAfter,
       experience:         (currentFighter.experience || 0) + xpGain,
       total_fights:       (currentFighter.record.wins + currentFighter.record.losses + currentFighter.record.draws) + 1,
-      total_damage_dealt: roundStatsRef.current.playerDamage,
-      total_damage_taken: roundStatsRef.current.opponentDamage,
-      total_hits_landed:  roundStatsRef.current.playerHits,
+      total_damage_dealt: totalStatsRef.current.playerDamage,
+      total_damage_taken: totalStatsRef.current.opponentDamage,
+      total_hits_landed:  totalStatsRef.current.playerHits,
       last_fight_at:      new Date().toISOString(),
       updated_at:         new Date().toISOString(),
     };
@@ -511,6 +516,36 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     supabase.from('profiles').update(profileUpdate).eq('id', currentFighter.id)
       .then(() => reloadFighter());
 
+    // ── Bug Fix #1: Update the real opponent's profile symmetrically ──────────
+    if (opponentRef && !opponentRef.id.startsWith('ai_')) {
+      const oppTotalFights =
+        (opponentRef.record?.wins ?? 0) +
+        (opponentRef.record?.losses ?? 0) +
+        (opponentRef.record?.draws ?? 0) + 1;
+      const oppUpdate: Record<string, unknown> = {
+        total_fights: oppTotalFights,
+        updated_at: new Date().toISOString(),
+      };
+      if (finalWinner === 'player') {
+        oppUpdate.losses = (opponentRef.record?.losses ?? 0) + 1;
+        if      (methodCat === 'ko')         oppUpdate.losses_by_ko         = 1;
+        else if (methodCat === 'submission') oppUpdate.losses_by_submission = 1;
+        else                                oppUpdate.losses_by_decision   = 1;
+      } else if (finalWinner === 'opponent') {
+        oppUpdate.wins = (opponentRef.record?.wins ?? 0) + 1;
+        if      (methodCat === 'ko')         oppUpdate.wins_by_ko         = 1;
+        else if (methodCat === 'submission') oppUpdate.wins_by_submission = 1;
+        else                                oppUpdate.wins_by_decision   = 1;
+      } else {
+        oppUpdate.draws = (opponentRef.record?.draws ?? 0) + 1;
+      }
+      supabase.from('profiles').update(oppUpdate).eq('id', opponentRef.id)
+        .then(({ error: oppErr }) => {
+          if (oppErr) console.error('❌ [OPPONENT UPDATE] Error:', oppErr.message);
+          else        console.log('✅ [OPPONENT UPDATE] Opponent profile updated symmetrically');
+        });
+    }
+
     if (opponentRef) {
       const isAIOpponent = opponentRef.id.startsWith('ai_');
       supabase.from('fight_history').insert({
@@ -522,10 +557,10 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         method,
         method_category:   methodCat,
         rounds_completed:  currentRoundRef.current,
-        damage_dealt:      roundStatsRef.current.playerDamage,
-        damage_taken:      roundStatsRef.current.opponentDamage,
-        hits_landed:       roundStatsRef.current.playerHits,
-        hits_received:     roundStatsRef.current.opponentHits,
+        damage_dealt:      totalStatsRef.current.playerDamage,
+        damage_taken:      totalStatsRef.current.opponentDamage,
+        hits_landed:       totalStatsRef.current.playerHits,
+        hits_received:     totalStatsRef.current.opponentHits,
         energy_cost:       energyCost,
         reputation_gain:   reputationGain,
         xp_gain:           xpGain,
@@ -559,8 +594,9 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     let finalWinner = winner;
     if (winner === 'judges') {
-      const ps = roundStatsRef.current.playerDamage + roundStatsRef.current.playerHits * 5;
-      const os = roundStatsRef.current.opponentDamage + roundStatsRef.current.opponentHits * 5;
+      // Use total fight stats for judges' scorecards, not just last round
+      const ps = totalStatsRef.current.playerDamage + totalStatsRef.current.playerHits * 5;
+      const os = totalStatsRef.current.opponentDamage + totalStatsRef.current.opponentHits * 5;
       finalWinner = ps > os ? 'player' : os > ps ? 'opponent' : 'draw';
     }
 
@@ -673,6 +709,7 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           opponentHSRef.current = { ...opponentHSRef.current, stamina: Math.min(100, opponentHSRef.current.stamina + 1)   }; setOpponentHS({ ...opponentHSRef.current });
 
           setRoundStats(stats => { const next = { ...stats, playerDamage: stats.playerDamage + effectiveDamage, playerHits: stats.playerHits + 1 }; roundStatsRef.current = next; return next; });
+          setTotalStats(t => { const next = { ...t, playerDamage: t.playerDamage + effectiveDamage, playerHits: t.playerHits + 1 }; totalStatsRef.current = next; return next; });
 
           if (newOppHS[tPart] <= 0 && !battleEndedRef.current) {
             battleEndedRef.current = true;
@@ -698,6 +735,7 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           playerHSRef.current   = { ...playerHSRef.current,   stamina: Math.min(100, playerHSRef.current.stamina   + 1)   }; setPlayerHS({ ...playerHSRef.current });
 
           setRoundStats(stats => { const next = { ...stats, opponentDamage: stats.opponentDamage + effectiveDamage, opponentHits: stats.opponentHits + 1 }; roundStatsRef.current = next; return next; });
+          setTotalStats(t => { const next = { ...t, opponentDamage: t.opponentDamage + effectiveDamage, opponentHits: t.opponentHits + 1 }; totalStatsRef.current = next; return next; });
 
           // on_low_health
           const playerTotalHP = newPlHS.head + newPlHS.body + newPlHS.legs;
@@ -887,6 +925,7 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setCurrentRound(r => { currentRoundRef.current = r + 1; return r + 1; });
     roundStatsRef.current = defaultRoundStats();
     setRoundStats(defaultRoundStats());
+    // NOTE: totalStatsRef is intentionally NOT reset here — it accumulates across all rounds
     setTimeRemaining(60);
     setFightPhase('STANDUP');
     setGroundAttackerName(null);
@@ -922,6 +961,7 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     fractureRef.current     = { player: false, opponent: false };
     currentRoundRef.current = 1;
     roundStatsRef.current   = defaultRoundStats();
+    totalStatsRef.current   = defaultRoundStats();
     if (pendingFinishTimeoutRef.current) { clearTimeout(pendingFinishTimeoutRef.current); pendingFinishTimeoutRef.current = null; }
 
     setSelectedOpponent(opponent);
@@ -964,6 +1004,7 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     battleEndedRef.current  = false;
     currentRoundRef.current = 1;
     roundStatsRef.current   = defaultRoundStats();
+    totalStatsRef.current   = defaultRoundStats();
 
     setPlayerHS({ ...resetHS });
     setOpponentHS({ ...resetHS });
@@ -978,6 +1019,7 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setShakeIntensity(0);
     setActiveSkillPopup(null);
     setRoundStats(defaultRoundStats());
+    setTotalStats(defaultRoundStats());
     setRoundBreak(false);
     setRoundBreakCountdown(5);
     roundBreakRef.current = false;
@@ -1008,6 +1050,7 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     lastOpponentHitCategory,
     currentAttacker,
     roundStats,
+    totalStats,
     activeSkillPopup,
     selectedOpponent,
     shakeIntensity,

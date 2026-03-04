@@ -77,7 +77,7 @@ export const Arena: React.FC = () => {
     isBattling, battleResult, playerHS, opponentHS, currentRound, timeRemaining,
     battleLog, fightPhase, groundAttackerName, groundTopFighter,
     lastPlayerHitPart, lastOpponentHitPart, lastPlayerHitCategory, lastOpponentHitCategory,
-    currentAttacker, roundStats, activeSkillPopup, selectedOpponent, shakeIntensity,
+    currentAttacker, roundStats, totalStats, activeSkillPopup, selectedOpponent, shakeIntensity,
     roundBreak, roundBreakCountdown,
     startBattle, resetFight,
   } = fight;
@@ -259,6 +259,7 @@ export const Arena: React.FC = () => {
               key="result"
               result={battleResult}
               roundStats={roundStats}
+              totalStats={totalStats}
               onReset={resetFight}
               t={t}
             />
@@ -274,6 +275,7 @@ export const Arena: React.FC = () => {
               battleLog={battleLog}
               battleLogRef={battleLogRef}
               roundStats={roundStats}
+              totalStats={totalStats}
               fightPhase={fightPhase}
               groundAttackerName={groundAttackerName}
               lastPlayerHitPart={lastPlayerHitPart}
@@ -319,6 +321,8 @@ interface BattleScreenProps {
   battleLog: BattleLogEntry[];
   battleLogRef: React.RefObject<HTMLDivElement>;
   roundStats: RoundResult;
+  /** Cumulative stats for the whole fight. */
+  totalStats: RoundResult;
   fightPhase: FightPhase;
   groundAttackerName: string | null;
   /** Paperdoll props */
@@ -345,6 +349,7 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
   battleLog,
   battleLogRef,
   roundStats,
+  totalStats,
   fightPhase,
   groundAttackerName,
   lastPlayerHitPart,
@@ -687,16 +692,25 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
           </div>
 
           {/* ROUND STATS */}
-          <div className="grid grid-cols-2 gap-3 glass-card rounded-2xl p-4">
-            <div className="text-center">
-              <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">{t('your_damage')}</p>
-              <p className="text-2xl font-bold text-neon-green">{roundStats.playerDamage}</p>
-              <p className="text-xs text-gray-400 mt-1">({roundStats.playerHits} {t('hits')})</p>
-            </div>
-            <div className="text-center">
-              <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">{t('opponent_damage')}</p>
-              <p className="text-2xl font-bold text-alert-red">{roundStats.opponentDamage}</p>
-              <p className="text-xs text-gray-400 mt-1">({roundStats.opponentHits} {t('hits')})</p>
+          <div className="glass-card rounded-2xl p-4">
+            <p className="text-[9px] font-black uppercase tracking-[0.25em] text-gray-500 mb-3 text-center">Round {currentRound} Stats</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">{t('your_damage')}</p>
+                <p className="text-2xl font-bold text-neon-green">{roundStats.playerDamage}</p>
+                <p className="text-xs text-gray-400 mt-0.5">({roundStats.playerHits} {t('hits')})</p>
+                <p className="text-[10px] text-gray-600 mt-1">
+                  Total: <span className="text-neon-green/60">{totalStats.playerDamage} dmg / {totalStats.playerHits} hits</span>
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">{t('opponent_damage')}</p>
+                <p className="text-2xl font-bold text-alert-red">{roundStats.opponentDamage}</p>
+                <p className="text-xs text-gray-400 mt-0.5">({roundStats.opponentHits} {t('hits')})</p>
+                <p className="text-[10px] text-gray-600 mt-1">
+                  Total: <span className="text-alert-red/60">{totalStats.opponentDamage} dmg / {totalStats.opponentHits} hits</span>
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -915,11 +929,12 @@ const LogEntry: React.FC<{ entry: BattleLogEntry }> = ({ entry }) => {
 interface ResultScreenProps {
   result: { winner: 'player' | 'opponent' | 'draw'; method: string };
   roundStats: RoundResult;
+  totalStats: RoundResult;
   onReset: () => void;
   t: (key: string) => string;
 }
 
-const ResultScreen: React.FC<ResultScreenProps> = ({ result, roundStats, onReset, t }) => {
+const ResultScreen: React.FC<ResultScreenProps> = ({ result, roundStats, totalStats, onReset, t }) => {
   const isVictory = result.winner === 'player';
   const isDraw = result.winner === 'draw';
 
@@ -950,13 +965,15 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ result, roundStats, onReset
       <div className="grid grid-cols-2 gap-8 mb-10 bg-gray-900/40 p-8 rounded-lg">
         <div>
           <p className="text-gray-400 uppercase tracking-wider text-sm mb-3">{t('your_damage')}</p>
-          <p className="text-4xl font-bold text-neon-green">{roundStats.playerDamage}</p>
-          <p className="text-sm text-gray-500 mt-2">({roundStats.playerHits} {t('hits')})</p>
+          <p className="text-4xl font-bold text-neon-green">{totalStats.playerDamage}</p>
+          <p className="text-sm text-gray-500 mt-2">({totalStats.playerHits} {t('hits')} total)</p>
+          <p className="text-xs text-gray-600 mt-1">Last round: {roundStats.playerDamage} dmg / {roundStats.playerHits} hits</p>
         </div>
         <div>
           <p className="text-gray-400 uppercase tracking-wider text-sm mb-3">{t('opponent_damage')}</p>
-          <p className="text-4xl font-bold text-alert-red">{roundStats.opponentDamage}</p>
-          <p className="text-sm text-gray-500 mt-2">({roundStats.opponentHits} {t('hits')})</p>
+          <p className="text-4xl font-bold text-alert-red">{totalStats.opponentDamage}</p>
+          <p className="text-sm text-gray-500 mt-2">({totalStats.opponentHits} {t('hits')} total)</p>
+          <p className="text-xs text-gray-600 mt-1">Last round: {roundStats.opponentDamage} dmg / {roundStats.opponentHits} hits</p>
         </div>
       </div>
 
