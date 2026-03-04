@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Bell, X, Swords, Shield, Atom, Brain, ChevronRight, Zap, Heart, Trophy, TrendingUp } from 'lucide-react';
+import { Plus, Bell, X, Swords, Shield, Atom, Brain, ChevronRight, Zap, Trophy, TrendingUp, Dumbbell, BookOpen } from 'lucide-react';
 import { useFighter } from '../context/FighterContext';
+import { ALL_SKILLS } from '../constants/skillTree';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { FighterInitialization } from '../components/FighterInitialization';
@@ -119,42 +120,170 @@ const IndexCard: React.FC<IndexCardProps> = ({
   </motion.div>
 );
 
-// ─── Big status bar ───────────────────────────────────────────────────────────
+// ─── Prominent Energy Banner ──────────────────────────────────────────────────
 
-interface StatusBarProps {
-  label: string;
-  value: number;
+interface EnergyBannerProps {
+  current: number;
   max: number;
-  color: string;
-  bgClass: string;
-  icon: React.ReactNode;
-  delay: number;
+  delay?: number;
 }
 
-const StatusBar: React.FC<StatusBarProps> = ({ label, value, max, color, bgClass, icon, delay }) => {
-  const pct = Math.min(100, Math.round((value / max) * 100));
+const EnergyBanner: React.FC<EnergyBannerProps> = ({ current, max, delay = 0.2 }) => {
+  const pct = Math.min(100, Math.round((current / max) * 100));
+  const isLow = pct <= 30;
+  const isMid = pct > 30 && pct <= 60;
+
+  const barColor = isLow
+    ? 'linear-gradient(90deg,#dc2626,#f87171)'
+    : isMid
+    ? 'linear-gradient(90deg,#d97706,#fbbf24)'
+    : 'linear-gradient(90deg,#eab308,#facc15,#fef08a)';
+
+  const glowColor = isLow ? 'rgba(220,38,38,0.4)' : isMid ? 'rgba(217,119,6,0.4)' : 'rgba(234,179,8,0.45)';
+  const borderColor = isLow ? 'border-red-500/40' : isMid ? 'border-yellow-600/40' : 'border-yellow-400/40';
+  const textColor = isLow ? 'text-red-400' : isMid ? 'text-yellow-400' : 'text-yellow-300';
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className={color}>{icon}</span>
-          <span className={`text-sm font-bold uppercase tracking-wider ${color}`}>{label}</span>
+    <motion.div
+      initial={{ opacity: 0, y: -12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay }}
+      className={`rounded-2xl border ${borderColor} bg-dark-secondary/80 backdrop-blur-sm p-5`}
+      style={{ boxShadow: `0 0 32px ${glowColor}` }}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2.5">
+          <motion.div
+            animate={{ scale: [1, 1.15, 1], opacity: [1, 0.8, 1] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            className={`text-2xl leading-none`}
+          >
+            ⚡
+          </motion.div>
+          <span className={`font-oswald font-bold text-lg uppercase tracking-widest ${textColor}`}>
+            Training Energy
+          </span>
+          <span className="text-[10px] text-gray-500 uppercase tracking-widest hidden sm:inline">
+            — used for Gym sessions
+          </span>
         </div>
-        <span className="text-sm font-black text-white">{Math.ceil(value)}<span className="text-gray-500 font-normal text-xs"> / {max}</span></span>
+        <div className="text-right">
+          <span className={`text-2xl font-black leading-none ${textColor}`}>{Math.ceil(current)}</span>
+          <span className="text-sm text-gray-500 font-normal"> / {max}</span>
+        </div>
       </div>
-      <div className={`h-4 rounded-full overflow-hidden ${bgClass}`}>
+
+      {/* Big glowing bar */}
+      <div className="h-6 rounded-full overflow-hidden bg-gray-900/80 relative">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
-          transition={{ duration: 1, delay, ease: 'easeOut' }}
+          transition={{ duration: 1.1, delay: delay + 0.1, ease: 'easeOut' }}
           className="h-full rounded-full relative"
-          style={{ background: color.includes('red') ? 'linear-gradient(90deg,#dc2626,#ef4444)' : 'linear-gradient(90deg,#d97706,#fbbf24)' }}
+          style={{
+            background: barColor,
+            boxShadow: `0 0 14px ${glowColor}`,
+          }}
         >
-          <div className="absolute inset-0 opacity-40"
-            style={{ background: 'linear-gradient(180deg,rgba(255,255,255,0.3) 0%,transparent 100%)' }} />
+          <div
+            className="absolute inset-0 rounded-full opacity-40"
+            style={{ background: 'linear-gradient(180deg,rgba(255,255,255,0.35) 0%,transparent 60%)' }}
+          />
+          {/* Animated shimmer */}
+          <motion.div
+            className="absolute inset-y-0 w-8 rounded-full opacity-30"
+            style={{ background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.6),transparent)' }}
+            animate={{ left: ['-8%', '110%'] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: 'linear', delay: 0.8 }}
+          />
         </motion.div>
+        <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-white/70 uppercase tracking-widest pointer-events-none">
+          {pct}%
+        </span>
       </div>
-    </div>
+
+      {isLow && (
+        <motion.p
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
+          className="mt-2 text-xs text-red-400 uppercase tracking-wider"
+        >
+          ⚠ Energy critically low — rest to recover
+        </motion.p>
+      )}
+    </motion.div>
+  );
+};
+
+// ─── Mastered Techniques / Unlocked Skills ────────────────────────────────────
+
+const DOMAIN_STYLES: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+  striking:  { bg: 'bg-red-950/60',     border: 'border-red-500/40',     text: 'text-red-300',    dot: 'bg-red-500' },
+  wrestling: { bg: 'bg-blue-950/60',    border: 'border-blue-500/40',    text: 'text-blue-300',   dot: 'bg-blue-500' },
+  bjj:       { bg: 'bg-purple-950/60',  border: 'border-purple-500/40',  text: 'text-purple-300', dot: 'bg-purple-500' },
+  defense:   { bg: 'bg-emerald-950/60', border: 'border-emerald-500/40', text: 'text-emerald-300',dot: 'bg-emerald-500' },
+};
+
+const DOMAIN_LABELS: Record<string, string> = {
+  striking: 'Striking',
+  wrestling: 'Wrestling',
+  bjj: 'BJJ',
+  defense: 'Defense',
+};
+
+interface MasteredTechniquesProps {
+  unlockedIds: string[];
+  delay?: number;
+}
+
+const MasteredTechniques: React.FC<MasteredTechniquesProps> = ({ unlockedIds, delay = 0.35 }) => {
+  const skills = unlockedIds
+    .map(id => ALL_SKILLS.find(s => s.id === id))
+    .filter((s): s is NonNullable<typeof s> => s !== undefined);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, delay }}
+      className="rounded-2xl border border-gray-700/50 bg-dark-secondary/70 p-5"
+    >
+      <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400 flex items-center gap-2 mb-4">
+        <BookOpen size={13} className="text-purple-400" />
+        Mastered Techniques
+        {skills.length > 0 && (
+          <span className="ml-auto text-purple-400 font-black text-xs">{skills.length}</span>
+        )}
+      </h3>
+
+      {skills.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 py-6 text-center">
+          <Dumbbell size={28} className="text-gray-700" />
+          <p className="text-sm text-gray-600 max-w-xs">
+            No techniques mastered yet.{' '}
+            <span className="text-gray-500">Visit the Gym and Skill Tree to begin.</span>
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {skills.map((skill, i) => {
+            const style = DOMAIN_STYLES[skill.domain] ?? DOMAIN_STYLES.defense;
+            return (
+              <motion.div
+                key={skill.id}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.25, delay: delay + i * 0.04 }}
+                title={`${DOMAIN_LABELS[skill.domain]} · ${skill.description?.slice(0, 80) ?? ''}`}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold uppercase tracking-wide cursor-default select-none ${style.bg} ${style.border} ${style.text}`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${style.dot}`} />
+                {skill.name}
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+    </motion.div>
   );
 };
 
@@ -313,6 +442,13 @@ export const Dashboard: React.FC = () => {
               </div>
             </motion.div>
 
+            {/* ── Energy Banner ──────────────────────────────────── */}
+            <EnergyBanner
+              current={fighter.currentEnergy}
+              max={fighter.maxEnergy}
+              delay={0.18}
+            />
+
             {/* ── 4 Index Hero Cards ──────────────────────────────── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <IndexCard
@@ -345,26 +481,11 @@ export const Dashboard: React.FC = () => {
               />
             </div>
 
-            {/* ── Fighter Status (HP + Energy) ────────────────────── */}
-            <motion.div
-              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.3 }}
-              className="rounded-2xl border border-gray-700/50 bg-dark-secondary/70 p-5 space-y-5"
-            >
-              <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400 flex items-center gap-2">
-                <Zap size={13} className="text-yellow-400" />
-                Fighter Status
-              </h3>
-              <StatusBar
-                label="Health" value={fighter.health ?? 100} max={fighter.maxHealth ?? 100}
-                color="text-red-400" bgClass="bg-red-950/60"
-                icon={<Heart size={14} />} delay={0.35}
-              />
-              <StatusBar
-                label="Energy / Stamina" value={fighter.currentEnergy} max={fighter.maxEnergy}
-                color="text-yellow-400" bgClass="bg-yellow-950/60"
-                icon={<Zap size={14} />} delay={0.45}
-              />
-            </motion.div>
+            {/* ── Mastered Techniques ──────────────────────────── */}
+            <MasteredTechniques
+              unlockedIds={fighter.unlocked_skills ?? []}
+              delay={0.32}
+            />
 
             {/* ── Quick Action ─────────────────────────────────────── */}
             <motion.div
