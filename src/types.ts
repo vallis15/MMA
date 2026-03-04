@@ -54,6 +54,8 @@ export interface Fighter {
   id: string;
   name: string;
   nickname: string;
+  /** ISO 3166-1 alpha-2 country code, e.g. "CZ", "US". Optional. */
+  country_code?: string;
   record: FighterRecord;
   stats: FighterStats;
   detailedStats?: DetailedFighterStats;

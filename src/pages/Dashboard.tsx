@@ -184,8 +184,7 @@ export const Dashboard: React.FC = () => {
     if (saved) { setAnnouncement(saved); setShowAnnouncement(true); }
   }, []);
 
-  const handleInitializationComplete = async (fighterName: string) => {
-    createFighter(fighterName, fighter?.nickname || 'The Champion');
+  const handleInitializationComplete = async (_fighterName: string) => {
     await reloadFighter();
     setShowInitialization(false);
   };
@@ -272,8 +271,18 @@ export const Dashboard: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <h1 className="text-3xl md:text-4xl font-oswald font-black text-white uppercase tracking-wide leading-none mb-1">
                     {fighter.name}
+                    {fighter.country_code && (
+                      <span className="ml-3 text-2xl md:text-3xl align-middle font-normal normal-case tracking-normal">
+                        ({fighter.country_code}){' '}
+                        {[...fighter.country_code.toUpperCase()].map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('')}
+                      </span>
+                    )}
                   </h1>
-                  <p className="text-alert-red font-bold italic text-sm mb-4">&ldquo;{fighter.nickname}&rdquo;</p>
+                  {fighter.nickname ? (
+                    <p className="text-alert-red font-bold italic text-sm mb-4">&ldquo;{fighter.nickname}&rdquo;</p>
+                  ) : (
+                    <p className="text-gray-600 italic text-sm mb-4">No nickname set</p>
+                  )}
                   <div className="flex flex-wrap gap-4">
                     {[
                       { label: 'Wins', val: fighter.record.wins, cls: 'text-neon-green' },

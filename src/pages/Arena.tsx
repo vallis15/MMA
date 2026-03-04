@@ -78,6 +78,7 @@ export const Arena: React.FC = () => {
     battleLog, fightPhase, groundAttackerName, groundTopFighter,
     lastPlayerHitPart, lastOpponentHitPart, lastPlayerHitCategory, lastOpponentHitCategory,
     currentAttacker, roundStats, activeSkillPopup, selectedOpponent, shakeIntensity,
+    roundBreak, roundBreakCountdown,
     startBattle, resetFight,
   } = fight;
 
@@ -282,6 +283,8 @@ export const Arena: React.FC = () => {
               currentAttacker={currentAttacker}
               groundTopFighter={groundTopFighter}
               activeSkillPopup={activeSkillPopup}
+              roundBreak={roundBreak}
+              roundBreakCountdown={roundBreakCountdown}
               t={t}
             />
           ) : (
@@ -326,6 +329,9 @@ interface BattleScreenProps {
   currentAttacker: 'player' | 'opponent' | null;
   groundTopFighter: 'player' | 'opponent' | null;
   activeSkillPopup: { skillName: string; logText: string; domain: SkillDomain } | null;
+  /** Inter-round break state */
+  roundBreak: boolean;
+  roundBreakCountdown: number;
   t: (key: string) => string;
 }
 
@@ -348,6 +354,8 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
   currentAttacker,
   groundTopFighter,
   activeSkillPopup,
+  roundBreak,
+  roundBreakCountdown,
   t,
 }) => {
   const isGround = fightPhase === 'GROUND';
@@ -363,8 +371,115 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="space-y-4"
+      className="space-y-4 relative"
     >
+      {/* ─── INTER-ROUND BREAK OVERLAY ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {roundBreak && (
+          <motion.div
+            key="round-break-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center"
+            style={{ background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(6px)' }}
+          >
+            {/* ROUND NUMBER banner */}
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+              className="text-center mb-8"
+            >
+              <p
+                className="text-[10px] font-black uppercase tracking-[0.4em] mb-3"
+                style={{ color: '#00e5ff88' }}
+              >
+                ● END OF ROUND {currentRound}
+              </p>
+              <div
+                className="text-[7rem] md:text-[10rem] font-black leading-none"
+                style={{
+                  fontFamily: 'Oswald, Impact, sans-serif',
+                  WebkitTextStroke: '2px #00e5ff',
+                  color: 'transparent',
+                  textShadow: '0 0 60px rgba(0,229,255,0.4)',
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                ROUND {currentRound + 1}
+              </div>
+              <p
+                className="text-[10px] font-black uppercase tracking-[0.4em] mt-4"
+                style={{ color: '#00e5ffaa' }}
+              >
+                BEGINS IN {roundBreakCountdown}s
+              </p>
+            </motion.div>
+
+            {/* Corner advice cards */}
+            <div className="flex gap-6 w-full max-w-2xl px-6">
+              <motion.div
+                initial={{ x: -40, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.25 }}
+                className="flex-1 rounded-2xl p-5 border"
+                style={{ border: '1px solid rgba(0,229,255,0.3)', background: 'rgba(0,229,255,0.06)' }}
+              >
+                <p className="text-[9px] font-black uppercase tracking-wider mb-2" style={{ color: '#00e5ffaa' }}>
+                  YOUR CORNER
+                </p>
+                <p className="text-white font-bold text-sm mb-1">{fighter.name}</p>
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  💧 Hydrate. Breathe deep. Watch for patterns — your opponent telegraphs before striking. Stay composed.
+                </p>
+              </motion.div>
+
+              <motion.div
+                initial={{ x: 40, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.25 }}
+                className="flex-1 rounded-2xl p-5 border"
+                style={{ border: '1px solid rgba(255,23,68,0.3)', background: 'rgba(255,23,68,0.06)' }}
+              >
+                <p className="text-[9px] font-black uppercase tracking-wider mb-2" style={{ color: '#ff1744aa' }}>
+                  OPPONENT'S CORNER
+                </p>
+                <p className="text-white font-bold text-sm mb-1">{opponent.name}</p>
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  🥊 Adjust strategy. Find the gaps. Finish strong in round {currentRound + 1}.
+                </p>
+              </motion.div>
+            </div>
+
+            {/* Countdown ring */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="mt-8 flex items-center gap-3"
+            >
+              {[5, 4, 3, 2, 1].map((n) => (
+                <motion.div
+                  key={n}
+                  animate={{ scale: roundBreakCountdown === n ? [1, 1.3, 1] : 1, opacity: roundBreakCountdown === n ? 1 : 0.25 }}
+                  transition={{ duration: 0.6, repeat: roundBreakCountdown === n ? Infinity : 0 }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-black"
+                  style={{
+                    border: '2px solid',
+                    borderColor: roundBreakCountdown === n ? '#00e5ff' : '#374151',
+                    color: roundBreakCountdown === n ? '#00e5ff' : '#4b5563',
+                    boxShadow: roundBreakCountdown === n ? '0 0 12px rgba(0,229,255,0.5)' : 'none',
+                  }}
+                >
+                  {n}
+                </motion.div>
+              ))}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* ROUND & TIMER */}
       <motion.div
         className="glass-card-premium rounded-2xl p-6 flex justify-between items-center"

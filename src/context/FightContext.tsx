@@ -114,6 +114,10 @@ export interface FightContextType {
   activeSkillPopup: { skillName: string; logText: string; domain: SkillDomain } | null;
   selectedOpponent: AIFighter | null;
   shakeIntensity: number;
+  /** True during the 5-second inter-round break between rounds. */
+  roundBreak: boolean;
+  /** Countdown seconds remaining during roundBreak (5 → 1). */
+  roundBreakCountdown: number;
   // Actions
   startBattle: (opponent: AIFighter) => void;
   resetFight: () => void;
@@ -425,6 +429,9 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [activeSkillPopup, setActiveSkillPopup] = useState<{ skillName: string; logText: string; domain: SkillDomain } | null>(null);
   const [selectedOpponent, setSelectedOpponent] = useState<AIFighter | null>(null);
   const [shakeIntensity,        setShakeIntensity]        = useState(0);
+  const [roundBreak,            setRoundBreak]            = useState(false);
+  const [roundBreakCountdown,   setRoundBreakCountdown]   = useState(5);
+  const roundBreakRef = useRef(false);
 
   // Keep selectedOppRef in sync
   useEffect(() => { selectedOppRef.current = selectedOpponent; }, [selectedOpponent]);
@@ -432,6 +439,8 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   useEffect(() => { isBattlingRef.current = isBattling; }, [isBattling]);
   // Keep currentRoundRef in sync
   useEffect(() => { currentRoundRef.current = currentRound; }, [currentRound]);
+  // Keep roundBreakRef in sync
+  useEffect(() => { roundBreakRef.current = roundBreak; }, [roundBreak]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // REWARD PROCESSING (exactly once per fight)
@@ -757,10 +766,10 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   // BATTLE CLOCK
   // ─────────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!isBattling || battleResult) return;
+    if (!isBattling || battleResult || roundBreak) return;
 
     timerRef.current = setInterval(() => {
-      if (battleEndedRef.current) return;
+      if (battleEndedRef.current || roundBreakRef.current) return;
       setTimeRemaining(prev => {
         if (prev <= 0) return 0;
         const newTime    = prev - 1;
@@ -783,7 +792,7 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     return () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isBattling, battleResult]);
+  }, [isBattling, battleResult, roundBreak, currentRound]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // ROUND TRANSITION
@@ -795,7 +804,40 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (currentRoundRef.current >= 3) {
       endBattle('judges', "Judges' Decision");
     } else {
-      startNextRound();
+      // Pause between rounds: show "Corner Advice" overlay for 5 seconds, then start next round
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+      const upcomingRound = currentRoundRef.current + 1;
+      setBattleLog(log => [...log, {
+        id: `round-${currentRoundRef.current}-end`,
+        message: `═══ END OF ROUND ${currentRoundRef.current} — Corner break ═══`,
+        category: 'MISS' as BattleCategory,
+        displayTime: Date.now(),
+      }]);
+      setRoundBreak(true);
+      roundBreakRef.current = true;
+      setRoundBreakCountdown(5);
+
+      let countdown = 5;
+      const countdownInterval = setInterval(() => {
+        countdown -= 1;
+        setRoundBreakCountdown(countdown);
+        if (countdown <= 0) { clearInterval(countdownInterval); }
+      }, 1000);
+
+      const breakTimeout = setTimeout(() => {
+        clearInterval(countdownInterval);
+        setRoundBreak(false);
+        roundBreakRef.current = false;
+        setBattleLog(log => [...log, {
+          id: `round-${upcomingRound}-announce`,
+          message: `═══ ROUND ${upcomingRound} BEGINS ═══`,
+          category: 'MISS' as BattleCategory,
+          displayTime: Date.now(),
+        }]);
+        startNextRound();
+      }, 5000);
+
+      return () => { clearInterval(countdownInterval); clearTimeout(breakTimeout); };
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRemaining, isBattling, battleResult]);
@@ -854,8 +896,6 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setLastPlayerHitCategory(null);
     setLastOpponentHitCategory(null);
     setCurrentAttacker(null);
-
-    setBattleLog(log => [...log, { id: `round-${currentRoundRef.current}-start`, message: `═══ ROUND ${currentRoundRef.current} BEGINS ═══`, category: 'MISS' as BattleCategory, displayTime: Date.now() }]);
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -898,6 +938,9 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setBattleResult(null);
     setShakeIntensity(0);
     setActiveSkillPopup(null);
+    setRoundBreak(false);
+    setRoundBreakCountdown(5);
+    roundBreakRef.current = false;
   }, []);
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -935,6 +978,9 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setShakeIntensity(0);
     setActiveSkillPopup(null);
     setRoundStats(defaultRoundStats());
+    setRoundBreak(false);
+    setRoundBreakCountdown(5);
+    roundBreakRef.current = false;
 
     eventsRef.current = [];
     processedEventIds.current.clear();
@@ -965,6 +1011,8 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     activeSkillPopup,
     selectedOpponent,
     shakeIntensity,
+    roundBreak,
+    roundBreakCountdown,
     startBattle,
     resetFight,
   };

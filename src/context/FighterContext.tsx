@@ -41,7 +41,8 @@ export const useFighter = () => {
 const createDefaultFighter = (): Fighter => ({
   id: '1',
   name: 'Undefined',
-  nickname: 'The Champion',
+  nickname: '',
+  country_code: undefined,
   record: { wins: 0, losses: 0, draws: 0 },
   stats: {
     strength: 40,
@@ -161,7 +162,8 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
           const fighterData: Fighter = {
             id: data.id,
             name: data.username || 'Fighter',
-            nickname: 'The Champion',
+            nickname: data.nickname || '',
+            country_code: data.country_code || undefined,
             record: {
               wins: data.wins || 0,
               losses: data.losses || 0,
@@ -280,7 +282,8 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
         const fighterData: Fighter = {
           id: data.id,
           name: data.username || 'Fighter',
-          nickname: fighter?.nickname || 'The Champion',
+          nickname: data.nickname || '',
+          country_code: data.country_code || undefined,
           record: {
             wins: data.wins || 0,
             losses: data.losses || 0,
