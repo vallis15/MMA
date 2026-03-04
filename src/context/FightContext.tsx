@@ -21,11 +21,12 @@ import { supabase } from '../lib/supabase';
 import { useFighter } from './FighterContext';
 import { useLanguage } from './LanguageContext';
 import {
-  getBattleMessage,
+  generateContextualLog,
   BattleCategory,
   MMA_MOVES,
   TAKEDOWN_MOVES,
   SUBMISSION_MOVES,
+  CLINCH_MOVES,
 } from '../constants/battlePhrases';
 import { getSkillById } from '../constants/skillTree';
 import type { SkillDomain, MechanicTrigger, MechanicEffect } from '../types/skills';
@@ -175,18 +176,45 @@ export const DOMAIN_COLORS: Record<SkillDomain, string> = {
 
 const getTargetPart = (move: string, category: BattleCategory): BodyPart => {
   const m = move.toLowerCase();
-  if (
-    (m.includes('leg kick') || m.includes('low kick') || m.includes('kopnięcie nogi')) &&
-    category !== 'TAKEDOWN_ATTEMPT' && category !== 'TAKEDOWN_DEFENSE'
-  ) return 'legs';
-  if (
-    m.includes('body kick') || m.includes('kop na tělo') || m.includes('kopnięcie w korpus') ||
-    m.includes('knee') || m.includes('koleno') || m.includes('kolano')
-  ) return Math.random() < 0.8 ? 'body' : 'head';
+
+  // Takedowns are positional — impact is to body, never head
   if (category === 'TAKEDOWN_ATTEMPT' || category === 'TAKEDOWN_DEFENSE') return 'body';
-  if (category === 'GROUND_CONTROL') return Math.random() < 0.45 ? 'head' : 'body';
+
+  // Submissions affect body/limbs, never head
   if (category === 'SUBMISSION_ATTEMPT' || category === 'SUBMISSION_ESCAPE') return 'body';
-  return Math.random() < 0.68 ? 'head' : 'body';
+
+  // Leg kicks always target legs
+  if (
+    m.includes('leg kick') || m.includes('low kick') ||
+    m.includes('kopnięcie w nogę') || m.includes('low kick')
+  ) return 'legs';
+
+  // Body shots
+  if (
+    m.includes('body kick') || m.includes('kop na tělo') ||
+    m.includes('kopnięcie w ciało') || m.includes('kopnięcie w korpus') ||
+    m.includes('liver') || m.includes('body shot') ||
+    m.includes('knee') || m.includes('koleno') || m.includes('kolano') ||
+    m.includes('clinch knee') || m.includes('koleno do těla')
+  ) return Math.random() < 0.85 ? 'body' : 'head';
+
+  // Head kicks
+  if (m.includes('head kick') || m.includes('kop na hlavu') || m.includes('kopnięcie w głowę')) return 'head';
+
+  // Ground and pound — mixed head/body
+  if (category === 'GROUND_CONTROL') return Math.random() < 0.5 ? 'head' : 'body';
+
+  // Elbows — nasty head cuts
+  if (m.includes('elbow') || m.includes('loket') || m.includes('łokieć')) return Math.random() < 0.7 ? 'head' : 'body';
+
+  // Clinch strikes — elbows go to head, knees to body
+  if (m.includes('clinch') || m.includes('klinč') || m.includes('klinch') || m.includes('klincz')) {
+    if (m.includes('elbow') || m.includes('loket') || m.includes('łokieć')) return 'head';
+    return Math.random() < 0.4 ? 'head' : 'body';
+  }
+
+  // Standard standup strikes — head bias
+  return Math.random() < 0.65 ? 'head' : 'body';
 };
 
 export const partLabel = (part: BodyPart): string =>
@@ -232,11 +260,15 @@ const generateBattleEvents = (
   opponent: FighterSnapshot = { grappling: 50, strength: 50, speed: 50, striking: 50, cardio: 50 },
   playerDetail?: Partial<DetailedFighterStats>,
   opponentDetail?: Partial<DetailedFighterStats>,
+  // Starting stamina carried over from the previous round (partial recovery)
+  playerStartStamina = 100,
+  opponentStartStamina = 100,
 ): BattleEvent[] => {
   const playerGrappling  = player.grappling;
   const opponentGrappling = opponent.grappling;
-  let playerStaminaSim  = 100;
-  let opponentStaminaSim = 100;
+  // Start simulation with carry-over stamina (NOT full 100)
+  let playerStaminaSim  = Math.max(20, playerStartStamina);
+  let opponentStaminaSim = Math.max(20, opponentStartStamina);
 
   const applyStatMod = (
     baseDmg: number, targetPart: BodyPart,
@@ -263,11 +295,16 @@ const generateBattleEvents = (
   const strikingMoves = MMA_MOVES[lang];
   const tdMoves       = TAKEDOWN_MOVES[lang];
   const subMoves      = SUBMISSION_MOVES[lang];
+  const clinchMoves   = CLINCH_MOVES[lang];
 
   let time = 0, eid = 0;
   let phase: FightPhase = 'STANDUP';
   let groundTopFighter: 'player' | 'opponent' = 'player';
   let groundEndTime = 0;
+  // Track whether we're in a clinch phase
+  let clinchPhase = false;
+  let clinchEndTime = 0;
+  let clinchTopFighter: 'player' | 'opponent' = 'player';
 
   const tdChancePlayer   = 0.10 + (playerGrappling   - 50) / 400;
   const tdChanceOpponent = 0.10 + (opponentGrappling - 50) / 400;
@@ -295,7 +332,7 @@ const generateBattleEvents = (
   };
 
   while (time < roundDuration) {
-    const spacing = phase === 'GROUND' ? randInt(2, 4) : randInt(2, 5);
+    const spacing = phase === 'GROUND' ? randInt(2, 4) : clinchPhase ? randInt(1, 3) : randInt(2, 5);
     time += spacing;
     if (time >= roundDuration) break;
 
@@ -328,6 +365,32 @@ const generateBattleEvents = (
         const posWork = lang === 'cs' ? 'kontrola pozice' : lang === 'pl' ? 'kontrola pozycji' : 'positional control';
         events.push(mkEvent('GROUND_CONTROL', groundTopFighter, posWork, 'GROUND', groundTopFighter));
       }
+    } else if (clinchPhase) {
+      // ── CLINCH phase: standing grappling, dirty boxing, elbows, knees ────
+      if (time >= clinchEndTime) {
+        // Break from clinch — fighters separate
+        const breakMsg = lang === 'cs' ? 'přerušení klinče' : lang === 'pl' ? 'wyjście z klinczu' : 'break from the clinch';
+        events.push({ id: `clinch-break-${eid++}`, timestamp: time, attacker: clinchTopFighter, category: 'TAKEDOWN_DEFENSE', move: breakMsg, damage: 0, targetPart: 'body', phase: 'STANDUP', groundAttacker: undefined });
+        clinchPhase = false;
+      } else {
+        const clinchAttacker: 'player' | 'opponent' = Math.random() < 0.55 ? clinchTopFighter : (clinchTopFighter === 'player' ? 'opponent' : 'player');
+        const clinchMove = randItem(clinchMoves);
+        const cr = Math.random();
+        let ccat: BattleCategory;
+        if      (cr < 0.15) ccat = 'MISS';
+        else if (cr < 0.40) ccat = 'LIGHT_HIT';
+        else if (cr < 0.75) ccat = 'MEDIUM_HIT';
+        else if (cr < 0.92) ccat = 'HEAVY_HIT';
+        else                ccat = 'CRITICAL_HIT';
+        events.push(mkEvent(ccat, clinchAttacker, clinchMove, 'STANDUP'));
+        // 15% chance the clinch leads to a takedown
+        if (Math.random() < 0.15) {
+          const td = randItem(tdMoves);
+          events.push(mkEvent('TAKEDOWN_ATTEMPT', clinchTopFighter, td, 'STANDUP'));
+          if (Math.random() < 0.55) { phase = 'GROUND'; groundTopFighter = clinchTopFighter; groundEndTime = time + randInt(15, 30); }
+          clinchPhase = false;
+        }
+      }
     } else {
       const tdAttemptChance = Math.random() < 0.5 ? tdChancePlayer : tdChanceOpponent;
       const roll = Math.random();
@@ -347,6 +410,14 @@ const generateBattleEvents = (
         } else {
           time += 1; phase = 'GROUND'; groundTopFighter = attacker; groundEndTime = time + randInt(20, 35);
         }
+      } else if (roll < tdAttemptChance + 0.07) {
+        // Clinch engagement — standing grappling with dirty boxing / elbows / knees
+        const initiator: 'player' | 'opponent' = Math.random() < 0.5 ? 'player' : 'opponent';
+        clinchTopFighter = initiator;
+        clinchPhase = true;
+        clinchEndTime = time + randInt(5, 12);
+        const clinchMove = randItem(clinchMoves);
+        events.push(mkEvent('MEDIUM_HIT', initiator, clinchMove, 'STANDUP'));
       } else {
         const attacker: 'player' | 'opponent' = Math.random() < 0.5 ? 'player' : 'opponent';
         const move = randItem(strikingMoves);
@@ -638,9 +709,8 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
 
     const lang     = languageRef.current;
-    const baseMsg  = getBattleMessage(event.category, attackerName, defenderName, event.move, lang);
-    const isStrike = event.damage > 0 && (['LIGHT_HIT', 'MEDIUM_HIT', 'HEAVY_HIT', 'CRITICAL_HIT'] as BattleCategory[]).includes(event.category);
-    const message  = baseMsg + (isStrike ? ` [${partLabel(event.targetPart)}]` : '');
+    // Use contextual UFC play-by-play commentary
+    const message  = generateContextualLog(event.category, attackerName, defenderName, event.move, event.targetPart, lang);
 
     setFightPhase(event.phase);
     if (event.phase === 'GROUND' && event.groundAttacker) {
@@ -845,12 +915,30 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       // Pause between rounds: show "Corner Advice" overlay for 5 seconds, then start next round
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
       const upcomingRound = currentRoundRef.current + 1;
-      setBattleLog(log => [...log, {
-        id: `round-${currentRoundRef.current}-end`,
-        message: `═══ END OF ROUND ${currentRoundRef.current} — Corner break ═══`,
-        category: 'MISS' as BattleCategory,
-        displayTime: Date.now(),
-      }]);
+      // Build a realistic corner summary showing partial recovery amounts
+      const pHS = playerHSRef.current;
+      const oHS = opponentHSRef.current;
+      const playerName   = fighterRef.current?.name ?? 'Fighter';
+      const opponentName = selectedOppRef.current?.name ?? 'Opponent';
+      const cornerLines: string[] = [
+        `═══ END OF ROUND ${currentRoundRef.current} — 60-Second Corner Break ═══`,
+        `📋 ${playerName}: Head ${pHS.head}% | Body ${pHS.body}% | Legs ${pHS.legs}% | Stamina ${pHS.stamina}%`,
+        `📋 ${opponentName}: Head ${oHS.head}% | Body ${oHS.body}% | Legs ${oHS.legs}% | Stamina ${oHS.stamina}%`,
+        fractureRef.current.player   ? `⚠️  ${playerName} has a FRACTURE — damage output reduced. It will not heal between rounds!`   : '',
+        fractureRef.current.opponent ? `⚠️  ${opponentName} has a FRACTURE — damage output reduced. It will not heal between rounds!` : '',
+        `🩹 Fighters receive partial corner treatment — only partial recovery possible.`,
+      ].filter(Boolean);
+
+      setBattleLog(log => [
+        ...log,
+        ...cornerLines.map((msg, i) => ({
+          id: `round-${currentRoundRef.current}-end-${i}`,
+          message: msg,
+          category: 'MISS' as BattleCategory,
+          displayTime: Date.now() + i * 50,
+        })),
+      ]);
+
       setRoundBreak(true);
       roundBreakRef.current = true;
       setRoundBreakCountdown(5);
@@ -902,23 +990,52 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const playerSnap: FighterSnapshot   = { grappling: f?.stats?.grappling ?? 50, strength: f?.stats?.strength  ?? 50, speed: f?.stats?.speed ?? 50, striking: f?.stats?.striking ?? 50, cardio: f?.stats?.cardio ?? 50 };
     const opponentSnap: FighterSnapshot = { grappling: opp?.stats?.grappling ?? 50, strength: opp?.stats?.strength ?? 50, speed: opp?.stats?.speed ?? 50, striking: opp?.stats?.striking ?? 50, cardio: opp?.stats?.cardio ?? 50 };
 
-    eventsRef.current = generateBattleEvents(60, languageRef.current, playerSnap, opponentSnap, f?.detailedStats, undefined);
+    // ── PARTIAL RECOVERY SYSTEM ────────────────────────────────────────────
+    // Energy: recover 15-25% of missing stamina (corner break restores only partial)
+    // Body parts: recover 10-20% of missing health
+    // Fatal damage (<20%): recovery is HALVED (swelling, cuts, deep structural damage)
+    // Fracture debuff: PERSISTS into the next round — never reset between rounds
+
+    const partialRecover = (current: number, minPct: number, maxPct: number): number => {
+      const missing = 100 - current;
+      if (missing <= 0) return current;
+      const isFatal = current < 20; // deep damage penalises recovery severely
+      const pct = minPct + Math.random() * (maxPct - minPct);
+      const recovery = missing * pct * (isFatal ? 0.5 : 1.0);
+      return Math.min(100, Math.round(current + recovery));
+    };
+
+    const curP = playerHSRef.current;
+    const curO = opponentHSRef.current;
+
+    const newPlayerHS: HealthStatus = {
+      head:    partialRecover(curP.head,    0.10, 0.20),
+      body:    partialRecover(curP.body,    0.10, 0.20),
+      legs:    partialRecover(curP.legs,    0.10, 0.20),
+      stamina: partialRecover(curP.stamina, 0.15, 0.25),
+    };
+    const newOppHS: HealthStatus = {
+      head:    partialRecover(curO.head,    0.10, 0.20),
+      body:    partialRecover(curO.body,    0.10, 0.20),
+      legs:    partialRecover(curO.legs,    0.10, 0.20),
+      stamina: partialRecover(curO.stamina, 0.15, 0.25),
+    };
+
+    playerHSRef.current   = newPlayerHS;
+    opponentHSRef.current = newOppHS;
+
+    // Pass carry-over stamina so the round simulation starts with realistic fatigue
+    eventsRef.current = generateBattleEvents(60, languageRef.current, playerSnap, opponentSnap, f?.detailedStats, undefined, newPlayerHS.stamina, newOppHS.stamina);
     processedEventIds.current.clear();
     displayQueueRef.current   = [];
     isProcessingQueueRef.current = false;
-
-    const roundFreshHS = defaultHS();
-    const carryoverPlayerStamina = playerHSRef.current.stamina;
-    const carryoverOppStamina    = opponentHSRef.current.stamina;
-    playerHSRef.current   = { ...roundFreshHS, stamina: carryoverPlayerStamina };
-    opponentHSRef.current = { ...roundFreshHS, stamina: carryoverOppStamina };
 
     if (pendingFinishTimeoutRef.current) { clearTimeout(pendingFinishTimeoutRef.current); pendingFinishTimeoutRef.current = null; }
     if (timerRef.current)               { clearInterval(timerRef.current); timerRef.current = null; }
 
     battleEndedRef.current = false;
-    stunRef.current    = { player: 0, opponent: 0 };
-    fractureRef.current = { player: false, opponent: false };
+    stunRef.current = { player: 0, opponent: 0 };
+    // NOTE: fractureRef is intentionally NOT reset — fractures persist the whole fight!
 
     setPlayerHS({ ...playerHSRef.current });
     setOpponentHS({ ...opponentHSRef.current });

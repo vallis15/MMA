@@ -2,6 +2,381 @@ import { Language } from '../context/LanguageContext';
 
 export type BattleCategory = 'MISS' | 'DODGE' | 'LIGHT_HIT' | 'MEDIUM_HIT' | 'HEAVY_HIT' | 'CRITICAL_HIT' | 'FINISHER' | 'TAKEDOWN_ATTEMPT' | 'TAKEDOWN_DEFENSE' | 'GROUND_CONTROL' | 'SUBMISSION_ATTEMPT' | 'SUBMISSION_ESCAPE';
 
+// Body part type (mirrored here for use in log generation)
+export type BodyPart = 'head' | 'body' | 'legs';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CLINCH MOVES — used during the standing clinch phase
+// ─────────────────────────────────────────────────────────────────────────────
+export const CLINCH_MOVES: Record<Language, string[]> = {
+  en: [
+    'short elbow in the clinch', 'clinch knee to the body', 'dirty boxing right hand',
+    'Thai plum knee', 'uppercut from the clinch', 'body shot in the clinch',
+    'short left hook in the clinch', 'clinch elbow to the temple',
+  ],
+  cs: [
+    'krátký loket v klinči', 'koleno do těla v klinči', 'dirty boxing pravou',
+    'koleno z Thai plumu', 'zvedák z klinče', 'úder do těla v klinči',
+    'krátký levý hák v klinči', 'loket na spánek v klinči',
+  ],
+  pl: [
+    'krótki łokieć w klinczu', 'kolano w tułów w klinczu', 'dirty boxing prawą',
+    'kolano z Thai plum', 'uppercut z klinczu', 'cios w ciało w klinczu',
+    'krótki lewy sierpowy w klinczu', 'łokieć w skroń w klinczu',
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTEXTUAL MOVE TEMPLATES — UFC play-by-play commentary per move type
+// ─────────────────────────────────────────────────────────────────────────────
+export type MoveContext =
+  | 'leg_kick' | 'body_kick' | 'head_kick' | 'jab' | 'cross' | 'hook'
+  | 'uppercut' | 'overhand' | 'elbow' | 'knee' | 'double_leg' | 'single_leg'
+  | 'clinch_work' | 'ground_and_pound' | 'submission' | 'generic';
+
+export const CONTEXTUAL_TEMPLATES: Record<Language, Record<MoveContext, string[]>> = {
+  en: {
+    leg_kick: [
+      '{attacker} lands a thunderous leg kick, punishing {defender}\'s lead thigh!',
+      '{attacker} chops down {defender}\'s lead leg with a vicious low kick!',
+      'A sharp leg kick from {attacker} targets the outer thigh of {defender}!',
+      '{defender}\'s leg buckles slightly as {attacker} lands another devastating low kick!',
+      '{attacker} keeps working the leg kick, conditioning {defender}\'s thigh!',
+    ],
+    body_kick: [
+      '{attacker} drives a body kick square into {defender}\'s ribs!',
+      'A well-timed body kick from {attacker} lands clean on {defender}\'s midsection!',
+      '{defender} visibly winces as {attacker}\'s body kick sinks in!',
+      '{attacker} targets the liver with a savage body kick!',
+    ],
+    head_kick: [
+      '{attacker} launches a head kick — {defender} barely manages to duck under it!',
+      'A SPECTACULAR head kick from {attacker} catches {defender} fully!',
+      '{attacker} pivots and fires a head kick at {defender}!',
+    ],
+    jab: [
+      '{attacker} flicks out a sharp jab, keeping {defender} honest!',
+      'A stiff jab from {attacker} snaps {defender}\'s head back!',
+      '{attacker} uses the jab to set up the combination on {defender}!',
+      '{attacker} establishes range with a stiff jab to {defender}\'s face!',
+    ],
+    cross: [
+      '{attacker} fires a straight right cross that connects flush on {defender}!',
+      'A textbook cross from {attacker} finds the chin of {defender}!',
+      '{attacker} loads up and drops a hard cross on {defender}!',
+    ],
+    hook: [
+      '{attacker} catches {defender} with a sharp left hook!',
+      'A powerful hook from {attacker} turns {defender}\'s head!',
+      '{attacker} digs in with a looping hook to {defender}\'s temple!',
+    ],
+    uppercut: [
+      '{attacker} sneaks a short uppercut up through {defender}\'s guard!',
+      'A tight uppercut from {attacker} lifts {defender}\'s chin!',
+      '{attacker} times the uppercut perfectly as {defender} circles in!',
+    ],
+    overhand: [
+      '{attacker} slings a wild overhand right that catches {defender}!',
+      'The overhand from {attacker} arcs over {defender}\'s guard and lands flush!',
+      '{attacker} throws a looping overhand right that finds its mark on {defender}!',
+    ],
+    elbow: [
+      '{attacker} opens a nasty cut with a short elbow in the clinch on {defender}!',
+      'A vicious upward elbow from {attacker} slices into {defender}!',
+      '{attacker} is working short elbows to the head of {defender}!',
+    ],
+    knee: [
+      '{attacker} drives a powerful knee into the midsection of {defender}!',
+      'A devastating knee from {attacker} finds {defender}\'s body!',
+      '{attacker} clinches tight and delivers a punishing knee to {defender}!',
+    ],
+    double_leg: [
+      '{attacker} shoots in for a double-leg and successfully slams {defender} to the canvas!',
+      '{attacker} changes levels explosively and drives {defender} hard to the mat!',
+      'A perfect double-leg takedown — {attacker} puts {defender} down with authority!',
+    ],
+    single_leg: [
+      '{attacker} grabs the single leg and runs the pipe, toppling {defender}!',
+      '{attacker} scoops up {defender}\'s lead leg and finishes the single-leg takedown!',
+      'A clean single-leg from {attacker} takes {defender} completely off their feet!',
+    ],
+    clinch_work: [
+      '{attacker} ties up {defender} against the fence and works the dirty clinch!',
+      '{attacker} is working the clinch, landing short elbows to the head of {defender}!',
+      'Dirty boxing in the clinch — {attacker} works the body of {defender}!',
+      '{attacker} anchors the Thai plum and fires knees at {defender}!',
+    ],
+    ground_and_pound: [
+      '{attacker} rains down ground and pound from full mount on {defender}!',
+      '{attacker} postures up and opens up with hammerfists on {defender}!',
+      'Ground and pound from {attacker} — the elbows are landing flush on {defender}!',
+      '{attacker} advances to full mount and drops bombs on {defender}!',
+    ],
+    submission: [
+      '{attacker} sinks in the choke — {defender} is going to sleep!',
+      '{attacker} locks up the armbar — {defender} has to tap!',
+      'Beautiful submission work from {attacker}! {defender} is in deep trouble!',
+    ],
+    generic: [
+      '{attacker} connects with the {move} on {defender}!',
+      '{attacker}\'s {move} lands on {defender}!',
+    ],
+  },
+  cs: {
+    leg_kick: [
+      '{attacker} zasazuje drtivý low kick a trestá přední stehno soupeře {defender}!',
+      '{attacker} sekne low kickem do přední nohy {defender}!',
+      'Ostrý low kick od {attacker} cílí na vnější stranu stehna {defender}!',
+      'Noha {defender} se mírně podlomí po ničivém low kicku od {attacker}!',
+      '{attacker} neustále pracuje low kickem a kondicionuje stehno {defender}!',
+    ],
+    body_kick: [
+      '{attacker} posílá kop do těla přímo do žeber soupeře {defender}!',
+      'Dobře načasovaný kop do těla od {attacker} přistál čistě do středu {defender}!',
+      '{defender} viditelně zaváhá, když kop do těla od {attacker} dopadne!',
+      '{attacker} cílí na játra krutým kopem do těla!',
+    ],
+    head_kick: [
+      '{attacker} vymrští kop na hlavu — {defender} se sotva stačí sehnout!',
+      'SPEKTAKULÁRNÍ kop na hlavu od {attacker} trefil {defender}!',
+      '{attacker} se otočí a spustí kop na hlavu na {defender}!',
+    ],
+    jab: [
+      '{attacker} vystřeluje ostrý jab a udržuje {defender} v ostražitosti!',
+      'Tuhý jab od {attacker} škubne hlavou soupeře {defender}!',
+      '{attacker} používá jab k nastavení kombinace na {defender}!',
+      '{attacker} ustavuje vzdálenost tvrdým jabem do obličeje {defender}!',
+    ],
+    cross: [
+      '{attacker} vypálí přímý cross, který přistane čistě na {defender}!',
+      'Učebnicový cross od {attacker} trefí bradu {defender}!',
+      '{attacker} se opře a srazí tvrdý cross na {defender}!',
+    ],
+    hook: [
+      '{attacker} trefí {defender} ostrým levým hákem!',
+      'Mocný hák od {attacker} otočí hlavu soupeře {defender}!',
+      '{attacker} zaboří oblý hák do spánku {defender}!',
+    ],
+    uppercut: [
+      '{attacker} propašuje krátký zvedák nahoru skrz obranu {defender}!',
+      'Těsný zvedák od {attacker} nadzvedne bradu {defender}!',
+      '{attacker} perfektně načasuje zvedák jak {defender} přichází!',
+    ],
+    overhand: [
+      '{attacker} posílá divoký overhand pravou, který trefí {defender}!',
+      'Overhand od {attacker} se oblukuje přes obranu a přistane čistě!',
+      '{attacker} hází oblukový overhand pravou, který najde svůj cíl na {defender}!',
+    ],
+    elbow: [
+      '{attacker} otevírá nepěkné řezné ranky krátkým loktem v klinči na {defender}!',
+      'Brutální vzestupný loket od {attacker} říznul do {defender}!',
+      '{attacker} pracuje krátkými lokty do hlavy {defender}!',
+    ],
+    knee: [
+      '{attacker} vrazí mocné koleno do střední části těla {defender}!',
+      'Devastující koleno od {attacker} trefí tělo {defender}!',
+      '{attacker} vstoupí do klinče a zasadí trestající koleno na {defender}!',
+    ],
+    double_leg: [
+      '{attacker} střílí double leg a úspěšně sloml {defender} na plátno!',
+      '{attacker} výbušně mění výšku a řídí {defender} tvrdě na žíněnku!',
+      'Perfektní double leg takedown — {attacker} srazil {defender} s autoritou!',
+    ],
+    single_leg: [
+      '{attacker} chytne single leg a dotahuje ho, čímž shodí {defender}!',
+      '{attacker} sebere přední nohu {defender} a dokončí single leg takedown!',
+      'Čistý single leg od {attacker} sfukne {defender} z nohou!',
+    ],
+    clinch_work: [
+      '{attacker} svazuje {defender} u pletiva a pracuje v klinči!',
+      '{attacker} pracuje v klinči a posílá krátké lokty do hlavy {defender}!',
+      'Dirty boxing v klinči — {attacker} opracovává tělo {defender}!',
+      '{attacker} kotví Thai plum a střílí kolena na {defender}!',
+    ],
+    ground_and_pound: [
+      '{attacker} zasypává soupeře ground and poundem z full mountu!',
+      '{attacker} se vzpřimuje a otevírá kladivovými údery na {defender}!',
+      'Ground and pound od {attacker} — lokty dopadají čistě na {defender}!',
+      '{attacker} přechází do full mountu a shazuje bomby na {defender}!',
+    ],
+    submission: [
+      '{attacker} nasazuje choke hluboko — {defender} zakrátko usne!',
+      '{attacker} zamkl páku na loket — {defender} musí odklepat!',
+      'Krásná submisní práce od {attacker}! {defender} je ve velkých potížích!',
+    ],
+    generic: [
+      '{attacker} spojil {move} na {defender}!',
+      '{move} od {attacker} přistál na {defender}!',
+    ],
+  },
+  pl: {
+    leg_kick: [
+      '{attacker} ląduje grzmiącym kopnięciem w nogę, karcąc prowadzące udo {defender}!',
+      '{attacker} sieknie low kickiem w przednią nogę {defender}!',
+      'Ostry low kick od {attacker} celuje w zewnętrzne udo {defender}!',
+      'Noga {defender} lekko ugina się po niszczącym low kicku od {attacker}!',
+      '{attacker} pracuje low kickiem, kondycjonując udo {defender}!',
+    ],
+    body_kick: [
+      '{attacker} wbija kopnięcie w ciało prosto w żebra {defender}!',
+      'Dobrze wyczuty kopnięcie w tułów od {attacker} ląduje czysto na środku {defender}!',
+      '{defender} widocznie wzdryga się gdy kopnięcie w ciało od {attacker} trafia!',
+      '{attacker} celuje w wątrobę dzikim kopnięciem w tułów!',
+    ],
+    head_kick: [
+      '{attacker} wystrzeliwuje kopnięcie w głowę — {defender} ledwo się nisko schyla!',
+      'SPEKTAKULARNE kopnięcie w głowę od {attacker} trafia {defender}!',
+      '{attacker} obraca się i wyprowadza kopnięcie w głowę na {defender}!',
+    ],
+    jab: [
+      '{attacker} strzela ostrym jabem, trzymając {defender} w szachu!',
+      'Sztywny prosty cios od {attacker} szarpie głową {defender}!',
+      '{attacker} używa jabem do ustawiania kombinacji na {defender}!',
+      '{attacker} ustala dystans sztywnym jabem w twarz {defender}!',
+    ],
+    cross: [
+      '{attacker} wyprowadza prosty krzyżowy cios, który trafia czysto na {defender}!',
+      'Podręcznikowy krzyżowy cios od {attacker} trafia podbródek {defender}!',
+      '{attacker} ładuje się i spuszcza twardy krzyżowy cios na {defender}!',
+    ],
+    hook: [
+      '{attacker} lapie {defender} ostrym sierpowym lewą!',
+      'Potężny sierpowy od {attacker} obraca głowę {defender}!',
+      '{attacker} wbija wielki sierpowy w skroń {defender}!',
+    ],
+    uppercut: [
+      '{attacker} przemyca krótki uppercut przez gardę {defender}!',
+      'Ciasny uppercut od {attacker} unosi szczękę {defender}!',
+      '{attacker} doskonale wyczuwa chwilę na uppercut gdy {defender} wchodzi!',
+    ],
+    overhand: [
+      '{attacker} rzuca dziki overhand prawą który trafia {defender}!',
+      'Overhand od {attacker} łukiem przechodzi przez gardę i ląduje czysto!',
+      '{attacker} rzuca łukowaty overhand prawą który trafia w cel na {defender}!',
+    ],
+    elbow: [
+      '{attacker} otwiera brzydkie nacięcie krótkim łokciem w klinczu na {defender}!',
+      'Brutalny górny łokieć od {attacker} roznosi twarz {defender}!',
+      '{attacker} pracuje krótkimi łokciami w głowę {defender}!',
+    ],
+    knee: [
+      '{attacker} wbija potężne kolano w środkową część ciała {defender}!',
+      'Niszczące kolano od {attacker} trafia ciało {defender}!',
+      '{attacker} wchodzi w klinch i zadaje karzące kolano {defender}!',
+    ],
+    double_leg: [
+      '{attacker} strzela obalenie double-leg i skutecznie ciska {defender} na matę!',
+      '{attacker} wybuchowo zmienia poziom i kieruje {defender} twardo na tatami!',
+      'Idealne obalenie double-leg — {attacker} kładzie {defender} z autorytetem!',
+    ],
+    single_leg: [
+      '{attacker} łapie single-leg i wykańcza obalenie, przewracając {defender}!',
+      '{attacker} zbiera przednią nogę {defender} i kończy obalenie single-leg!',
+      'Czyste obalenie single-leg od {attacker} zrzuca {defender} z nóg!',
+    ],
+    clinch_work: [
+      '{attacker} przykrywa {defender} przy siatce i pracuje w brudnym klinczu!',
+      '{attacker} pracuje w klinczu, lądując krótkie łokcie w głowę {defender}!',
+      'Dirty boxing w klinczu — {attacker} pracuje ciało {defender}!',
+      '{attacker} zakotwicza Thai plum i strzela kolanami w {defender}!',
+    ],
+    ground_and_pound: [
+      '{attacker} sypie ground and pound z pełnego mountu na {defender}!',
+      '{attacker} prostuje się i otwiera uderzeniami z góry na {defender}!',
+      'Ground and pound od {attacker} — łokcie lądują czysto na {defender}!',
+      '{attacker} przechodzi do pełnego mountu i spuszcza bomby na {defender}!',
+    ],
+    submission: [
+      '{attacker} wbija duszenie głęboko — {defender} zaraz zaśnie!',
+      '{attacker} zamknął dźwignię na łokieć — {defender} musi klepnąć!',
+      'Piękna praca poddaniowa od {attacker}! {defender} jest w wielkich tarapatach!',
+    ],
+    generic: [
+      '{attacker} łączy się z {move} na {defender}!',
+      '{move} od {attacker} ląduje na {defender}!',
+    ],
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MOVE CONTEXT DETECTION
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Identifies the MoveContext from a raw move string + category.
+ * Used to select the correct contextual commentary template.
+ */
+export const getMoveContext = (move: string, category: BattleCategory): MoveContext => {
+  const m = move.toLowerCase();
+  if (category === 'SUBMISSION_ATTEMPT' || category === 'SUBMISSION_ESCAPE') return 'submission';
+  if (category === 'GROUND_CONTROL') return 'ground_and_pound';
+  if (category === 'TAKEDOWN_ATTEMPT') {
+    if (m.includes('double') || m.includes('obalenie double')) return 'double_leg';
+    if (m.includes('single') || m.includes('obalenie single')) return 'single_leg';
+    return 'double_leg'; // default takedown
+  }
+  if (m.includes('clinch') || m.includes('klinč') || m.includes('klinch') || m.includes('klincz') || m.includes('dirty boxing') || m.includes('thai plum')) return 'clinch_work';
+  if (m.includes('leg kick') || m.includes('low kick') || m.includes('kopnięcie w nogę') || m.includes('kopnięcie nogi')) return 'leg_kick';
+  if (m.includes('body kick') || m.includes('kop na tělo') || m.includes('kopnięcie w korpus') || m.includes('kopnięcie w ciało')) return 'body_kick';
+  if (m.includes('head kick') || m.includes('kop na hlavu') || m.includes('kopnięcie w głowę')) return 'head_kick';
+  if (m.includes('jab') || m.includes('prosty cios')) return 'jab';
+  if (m.includes('cross') || m.includes('krzyżowy')) return 'cross';
+  if (m.includes('hook') || m.includes('hák') || m.includes('sierpowy')) return 'hook';
+  if (m.includes('uppercut') || m.includes('zvedák')) return 'uppercut';
+  if (m.includes('overhand')) return 'overhand';
+  if (m.includes('elbow') || m.includes('loket') || m.includes('łokieć')) return 'elbow';
+  if (m.includes('knee') || m.includes('koleno') || m.includes('kolano')) return 'knee';
+  if (m.includes('ground and pound') || m.includes('hammerfist') || m.includes('kladivový')) return 'ground_and_pound';
+  return 'generic';
+};
+
+/**
+ * Generates a contextual, play-by-play UFC commentary log entry.
+ * Uses move-specific templates when available; falls back to category templates.
+ */
+export const generateContextualLog = (
+  category: BattleCategory,
+  attacker: string,
+  defender: string,
+  move: string,
+  targetPart: BodyPart,
+  language: Language = 'en',
+): string => {
+  const lang = language as 'en' | 'cs' | 'pl';
+
+  // Misses and dodges always use generic category phrasing
+  if (category === 'MISS' || category === 'DODGE' || category === 'TAKEDOWN_DEFENSE' || category === 'SUBMISSION_ESCAPE') {
+    const phrase = BATTLE_DATA[lang][category][Math.floor(Math.random() * BATTLE_DATA[lang][category].length)];
+    return phrase.replace(/{attacker}/g, attacker).replace(/{defender}/g, defender).replace(/{move}/g, move);
+  }
+
+  const context = getMoveContext(move, category);
+
+  // Use contextual template for meaningful moves
+  const useContextual =
+    context !== 'generic' ||
+    (['TAKEDOWN_ATTEMPT', 'GROUND_CONTROL', 'SUBMISSION_ATTEMPT'] as BattleCategory[]).includes(category);
+
+  if (useContextual) {
+    const templates = CONTEXTUAL_TEMPLATES[lang][context];
+    const template = templates[Math.floor(Math.random() * templates.length)];
+    return template
+      .replace(/{attacker}/g, attacker)
+      .replace(/{defender}/g, defender)
+      .replace(/{move}/g, move);
+  }
+
+  // Fallback: generic category template + target part label
+  const baseMsg = getBattleMessage(category, attacker, defender, move, language);
+  const partSuffix =
+    targetPart === 'head' ? ' — targeting the head' :
+    targetPart === 'body' ? ' — landing to the body' :
+    ' — chopping the legs';
+  const isStrike = (['LIGHT_HIT', 'MEDIUM_HIT', 'HEAVY_HIT', 'CRITICAL_HIT', 'FINISHER'] as BattleCategory[]).includes(category);
+  return baseMsg + (isStrike ? partSuffix : '');
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Ground & Pound moves (used ONLY when in GROUND phase — no kicks, no spinning)
 export const GROUND_POUND_MOVES: Record<Language, string[]> = {
   en: [
@@ -59,25 +434,25 @@ export const SUBMISSION_MOVES: Record<Language, string[]> = {
   ],
 };
 
-// MMA Moves in all languages
+// MMA Moves in all languages — STANDUP STRIKES ONLY (no takedowns in this list)
 export const MMA_MOVES: Record<Language, string[]> = {
   en: [
-    'jab', 'cross', 'hook', 'uppercut', 'body kick', 'leg kick',
-    'spinning backfist', 'knee strike', 'elbow strike', 'takedown',
-    'submission attempt', 'power punch', 'spinning heel kick', 'teep kick',
-    'overhand right', 'roundhouse kick',
+    'jab', 'cross', 'hook', 'uppercut', 'overhand right',
+    'body kick', 'leg kick', 'head kick',
+    'elbow strike', 'knee strike',
+    'spinning backfist', 'teep kick',
   ],
   cs: [
-    'jab', 'cross', 'hák', 'zvedák', 'kop na tělo', 'low kick',
-    'spinning backfist', 'koleno', 'loket', 'takedown',
-    'pokus o submisi', 'power punch', 'otočný kop', 'teep kick',
-    'overhand', 'roundhouse kick',
+    'jab', 'cross', 'hák', 'zvedák', 'overhand',
+    'kop na tělo', 'low kick', 'kop na hlavu',
+    'loket', 'koleno',
+    'spinning backfist', 'teep kick',
   ],
   pl: [
-    'prosty cios', 'krzyżowy cios', 'sierpowy', 'uppercut', 'kopnięcie w korpus', 'low kick',
-    'obrotowy cios z tyłu', 'kopnięcie kolanem', 'cios łokciem', 'powalenie',
-    'próba poddania', 'mocny cios', 'obrotowe kopnięcie', 'kopnięcie czołowe',
-    'overhand prawą', 'kopnięcie okrężne',
+    'prosty cios', 'krzyżowy cios', 'sierpowy', 'uppercut', 'overhand prawą',
+    'kopnięcie w ciało', 'low kick', 'kopnięcie w głowę',
+    'cios łokciem', 'kopnięcie kolanem',
+    'obrotowy cios z tyłu', 'kopnięcie czołowe',
   ],
 };
 
