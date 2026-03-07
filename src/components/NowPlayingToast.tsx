@@ -1,48 +1,48 @@
-import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Music2 } from 'lucide-react';
+import { SkipBack, SkipForward, Volume2, VolumeX, Music2 } from 'lucide-react';
 import { useMusic } from '../context/MusicContext';
 
-interface ToastData {
-  id: number;
-  track: string;
-}
-
 export const NowPlayingToast: React.FC = () => {
-  const { nowPlaying } = useMusic();
-  const [toast, setToast] = useState<ToastData | null>(null);
-
-  useEffect(() => {
-    if (!nowPlaying) return;
-
-    setToast({ id: Date.now(), track: nowPlaying });
-
-    const timer = setTimeout(() => setToast(null), 5000);
-    return () => clearTimeout(timer);
-  }, [nowPlaying]);
+  const { isMuted, isStarted, nowPlaying, toggleMute, nextTrack, prevTrack } = useMusic();
 
   return (
-    <div className="fixed bottom-6 right-6 z-[9999] pointer-events-none">
-      <AnimatePresence mode="wait">
-        {toast && (
-          <motion.div
-            key={toast.id}
-            initial={{ x: 120, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 120, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="now-playing-toast"
-          >
-            <div className="now-playing-icon">
-              <Music2 size={15} />
-            </div>
-            <div className="now-playing-text">
-              <span className="now-playing-label">NOW PLAYING</span>
-              <span className="now-playing-track">{toast.track}</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+    <AnimatePresence>
+      {isStarted && (
+        <motion.div
+          initial={{ y: -70, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -70, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 280, damping: 28 }}
+          className="mini-player"
+        >
+          {/* Equalizer bars */}
+          <div className={`mini-player-eq${isMuted ? ' mini-player-eq--paused' : ''}`} aria-hidden="true">
+            <span /><span /><span /><span />
+          </div>
+
+          {/* Prev */}
+          <button className="mini-player-btn" onClick={prevTrack} title="Předchozí" aria-label="Předchozí">
+            <SkipBack size={14} />
+          </button>
+
+          {/* Track info */}
+          <div className="mini-player-info">
+            <span className="mini-player-label">NOW PLAYING</span>
+            <span className="mini-player-track">{nowPlaying ?? '—'}</span>
+          </div>
+
+          {/* Next */}
+          <button className="mini-player-btn" onClick={nextTrack} title="Další" aria-label="Další">
+            <SkipForward size={14} />
+          </button>
+
+          {/* Mute */}
+          <button className="mini-player-btn mini-player-btn--mute" onClick={toggleMute} title={isMuted ? 'Zapnout zvuk' : 'Ztlumit'} aria-label={isMuted ? 'Zapnout zvuk' : 'Ztlumit'}>
+            {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
+

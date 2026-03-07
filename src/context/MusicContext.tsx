@@ -40,9 +40,12 @@ function shuffle<T>(arr: T[]): T[] {
 
 interface MusicContextType {
   isMuted: boolean;
+  isStarted: boolean;
   nowPlaying: string | null;
   startPlayback: () => void;
   toggleMute: () => void;
+  nextTrack: () => void;
+  prevTrack: () => void;
 }
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined);
@@ -61,24 +64,26 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const startedRef = useRef(false);
 
   const [isMuted, setIsMuted] = useState(false);
+  const [isStarted, setIsStarted] = useState(false);
   const [nowPlaying, setNowPlaying] = useState<string | null>(null);
 
-  const advanceTrack = useCallback(() => {
+  const playTrack = useCallback((index: number) => {
     const audio = audioRef.current;
     if (!audio) return;
-
-    indexRef.current = (indexRef.current + 1) % playlistRef.current.length;
-    // Reshuffle when we complete a full cycle
-    if (indexRef.current === 0) {
-      playlistRef.current = shuffle(PLAYLIST);
-    }
-
-    const track = playlistRef.current[indexRef.current];
+    // Remove old ended listener, add fresh one
+    const track = playlistRef.current[index];
     audio.src = `/music/${track}`;
     audio.volume = isMutedRef.current ? 0 : 0.25;
     audio.play().catch(() => {});
     setNowPlaying(getTrackName(track));
   }, []);
+
+  const advanceTrack = useCallback(() => {
+    const next = (indexRef.current + 1) % playlistRef.current.length;
+    if (next === 0) playlistRef.current = shuffle(PLAYLIST);
+    indexRef.current = next;
+    playTrack(next);
+  }, [playTrack]);
 
   const startPlayback = useCallback(() => {
     if (startedRef.current) return;
@@ -89,11 +94,27 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     audio.addEventListener('ended', advanceTrack);
     audioRef.current = audio;
 
+    setIsStarted(true);
     const track = playlistRef.current[0];
     audio.src = `/music/${track}`;
     audio.play().catch(() => {});
     setNowPlaying(getTrackName(track));
   }, [advanceTrack]);
+
+  const nextTrack = useCallback(() => {
+    if (!audioRef.current) return;
+    const next = (indexRef.current + 1) % playlistRef.current.length;
+    if (next === 0) playlistRef.current = shuffle(PLAYLIST);
+    indexRef.current = next;
+    playTrack(next);
+  }, [playTrack]);
+
+  const prevTrack = useCallback(() => {
+    if (!audioRef.current) return;
+    const prev = (indexRef.current - 1 + playlistRef.current.length) % playlistRef.current.length;
+    indexRef.current = prev;
+    playTrack(prev);
+  }, [playTrack]);
 
   const toggleMute = useCallback(() => {
     isMutedRef.current = !isMutedRef.current;
@@ -104,7 +125,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   return (
-    <MusicContext.Provider value={{ isMuted, nowPlaying, startPlayback, toggleMute }}>
+    <MusicContext.Provider value={{ isMuted, isStarted, nowPlaying, startPlayback, toggleMute, nextTrack, prevTrack }}>
       {children}
     </MusicContext.Provider>
   );

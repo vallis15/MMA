@@ -513,68 +513,129 @@ body::before {
   transform: translateY(0);
 }
 
-/* === NOW PLAYING TOAST === */
+/* === MINI PLAYER (persistent top-center bar) === */
 
-.now-playing-toast {
+.mini-player {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px 10px 12px;
-  background: rgba(10, 15, 10, 0.72);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(0, 255, 65, 0.28);
-  border-radius: 10px;
+  gap: 6px;
+  padding: 7px 14px;
+  background: rgba(8, 12, 8, 0.78);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: 1px solid rgba(0, 255, 65, 0.32);
+  border-radius: 50px;
   box-shadow:
-    0 0 18px rgba(0, 255, 65, 0.18),
-    0 4px 24px rgba(0, 0, 0, 0.55),
+    0 0 22px rgba(0, 255, 65, 0.18),
+    0 4px 28px rgba(0, 0, 0, 0.65),
     inset 0 1px 0 rgba(0, 255, 65, 0.1);
-  min-width: 200px;
-  max-width: 280px;
+  pointer-events: auto;
+  user-select: none;
 }
 
-.now-playing-icon {
+/* Equalizer bars animation */
+.mini-player-eq {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background: rgba(0, 255, 65, 0.12);
-  border: 1px solid rgba(0, 255, 65, 0.25);
-  color: #00ff41;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
   flex-shrink: 0;
 }
 
-.now-playing-text {
+.mini-player-eq span {
+  display: block;
+  width: 3px;
+  background: #00ff41;
+  border-radius: 2px;
+  box-shadow: 0 0 4px rgba(0, 255, 65, 0.8);
+}
+
+.mini-player-eq span:nth-child(1) { animation: eq-bar 0.8s ease-in-out infinite alternate; }
+.mini-player-eq span:nth-child(2) { animation: eq-bar 0.65s ease-in-out 0.15s infinite alternate; }
+.mini-player-eq span:nth-child(3) { animation: eq-bar 0.9s ease-in-out 0.05s infinite alternate; }
+.mini-player-eq span:nth-child(4) { animation: eq-bar 0.7s ease-in-out 0.25s infinite alternate; }
+
+.mini-player-eq--paused span { animation-play-state: paused; height: 4px !important; }
+
+@keyframes eq-bar {
+  0%   { height: 4px; }
+  100% { height: 14px; }
+}
+
+/* Control buttons */
+.mini-player-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: rgba(0, 255, 65, 0.65);
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+  flex-shrink: 0;
+}
+
+.mini-player-btn:hover {
+  color: #00ff41;
+  background: rgba(0, 255, 65, 0.1);
+}
+
+.mini-player-btn:active {
+  transform: scale(0.88);
+}
+
+.mini-player-btn--mute {
+  color: rgba(168, 170, 181, 0.6);
+}
+
+.mini-player-btn--mute:hover {
+  color: #a8aab5;
+  background: rgba(168, 170, 181, 0.1);
+}
+
+/* Track info */
+.mini-player-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 1px;
+  min-width: 130px;
+  max-width: 200px;
   overflow: hidden;
 }
 
-.now-playing-label {
+.mini-player-label {
   font-family: 'Oswald', sans-serif;
-  font-size: 0.58rem;
+  font-size: 0.52rem;
   font-weight: 600;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.24em;
   color: #00ff41;
   text-shadow: 0 0 8px rgba(0, 255, 65, 0.5);
   line-height: 1;
 }
 
-.now-playing-track {
+.mini-player-track {
   font-family: 'Oswald', sans-serif;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.92);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  width: 100%;
+  text-align: center;
   line-height: 1.2;
 }
 
-/* === MUTE BUTTON === */
+/* === MUTE BUTTON (standalone — kept for back-compat, unused) === */
 
 .mute-btn {
   display: flex;

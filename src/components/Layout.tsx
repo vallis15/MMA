@@ -1,11 +1,9 @@
 import React, { ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { Volume2, VolumeX } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { CombatWidget } from './CombatWidget';
 import { NowPlayingToast } from './NowPlayingToast';
-import { useMusic } from '../context/MusicContext';
 
 interface LayoutProps {
   children: ReactNode;
@@ -34,8 +32,6 @@ const containerVariants = {
 };
 
 export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
-  const { isMuted, toggleMute } = useMusic();
-
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-dark-bg via-dark-secondary to-dark-bg relative overflow-hidden">
       {/* Animated Background Elements */}
@@ -50,18 +46,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
         transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
       />
 
-      {/* Language Switcher + Mute Button - Fixed Top Right */}
-      <div className="fixed top-4 right-4 z-50 pointer-events-auto flex items-center gap-2">
-        <button
-          onClick={toggleMute}
-          className="mute-btn"
-          title={isMuted ? 'Unmute music' : 'Mute music'}
-          aria-label={isMuted ? 'Unmute music' : 'Mute music'}
-        >
-          {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
-        </button>
+      {/* Language Switcher - Fixed Top Right */}
+      <div className="fixed top-4 right-4 z-50 pointer-events-auto">
         <LanguageSwitcher />
       </div>
+
+      {/* MiniPlayer — fixed top center, slides in after music starts */}
+      <NowPlayingToast />
 
       <Sidebar activeTab={activeTab} onTabChange={onTabChange} />
       
@@ -79,9 +70,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
 
       {/* Persistent Combat Widget — visible across all routes except /arena */}
       <CombatWidget />
-
-      {/* Now Playing Toast — global music notification */}
-      <NowPlayingToast />
     </div>
   );
 };
