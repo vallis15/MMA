@@ -6,6 +6,7 @@ import { FightProvider } from './context/FightContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
+import { MusicProvider } from './context/MusicContext';
 import { NotificationCenter } from './components/NotificationCenter';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -113,7 +114,7 @@ function App() {
   const handleSplashComplete = useCallback(() => setLoading(false), []);
 
   return (
-    <>
+    <MusicProvider>
       {loading && <SplashScreen onComplete={handleSplashComplete} />}
       <Router>
       <LanguageProvider>
@@ -128,7 +129,7 @@ function App() {
         </AuthProvider>
       </LanguageProvider>
       </Router>
-    </>
+    </MusicProvider>
   );
 }
 

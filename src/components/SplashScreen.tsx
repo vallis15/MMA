@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useMusic } from '../context/MusicContext';
 
 const QUOTES = [
   { text: "Surprise, surprise motherfu*ker, the king is back!", author: "Conor McGregor" },
@@ -18,10 +19,17 @@ interface SplashScreenProps {
 }
 
 export function SplashScreen({ onComplete }: SplashScreenProps) {
+  const { startPlayback } = useMusic();
   const [quote] = useState(() => QUOTES[Math.floor(Math.random() * QUOTES.length)]);
   const [quoteVisible, setQuoteVisible] = useState(false);
   const [authorVisible, setAuthorVisible] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
+
+  const handleEnter = useCallback(() => {
+    startPlayback();
+    setFadeOut(true);
+    setTimeout(() => onComplete(), 600);
+  }, [startPlayback, onComplete]);
 
   useEffect(() => {
     const t1 = setTimeout(() => setQuoteVisible(true), 700);
@@ -38,7 +46,11 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
   }, [onComplete]);
 
   return (
-    <div className={`splash-screen${fadeOut ? ' splash-fadeout' : ''}`}>
+    <div
+      className={`splash-screen${fadeOut ? ' splash-fadeout' : ''}`}
+      onClick={handleEnter}
+      style={{ cursor: 'pointer' }}
+    >
       {/* Corner Spotlights */}
       <div className="splash-spotlight splash-spotlight-tl" />
       <div className="splash-spotlight splash-spotlight-tr" />
@@ -65,6 +77,10 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         <cite className={`splash-author${authorVisible ? ' splash-author-visible' : ''}`}>
           — {quote.author}
         </cite>
+
+        <div className={`splash-enter-hint${authorVisible ? ' splash-enter-hint-visible' : ''}`}>
+          CLICK ANYWHERE TO ENTER
+        </div>
       </div>
     </div>
   );

@@ -494,3 +494,110 @@ body::before {
   opacity: 1;
   transform: translateY(0);
 }
+
+.splash-enter-hint {
+  margin-top: 2.5rem;
+  font-family: 'Oswald', sans-serif;
+  font-size: clamp(0.65rem, 1.4vw, 0.8rem);
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  color: rgba(0, 255, 65, 0.55);
+  text-shadow: 0 0 12px rgba(0, 255, 65, 0.3);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 1.1s ease 0.5s, transform 1.1s ease 0.5s;
+}
+
+.splash-enter-hint.splash-enter-hint-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* === NOW PLAYING TOAST === */
+
+.now-playing-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 10px 12px;
+  background: rgba(10, 15, 10, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(0, 255, 65, 0.28);
+  border-radius: 10px;
+  box-shadow:
+    0 0 18px rgba(0, 255, 65, 0.18),
+    0 4px 24px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(0, 255, 65, 0.1);
+  min-width: 200px;
+  max-width: 280px;
+}
+
+.now-playing-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(0, 255, 65, 0.12);
+  border: 1px solid rgba(0, 255, 65, 0.25);
+  color: #00ff41;
+  flex-shrink: 0;
+}
+
+.now-playing-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.now-playing-label {
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: #00ff41;
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.5);
+  line-height: 1;
+}
+
+.now-playing-track {
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* === MUTE BUTTON === */
+
+.mute-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(10, 15, 10, 0.65);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 255, 65, 0.25);
+  color: rgba(0, 255, 65, 0.8);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, color 0.2s;
+}
+
+.mute-btn:hover {
+  background: rgba(0, 255, 65, 0.12);
+  border-color: rgba(0, 255, 65, 0.55);
+  color: #00ff41;
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.25);
+}
+
+.mute-btn:active {
+  transform: scale(0.93);
+}
