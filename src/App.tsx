@@ -9,7 +9,8 @@ import { LanguageProvider } from './context/LanguageContext';
 import { NotificationCenter } from './components/NotificationCenter';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminDashboard } from './pages/AdminDashboard';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { SplashScreen } from './components/SplashScreen';
 import './index.css';
 
 function AppContent() {
@@ -108,8 +109,13 @@ function AppContent() {
 }
 
 function App() {
+  const [loading, setLoading] = useState(true);
+  const handleSplashComplete = useCallback(() => setLoading(false), []);
+
   return (
-    <Router>
+    <>
+      {loading && <SplashScreen onComplete={handleSplashComplete} />}
+      <Router>
       <LanguageProvider>
         <AuthProvider>
           <NotificationProvider>
@@ -121,7 +127,8 @@ function App() {
           </NotificationProvider>
         </AuthProvider>
       </LanguageProvider>
-    </Router>
+      </Router>
+    </>
   );
 }
 

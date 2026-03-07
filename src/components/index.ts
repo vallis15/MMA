@@ -12,3 +12,4 @@ export { ProtectedRoute } from './ProtectedRoute';
 export { LeagueBadge } from './LeagueBadge';
 export { ErrorBoundary } from './ErrorBoundary';
 export { LanguageSwitcher } from './LanguageSwitcher';
+export { SplashScreen } from './SplashScreen';

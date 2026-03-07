@@ -251,3 +251,246 @@ body::before {
 .table-row-stripe:hover {
   background: rgba(0, 255, 65, 0.08);
 }
+
+/* ============================================================
+   SPLASH / LOADING SCREEN
+   ============================================================ */
+
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity 1s ease-in-out;
+}
+
+.splash-screen.splash-fadeout {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── Spotlights ── */
+
+.splash-spotlight {
+  position: absolute;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* Top-left: beam anchored at top-left corner, swings inward */
+.splash-spotlight-tl {
+  top: -5vh;
+  left: -5vw;
+  width: 90vw;
+  height: 85vh;
+  background: conic-gradient(
+    from 135deg at 0% 0%,
+    transparent 0deg,
+    rgba(0, 255, 65, 0.07) 18deg,
+    rgba(0, 255, 65, 0.18) 38deg,
+    rgba(0, 255, 65, 0.07) 58deg,
+    transparent 76deg
+  );
+  filter: blur(28px);
+  transform-origin: 5% 5%;
+  animation: splash-swing-tl 2.8s cubic-bezier(0.35, 0, 0.2, 1) 0s forwards;
+}
+
+/* Top-right: beam anchored at top-right corner, swings inward */
+.splash-spotlight-tr {
+  top: -5vh;
+  right: -5vw;
+  width: 90vw;
+  height: 85vh;
+  background: conic-gradient(
+    from 45deg at 100% 0%,
+    transparent 0deg,
+    rgba(220, 20, 60, 0.08) 18deg,
+    rgba(220, 20, 60, 0.20) 38deg,
+    rgba(220, 20, 60, 0.08) 58deg,
+    transparent 76deg
+  );
+  filter: blur(28px);
+  transform-origin: 95% 5%;
+  animation: splash-swing-tr 2.8s cubic-bezier(0.35, 0, 0.2, 1) 0.2s forwards;
+}
+
+/* Bottom-left: beam anchored at bottom-left corner, swings inward */
+.splash-spotlight-bl {
+  bottom: -5vh;
+  left: -5vw;
+  width: 90vw;
+  height: 85vh;
+  background: conic-gradient(
+    from 225deg at 0% 100%,
+    transparent 0deg,
+    rgba(220, 20, 60, 0.08) 18deg,
+    rgba(220, 20, 60, 0.20) 38deg,
+    rgba(220, 20, 60, 0.08) 58deg,
+    transparent 76deg
+  );
+  filter: blur(28px);
+  transform-origin: 5% 95%;
+  animation: splash-swing-bl 2.8s cubic-bezier(0.35, 0, 0.2, 1) 0.4s forwards;
+}
+
+/* Bottom-right: beam anchored at bottom-right corner, swings inward */
+.splash-spotlight-br {
+  bottom: -5vh;
+  right: -5vw;
+  width: 90vw;
+  height: 85vh;
+  background: conic-gradient(
+    from 315deg at 100% 100%,
+    transparent 0deg,
+    rgba(0, 255, 65, 0.07) 18deg,
+    rgba(0, 255, 65, 0.18) 38deg,
+    rgba(0, 255, 65, 0.07) 58deg,
+    transparent 76deg
+  );
+  filter: blur(28px);
+  transform-origin: 95% 95%;
+  animation: splash-swing-br 2.8s cubic-bezier(0.35, 0, 0.2, 1) 0.6s forwards;
+}
+
+@keyframes splash-swing-tl {
+  0%   { transform: rotate(-28deg); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: rotate(18deg);  opacity: 1; }
+}
+
+@keyframes splash-swing-tr {
+  0%   { transform: rotate(28deg);  opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: rotate(-18deg); opacity: 1; }
+}
+
+@keyframes splash-swing-bl {
+  0%   { transform: rotate(28deg);  opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: rotate(-18deg); opacity: 1; }
+}
+
+@keyframes splash-swing-br {
+  0%   { transform: rotate(-28deg); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: rotate(18deg);  opacity: 1; }
+}
+
+/* ── Ambient center glow ── */
+
+.splash-center-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 55% 38% at 50% 50%,
+    rgba(0, 255, 65, 0.06) 0%,
+    rgba(220, 20, 60, 0.04) 40%,
+    transparent 68%
+  );
+  pointer-events: none;
+  animation: splash-glow-pulse 2.2s ease-in-out infinite alternate;
+}
+
+@keyframes splash-glow-pulse {
+  from { opacity: 0.4; }
+  to   { opacity: 1; }
+}
+
+/* ── Content ── */
+
+.splash-content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 2rem;
+  max-width: 760px;
+  gap: 1.6rem;
+}
+
+.splash-logo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-family: 'Oswald', sans-serif;
+  font-size: clamp(1.4rem, 4vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  color: #00ff41;
+  text-shadow:
+    0 0 20px rgba(0, 255, 65, 0.8),
+    0 0 50px rgba(0, 255, 65, 0.4),
+    0 0 100px rgba(0, 255, 65, 0.15);
+  opacity: 0;
+  animation: splash-logo-appear 0.9s ease-out 0.1s forwards;
+}
+
+.splash-logo-icon {
+  font-size: 0.72em;
+  opacity: 0.65;
+}
+
+@keyframes splash-logo-appear {
+  from { opacity: 0; transform: translateY(-12px) scale(0.93); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+.splash-divider {
+  width: 140px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 255, 65, 0.7),
+    transparent
+  );
+  opacity: 0;
+  animation: splash-logo-appear 0.9s ease-out 0.4s forwards;
+}
+
+.splash-quote {
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  font-size: clamp(0.95rem, 2.4vw, 1.3rem);
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.75;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 0 24px rgba(255, 255, 255, 0.12);
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 1.3s ease, transform 1.3s ease;
+  max-width: 680px;
+}
+
+.splash-quote.splash-quote-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.splash-author {
+  font-family: 'Oswald', sans-serif;
+  font-size: clamp(0.8rem, 1.8vw, 1.05rem);
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: #dc143c;
+  text-shadow:
+    0 0 12px rgba(220, 20, 60, 0.7),
+    0 0 28px rgba(220, 20, 60, 0.3);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.95s ease, transform 0.95s ease;
+}
+
+.splash-author.splash-author-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
