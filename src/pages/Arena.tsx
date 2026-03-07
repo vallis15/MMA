@@ -746,47 +746,53 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
 };
 
 // ============ LOG ENTRY WITH TYPEWRITER EFFECT ============
+// Color-coding logic:
+//   player  → Neon Green  #4ade80  (player lands a hit / takedown / submission)
+//   opponent → Neon Red   #f87171  (player takes damage / opponent attacks)
+//   neutral  → Neon Blue  #60a5fa  (dodges, misses, round markers, stun messages)
+// Font-weight scales with impact:
+//   high   → 900  (CRITICAL_HIT, FINISHER)   + shake animation + background glow
+//   medium → 700  (HEAVY_HIT, MEDIUM_HIT, takedowns, submissions)
+//   low    → 400  (LIGHT_HIT, misses, dodges)
 
 const LogEntry: React.FC<{ entry: BattleLogEntry }> = ({ entry }) => {
   const [displayedText, setDisplayedText] = useState('');
 
   // ── Skill trigger gets its own rendering path ────────────────────────────
-  const isSkill     = entry.isSkillTrigger === true;
-  const skillColor  = isSkill && entry.skillDomain ? DOMAIN_COLORS[entry.skillDomain] : null;
+  const isSkill    = entry.isSkillTrigger === true;
+  const skillColor = isSkill && entry.skillDomain ? DOMAIN_COLORS[entry.skillDomain] : null;
+  const isRoundSep = entry.message.startsWith('═══');
 
-  const isCritical  = !isSkill && (entry.category === 'CRITICAL_HIT' || entry.category === 'FINISHER');
-  const isNegative  = !isSkill && (entry.category === 'MISS' || entry.category === 'DODGE');
-  const isTakedown  = !isSkill && (entry.category === 'TAKEDOWN_ATTEMPT' || entry.category === 'TAKEDOWN_DEFENSE');
-  const isGndControl = !isSkill && entry.category === 'GROUND_CONTROL';
-  const isSub       = !isSkill && entry.category === 'SUBMISSION_ATTEMPT';
-  const isSubEscape = !isSkill && entry.category === 'SUBMISSION_ESCAPE';
-  const isRoundSep  = entry.message.startsWith('═══');
+  // ── Actor / impact derived from the log entry metadata ───────────────────
+  const actor  = entry.actor  ?? 'neutral';
+  const impact = entry.impact ?? 'low';
 
-  // Neon accent color per category
-  const accentColor = isSkill     ? (skillColor ?? '#ffd600')
-    : isCritical  ? '#ff1744'
-    : isTakedown   ? '#ffd600'
-    : isSub        ? '#ff6d00'
-    : isSubEscape  ? '#00e5ff'
-    : isGndControl ? '#ff9100'
-    : isNegative   ? 'rgba(80,80,80,0.5)'
-    : isRoundSep   ? '#00e5ff'
-    : 'rgba(0,229,255,0.25)';
+  // Base color: skill keeps its domain color; others use actor → color table
+  const baseColor: string = isSkill
+    ? (skillColor ?? '#ffd600')
+    : actor === 'player'
+      ? '#4ade80'          // neon green  — player attacking
+      : actor === 'opponent'
+        ? '#f87171'        // neon red    — opponent attacking
+        : '#60a5fa';       // neon blue   — neutral / round info
 
-  const textColor = isSkill      ? (skillColor ?? '#ffd600')
-    : isCritical  ? '#ff4444'
-    : isTakedown   ? '#ffd600'
-    : isSub        ? '#ff9100'
-    : isSubEscape  ? '#00e5ff'
-    : isGndControl ? '#ffab40'
-    : isNegative   ? 'rgba(100,100,110,0.8)'
-    : isRoundSep   ? '#00e5ff'
-    : 'rgba(200,210,220,0.9)';
+  const fontWeight = isSkill ? 700 : impact === 'high' ? 900 : impact === 'medium' ? 700 : 400;
+  const isCritical = !isSkill && impact === 'high';
+
+  // Subtle background glow for high-impact hits so they jump out of the log
+  const bgGlow = isCritical
+    ? actor === 'player'
+      ? 'rgba(74,222,128,0.08)'
+      : actor === 'opponent'
+        ? 'rgba(248,113,113,0.08)'
+        : 'rgba(96,165,250,0.08)'
+    : 'transparent';
 
   useEffect(() => {
     let currentIndex = 0;
-    const fullText = entry.message;
-    const tickDuration = isSkill ? 30 : isCritical ? 45 : 60;
+    const fullText   = entry.message;
+    // Critical hits type faster for dramatic effect
+    const tickDuration = isSkill ? 30 : isCritical ? 38 : 60;
 
     const typewriter = setInterval(() => {
       if (currentIndex < fullText.length) {
@@ -800,13 +806,14 @@ const LogEntry: React.FC<{ entry: BattleLogEntry }> = ({ entry }) => {
     return () => clearInterval(typewriter);
   }, [entry.message]);
 
+  // ── Round separator line ─────────────────────────────────────────────────
   if (isRoundSep) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         className="my-2 text-center text-[9px] font-black tracking-[0.3em] uppercase"
-        style={{ color: '#00e5ff88', borderTop: '1px solid rgba(0,229,255,0.15)', borderBottom: '1px solid rgba(0,229,255,0.15)', padding: '6px 0' }}
+        style={{ color: '#60a5fa88', borderTop: '1px solid rgba(96,165,250,0.2)', borderBottom: '1px solid rgba(96,165,250,0.2)', padding: '6px 0' }}
       >
         {entry.message}
       </motion.div>
@@ -816,7 +823,6 @@ const LogEntry: React.FC<{ entry: BattleLogEntry }> = ({ entry }) => {
   // ── SKILL TRIGGER — special neon-pulse card ──────────────────────────────
   if (isSkill) {
     const col = skillColor ?? '#ffd600';
-    // Split "[SKILL: Name]" prefix from the rest of the message
     const prefixMatch = displayedText.match(/^(\[SKILL:[^\]]+\])(.*)/s);
     const prefix = prefixMatch ? prefixMatch[1] : '';
     const rest   = prefixMatch ? prefixMatch[2] : displayedText;
@@ -888,27 +894,39 @@ const LogEntry: React.FC<{ entry: BattleLogEntry }> = ({ entry }) => {
     );
   }
 
+  // ── Normal combat log entry ───────────────────────────────────────────────
   return (
     <motion.div
       initial={{ opacity: 0, x: -12 }}
-      animate={{ opacity: 1, x: 0 }}
+      // High-impact hits get a brief horizontal shake on entry
+      animate={isCritical
+        ? { opacity: 1, x: [-12, 7, -5, 3, 0] }
+        : { opacity: 1, x: 0 }
+      }
       exit={{ opacity: 0, x: 12 }}
-      transition={{ duration: 0.25 }}
+      transition={{ duration: isCritical ? 0.35 : 0.25 }}
       style={{
-        borderLeft: `2px solid ${accentColor}`,
+        borderLeft: `${isCritical ? 3 : 2}px solid ${baseColor}${isCritical ? '' : '99'}`,
         paddingLeft: 8,
         paddingTop: 3,
         paddingBottom: 3,
-        background: isCritical
-          ? 'rgba(255,23,68,0.06)'
-          : isSub
-            ? 'rgba(255,109,0,0.05)'
-            : 'transparent',
+        background: bgGlow,
+        // Extra outer glow for critical/finisher lines
+        boxShadow: isCritical ? `0 0 8px ${baseColor}22` : 'none',
       }}
     >
       <p
-        className={`text-xs font-mono leading-relaxed ${isCritical ? 'font-bold' : ''}`}
-        style={{ color: textColor }}
+        className="text-xs font-mono leading-relaxed"
+        style={{
+          color: isCritical ? baseColor : `${baseColor}cc`,
+          fontWeight,
+          // Slight text-shadow glow on medium+ for readability against dark bg
+          textShadow: impact === 'high'
+            ? `0 0 10px ${baseColor}88`
+            : impact === 'medium'
+              ? `0 0 6px ${baseColor}44`
+              : 'none',
+        }}
       >
         {displayedText}
         {displayedText.length < entry.message.length && (
@@ -916,7 +934,7 @@ const LogEntry: React.FC<{ entry: BattleLogEntry }> = ({ entry }) => {
             animate={{ opacity: [1, 0] }}
             transition={{ duration: 0.4, repeat: Infinity }}
             className="inline-block w-1.5 h-3 ml-0.5 align-middle"
-            style={{ background: accentColor }}
+            style={{ background: baseColor }}
           />
         )}
       </p>

@@ -242,7 +242,20 @@ export const CombatWidget: React.FC = () => {
             {!battleResult && lastEntry && (
               <div
                 className="mx-3 mb-2.5 px-2 py-1.5 rounded-lg"
-                style={{ background: 'rgba(0,229,255,0.04)', border: '1px solid rgba(0,229,255,0.08)' }}
+                style={{
+                  background: lastEntry.actor === 'player'
+                    ? 'rgba(74,222,128,0.05)'
+                    : lastEntry.actor === 'opponent'
+                      ? 'rgba(248,113,113,0.05)'
+                      : 'rgba(96,165,250,0.04)',
+                  border: `1px solid ${
+                    lastEntry.actor === 'player'
+                      ? 'rgba(74,222,128,0.15)'
+                      : lastEntry.actor === 'opponent'
+                        ? 'rgba(248,113,113,0.15)'
+                        : 'rgba(96,165,250,0.1)'
+                  }`,
+                }}
               >
                 <LogTicker message={lastEntry.message} />
               </div>

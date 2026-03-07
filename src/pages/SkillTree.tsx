@@ -143,18 +143,18 @@ const PentagonNode: React.FC<PentagonNodeProps> = ({
   const theme = DOMAIN_THEME[domain];
 
   const bgColor = {
-    locked: '#111',
+    locked: `${theme.color}10`,
     available: '#0d0d1a',
     unlocked: '#0d0d1a',
   }[state];
 
   const borderColor = {
-    locked: '#333',
+    locked: `${theme.color}55`,
     available: theme.color,
     unlocked: theme.color,
   }[state];
 
-  const iconOpacity = state === 'locked' ? 0.25 : 1;
+  const iconOpacity = state === 'locked' ? 0.7 : 1;
   const isFlashing = flashId === skill.id;
 
   const clipPath = 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)';
@@ -208,6 +208,8 @@ const PentagonNode: React.FC<PentagonNodeProps> = ({
           background: bgColor,
           border: 'none',
           outline: 'none',
+          filter: 'none',
+          opacity: 1,
           boxShadow: state !== 'locked'
             ? (isActive ? theme.ringStyle : `0 0 8px ${borderColor}55`)
             : 'none',
@@ -238,15 +240,38 @@ const PentagonNode: React.FC<PentagonNodeProps> = ({
         {/* Icon */}
         <div
           className="relative z-10"
-          style={{ opacity: iconOpacity, color: state === 'locked' ? '#555' : theme.color,
-            filter: state !== 'locked' ? `drop-shadow(0 0 4px ${theme.color})` : 'none' }}
+          style={{
+            opacity: iconOpacity,
+            color: theme.color,
+            filter: state === 'unlocked'
+              ? `drop-shadow(0 0 4px ${theme.color})`
+              : state === 'available'
+                ? `drop-shadow(0 0 3px ${theme.color}aa)`
+                : `drop-shadow(0 0 2px ${theme.color}60)`,
+          }}
         >
           <SkillIcon name={skill.iconName} size={20} />
         </div>
       </motion.button>
 
-      {/* Active skill [A] badge */}
-      {skill.type === 'active' && (
+      {/* Lock icon overlay for locked skills */}
+      {state === 'locked' && (
+        <div
+          className="absolute -bottom-1 -right-1 z-20 flex items-center justify-center rounded-full"
+          style={{
+            width: 18,
+            height: 18,
+            background: '#0a0a0a',
+            border: `1.5px solid ${theme.color}70`,
+            boxShadow: `0 0 8px ${theme.color}60, inset 0 0 6px ${theme.color}20`,
+          }}
+        >
+          <Lock size={9} style={{ color: theme.color, filter: `drop-shadow(0 0 3px ${theme.color})` }} />
+        </div>
+      )}
+
+      {/* Active skill [A] badge – only shown when skill is actually unlocked */}
+      {skill.type === 'active' && state === 'unlocked' && (
         <div
           className="absolute -top-1 -right-1 z-20 text-[9px] font-black px-1 rounded"
           style={{
@@ -272,8 +297,8 @@ const ConnectorLine: React.FC<{ color: string; unlocked: boolean }> = ({ color, 
         height: '100%',
         background: unlocked
           ? `linear-gradient(to bottom, ${color}, ${color})`
-          : '#2a2a2a',
-        boxShadow: unlocked ? `0 0 6px ${color}` : 'none',
+          : `linear-gradient(to bottom, ${color}25, ${color}15)`,
+        boxShadow: unlocked ? `0 0 6px ${color}` : `0 0 3px ${color}15`,
         borderRadius: 2,
       }}
       initial={{ scaleY: 0 }}
@@ -361,7 +386,7 @@ const SkillDetailPanel: React.FC<SkillDetailProps> = ({
             }}
           >
             <span>{theme.label}</span>
-            {skill.type === 'active' && <span className="ml-1">• ACTIVE</span>}
+            {skill.type === 'active' && state === 'unlocked' && <span className="ml-1">• ACTIVE</span>}
           </div>
 
           {/* Icon + Name */}
@@ -653,6 +678,7 @@ export const SkillTree: React.FC = () => {
   const [selectedSkill, setSelectedSkill] = useState<SkillNode | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
   const [isLearning, setIsLearning] = useState(false);
+  const [notify, setNotify] = useState<{ success: boolean; msg: string } | null>(null);
 
   const theme = DOMAIN_THEME[activeDomain];
 
@@ -725,8 +751,12 @@ export const SkillTree: React.FC = () => {
     if (result.success) {
       setFlashId(selectedSkill.id);
       setTimeout(() => setFlashId(null), 700);
+      setNotify({ success: true, msg: '✅ Skill unlocked!' });
+    } else {
+      setNotify({ success: false, msg: result.message });
     }
     setIsLearning(false);
+    setTimeout(() => setNotify(null), 3500);
   }, [selectedSkill, learnSkill]);
 
   const selectedCanLearn = selectedSkill ? canLearnSkill(selectedSkill.id) : null;
@@ -860,7 +890,7 @@ export const SkillTree: React.FC = () => {
                       <p
                         className="text-center text-[9px] leading-tight font-medium max-w-[68px] truncate"
                         style={{
-                          color: nodeState === 'locked' ? '#333'
+                          color: nodeState === 'locked' ? `${theme.color}55`
                             : nodeState === 'unlocked' ? theme.color
                             : '#aaa',
                         }}
@@ -927,6 +957,28 @@ export const SkillTree: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Skill unlock toast notification ─────────────────── */}
+      <AnimatePresence>
+        {notify && (
+          <motion.div
+            key="skill-notify"
+            initial={{ opacity: 0, y: -24, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -16, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+            className="fixed top-6 left-1/2 z-[100] -translate-x-1/2 px-5 py-3 rounded-2xl text-sm font-bold flex items-center gap-2.5 shadow-2xl pointer-events-none"
+            style={
+              notify.success
+                ? { background: 'rgba(0,20,5,0.95)', border: '1.5px solid #00ff41', color: '#00ff41', boxShadow: '0 0 24px #00ff4180' }
+                : { background: 'rgba(20,5,5,0.95)', border: '1.5px solid #ff4444', color: '#ff6666', boxShadow: '0 0 24px #ff444460' }
+            }
+          >
+            {notify.success ? <CheckCircle size={16} /> : <XCircle size={16} />}
+            {notify.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Detail panel ────────────────────────────────────────── */}
       <AnimatePresence>

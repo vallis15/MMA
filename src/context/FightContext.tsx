@@ -66,6 +66,10 @@ export interface BattleLogEntry {
   displayTime: number;
   isSkillTrigger?: boolean;
   skillDomain?: SkillDomain;
+  /** Who initiated the action — used to colour the log entry. */
+  actor?: 'player' | 'opponent' | 'neutral';
+  /** Impact level — drives font-weight and damage bracket. */
+  impact?: 'low' | 'medium' | 'high';
 }
 
 interface QueuedEvent {
@@ -172,6 +176,30 @@ export const DOMAIN_COLORS: Record<SkillDomain, string> = {
   wrestling: '#ffd600',
   bjj:       '#ce93d8',
   defense:   '#00e5ff',
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOG COLOURING HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+const ATTACKING_CATEGORIES = new Set<BattleCategory>([
+  'LIGHT_HIT', 'MEDIUM_HIT', 'HEAVY_HIT', 'CRITICAL_HIT',
+  'FINISHER', 'TAKEDOWN_ATTEMPT', 'SUBMISSION_ATTEMPT', 'GROUND_CONTROL',
+]);
+
+const getActor = (
+  category: BattleCategory,
+  attacker: 'player' | 'opponent',
+): 'player' | 'opponent' | 'neutral' =>
+  ATTACKING_CATEGORIES.has(category) ? attacker : 'neutral';
+
+const getImpact = (category: BattleCategory): 'low' | 'medium' | 'high' => {
+  if (category === 'CRITICAL_HIT' || category === 'FINISHER') return 'high';
+  if (
+    category === 'HEAVY_HIT' || category === 'MEDIUM_HIT' ||
+    category === 'TAKEDOWN_ATTEMPT' || category === 'SUBMISSION_ATTEMPT' ||
+    category === 'GROUND_CONTROL'
+  ) return 'medium';
+  return 'low';
 };
 
 const getTargetPart = (move: string, category: BattleCategory): BodyPart => {
@@ -703,7 +731,7 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (stunRef.current[event.attacker] > 0) {
       stunRef.current = { ...stunRef.current, [event.attacker]: stunRef.current[event.attacker] - 1 };
       const stunMsg = `🌀 ${attackerName} is still stunned — turn skipped!`;
-      setBattleLog(log => [...log, { id: `stun-skip-${event.id}`, message: stunMsg, category: 'DODGE' as BattleCategory, displayTime: Date.now() }]);
+      setBattleLog(log => [...log, { id: `stun-skip-${event.id}`, message: stunMsg, category: 'DODGE' as BattleCategory, displayTime: Date.now(), actor: 'neutral' as const, impact: 'low' as const }]);
       setTimeout(() => { isProcessingQueueRef.current = false; processNextQueuedEvent(); }, 900 + Math.random() * 500);
       return;
     }
@@ -725,7 +753,10 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setCurrentAttacker(event.attacker);
     setTimeout(() => setCurrentAttacker(null), 700);
 
-    setBattleLog(log => [...log, { id: event.id, message, category: event.category, displayTime: Date.now() }]);
+    const _actor  = getActor(event.category, event.attacker);
+    const _impact = getImpact(event.category);
+    const _dmgSuffix = _impact === 'high' && event.damage > 0 ? ` [${event.damage} DMG]` : '';
+    setBattleLog(log => [...log, { id: event.id, message: message + _dmgSuffix, category: event.category, displayTime: Date.now(), actor: _actor, impact: _impact }]);
 
     const typewriterDuration = message.length * 60;
 
@@ -784,7 +815,7 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           if (newOppHS[tPart] <= 0 && !battleEndedRef.current) {
             battleEndedRef.current = true;
             const method = tPart === 'head' ? 'Knockout' : tPart === 'body' ? 'TKO — Body Damage' : 'TKO — Leg Damage';
-            setBattleLog(log => [...log, { id: `finish-${Date.now()}`, message: FINISHER_MSGS[tPart](attackerName, defenderName), category: 'FINISHER', displayTime: Date.now() }]);
+            setBattleLog(log => [...log, { id: `finish-${Date.now()}`, message: FINISHER_MSGS[tPart](attackerName, defenderName) + ` [${effectiveDamage} DMG]`, category: 'FINISHER', displayTime: Date.now(), actor: 'player' as const, impact: 'high' as const }]);
             if (pendingFinishTimeoutRef.current) clearTimeout(pendingFinishTimeoutRef.current);
             pendingFinishTimeoutRef.current = setTimeout(() => endBattle('player', method), 1200);
           } else if (event.category === 'FINISHER' && !battleEndedRef.current) {
@@ -792,7 +823,7 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             const isSubmission = event.phase === 'GROUND';
             const method = isSubmission ? `Submission — ${event.move}` : (tPart === 'head' ? 'Knockout' : tPart === 'body' ? 'TKO — Body Damage' : 'TKO — Leg Damage');
             const finishMsg = isSubmission ? `🔒 SUBMISSION!! ${defenderName} tapped out! ${attackerName} wins by submission — ${event.move}!` : FINISHER_MSGS[tPart](attackerName, defenderName);
-            setBattleLog(log => [...log, { id: `finish-sub-${Date.now()}`, message: finishMsg, category: 'FINISHER', displayTime: Date.now() }]);
+            setBattleLog(log => [...log, { id: `finish-sub-${Date.now()}`, message: finishMsg + ` [${effectiveDamage} DMG]`, category: 'FINISHER', displayTime: Date.now(), actor: 'player' as const, impact: 'high' as const }]);
             if (pendingFinishTimeoutRef.current) clearTimeout(pendingFinishTimeoutRef.current);
             pendingFinishTimeoutRef.current = setTimeout(() => endBattle('player', method), 1200);
           }
@@ -829,7 +860,7 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           if (newPlHS[tPart] <= 0 && !battleEndedRef.current) {
             battleEndedRef.current = true;
             const method = tPart === 'head' ? 'Knockout' : tPart === 'body' ? 'TKO — Body Damage' : 'TKO — Leg Damage';
-            setBattleLog(log => [...log, { id: `finish-${Date.now()}`, message: FINISHER_MSGS[tPart](defenderName, attackerName), category: 'FINISHER', displayTime: Date.now() }]);
+            setBattleLog(log => [...log, { id: `finish-${Date.now()}`, message: FINISHER_MSGS[tPart](defenderName, attackerName) + ` [${effectiveDamage} DMG]`, category: 'FINISHER', displayTime: Date.now(), actor: 'opponent' as const, impact: 'high' as const }]);
             if (pendingFinishTimeoutRef.current) clearTimeout(pendingFinishTimeoutRef.current);
             pendingFinishTimeoutRef.current = setTimeout(() => endBattle('opponent', method), 1200);
           } else if (event.category === 'FINISHER' && !battleEndedRef.current) {
@@ -837,7 +868,7 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             const isSubmission = event.phase === 'GROUND';
             const method = isSubmission ? `Submission — ${event.move}` : (tPart === 'head' ? 'Knockout' : tPart === 'body' ? 'TKO — Body Damage' : 'TKO — Leg Damage');
             const finishMsg = isSubmission ? `🔒 SUBMISSION!! ${attackerName} tapped out! ${defenderName} wins by submission — ${event.move}!` : FINISHER_MSGS[tPart](defenderName, attackerName);
-            setBattleLog(log => [...log, { id: `finish-sub-${Date.now()}`, message: finishMsg, category: 'FINISHER', displayTime: Date.now() }]);
+            setBattleLog(log => [...log, { id: `finish-sub-${Date.now()}`, message: finishMsg + ` [${effectiveDamage} DMG]`, category: 'FINISHER', displayTime: Date.now(), actor: 'opponent' as const, impact: 'high' as const }]);
             if (pendingFinishTimeoutRef.current) clearTimeout(pendingFinishTimeoutRef.current);
             pendingFinishTimeoutRef.current = setTimeout(() => endBattle('opponent', method), 1200);
           }
@@ -936,6 +967,8 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           message: msg,
           category: 'MISS' as BattleCategory,
           displayTime: Date.now() + i * 50,
+          actor: 'neutral' as const,
+          impact: 'low' as const,
         })),
       ]);
 
@@ -959,6 +992,8 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           message: `═══ ROUND ${upcomingRound} BEGINS ═══`,
           category: 'MISS' as BattleCategory,
           displayTime: Date.now(),
+          actor: 'neutral' as const,
+          impact: 'low' as const,
         }]);
         startNextRound();
       }, 5000);

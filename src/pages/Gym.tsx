@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dumbbell, Zap, TrendingUp, TrendingDown, CheckCircle, XCircle } from 'lucide-react';
+import { Dumbbell, Zap, TrendingUp, TrendingDown, CheckCircle, XCircle, Search } from 'lucide-react';
 import { useFighter } from '../context/FighterContext';
 import { useLanguage } from '../context/LanguageContext';
 import { GYM_EXERCISES, GymExercise, ExerciseCategory, ExerciseTier } from '../data/gymExercises';
@@ -220,13 +220,24 @@ export const Gym: React.FC = () => {
   const [tierFilter,     setTierFilter]     = useState<TierFilter>('all');
   const [toasts,         setToasts]         = useState<Toast[]>([]);
   const [toastCounter,   setToastCounter]   = useState(0);
+  const [searchTerm,     setSearchTerm]     = useState('');
 
   const canTrain = !!(fighter && fighter.name && fighter.name !== 'Undefined');
 
   const filteredExercises = GYM_EXERCISES.filter(ex => {
     const catOk  = categoryFilter === 'all' || ex.category === categoryFilter;
     const tierOk = tierFilter     === 'all' || ex.tier     === tierFilter;
-    return catOk && tierOk;
+    if (!catOk || !tierOk) return false;
+    if (!searchTerm.trim()) return true;
+    const q = searchTerm.toLowerCase();
+    const nameMatch     = ex.name.toLowerCase().includes(q);
+    const catLabel      = CATEGORY_CONFIG[ex.category].label.toLowerCase();
+    const categoryMatch = catLabel.includes(q);
+    const statMatch     = Object.keys(ex.statChanges).some(statKey => {
+      const label = STAT_LABELS[statKey as keyof DetailedFighterStats] ?? statKey;
+      return label.toLowerCase().includes(q);
+    });
+    return nameMatch || categoryMatch || statMatch;
   });
 
   const handleTrainingDone = useCallback(
@@ -342,6 +353,40 @@ export const Gym: React.FC = () => {
 
         {canTrain && (
           <>
+            {/* ── Search Bar ── */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 }}
+              className="mb-5"
+            >
+              <div className="relative">
+                <Search
+                  size={16}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-neon-green/60 pointer-events-none"
+                />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  placeholder='Search exercises (e.g., "Leg Kick", "Power", "Stamina")...'
+                  className="w-full glass-card-premium rounded-xl pl-10 pr-10 py-3 text-sm text-gray-200 placeholder-gray-600 bg-gray-900/60 border border-neon-green/20 focus:border-neon-green/60 focus:outline-none focus:ring-1 focus:ring-neon-green/30 transition-all duration-200"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors text-lg leading-none"
+                    aria-label="Clear search"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              <p className="mt-1.5 text-[11px] text-gray-600 pl-1 tracking-wide">
+                Tip: Search by exercise name, body part, or attribute.
+              </p>
+            </motion.div>
+
             {/* ── Filter Row ── */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -402,13 +447,16 @@ export const Gym: React.FC = () => {
               {/* Count */}
               <div className="ml-auto self-center text-xs text-gray-600 font-mono hidden sm:block">
                 {filteredExercises.length} / {GYM_EXERCISES.length} exercises
+                {searchTerm.trim() && (
+                  <span className="ml-1 text-neon-green/60">— "{searchTerm.trim()}"</span>
+                )}
               </div>
             </motion.div>
 
             {/* ── Exercise Grid ── */}
             <AnimatePresence mode="wait">
               <motion.div
-                key={`${categoryFilter}-${tierFilter}`}
+                key={`${categoryFilter}-${tierFilter}-${searchTerm}`}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
@@ -436,11 +484,24 @@ export const Gym: React.FC = () => {
 
                 {filteredExercises.length === 0 && (
                   <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="col-span-full text-center py-16 text-gray-600 text-sm uppercase tracking-widest"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="col-span-full flex flex-col items-center justify-center py-20 gap-4"
                   >
-                    No exercises found for this filter combination.
+                    <span className="text-5xl select-none">🔍</span>
+                    <p className="text-gray-400 text-base font-semibold">
+                      {searchTerm.trim()
+                        ? 'No training matches your search. Try different keywords.'
+                        : 'No exercises found for this filter combination.'}
+                    </p>
+                    {searchTerm.trim() && (
+                      <button
+                        onClick={() => setSearchTerm('')}
+                        className="text-xs text-neon-green/70 hover:text-neon-green underline underline-offset-2 transition-colors"
+                      >
+                        Clear search
+                      </button>
+                    )}
                   </motion.div>
                 )}
               </motion.div>

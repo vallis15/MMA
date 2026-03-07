@@ -108,7 +108,7 @@ export interface CanLearnResult {
  * requirement checks, NOT the top-level fighter.stats object.
  */
 export function canLearnSkill(
-  fighter: { unlocked_skills: string[]; detailedStats?: DetailedFighterStats },
+  fighter: { unlocked_skills: string[]; detailedStats?: DetailedFighterStats; skill_points?: number },
   skillId: string,
   allSkillsData: SkillNode[],
 ): CanLearnResult {
@@ -150,6 +150,11 @@ export function canLearnSkill(
         reason: `Not enough ${label}: ${current} / ${req.value} required`,
       };
     }
+  }
+
+  // Skill point check – last gate so attribute messages are shown first
+  if ((fighter.skill_points ?? 0) < 1) {
+    return { canLearn: false, reason: 'No skill points available. Keep training to earn more!' };
   }
 
   return { canLearn: true };
