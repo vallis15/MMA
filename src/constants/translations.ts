@@ -102,6 +102,8 @@ export const translations: Record<string, Record<Language, string>> = {
   sort_by_reputation: { en: '💰 Reputation', cs: '💰 Reputace', pl: '💰 Reputacja' },
   sort_by_wins: { en: '🏆 Wins', cs: '🏆 Výhry', pl: '🏆 Wygrane' },
   sort_by_level: { en: '📈 Level', cs: '📈 Úroveň', pl: '📈 Poziom' },
+  fewest_losses: { en: 'Fewest Losses', cs: 'Nejméně proher', pl: 'Najmniej przegranych' },
+  debut_required: { en: 'Must have at least 1 fight to appear', cs: 'Pro zobrazení je potřeba alespoň 1 zápas', pl: 'Wymagany co najmniej 1 walka' },
   error_loading_leaderboard: { en: '⚠️ Error Loading Leaderboard', cs: '⚠️ Chyba načítání žebříčku', pl: '⚠️ Błąd ładowania rankingu' },
   no_players_found: { en: 'No players found in the database', cs: 'V databázi nebyli nalezeni žádní hráči', pl: 'Nie znaleziono graczy w bazie danych' },
   w_l_d: { en: 'W-L-D', cs: 'V-P-R', pl: 'W-P-R' },

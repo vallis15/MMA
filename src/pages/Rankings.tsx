@@ -20,13 +20,10 @@ interface DatabasePlayer {
   isAI?: boolean;
 }
 
-type SortBy = 'reputation' | 'wins';
-
 export const Rankings: React.FC = () => {
   const { fighter, resetCareer } = useFighter();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const [sortBy, setSortBy] = useState<SortBy>('reputation');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [players, setPlayers] = useState<DatabasePlayer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,20 +95,45 @@ export const Rankings: React.FC = () => {
     };
 
     fetchPlayers();
+
+    // Auto-refresh when any profile is updated (e.g. after a fight ends)
+    const channel = supabase
+      .channel('rankings_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        console.log('🔄 [RANKINGS] Profile change detected — refreshing leaderboard...');
+        fetchPlayers();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  // Sort players based on selected criteria
+  // Professional MMA ranking: hide 0-fight players, then sort by
+  // 1) Wins desc  2) Losses asc  3) Win-rate desc  4) Reputation desc
   const sortedPlayers = React.useMemo(() => {
-    const sorted = [...players];
-    
-    if (sortBy === 'reputation') {
-      sorted.sort((a, b) => (b.reputation ?? 0) - (a.reputation ?? 0));
-    } else if (sortBy === 'wins') {
-      sorted.sort((a, b) => (b.wins ?? 0) - (a.wins ?? 0));
-    }
+    const active = players.filter(p => {
+      const total = (p.wins ?? 0) + (p.losses ?? 0) + (p.draws ?? 0);
+      return total > 0;
+    });
 
-    return sorted;
-  }, [players, sortBy]);
+    return active.sort((a, b) => {
+      const aW = a.wins ?? 0;  const bW = b.wins ?? 0;
+      if (bW !== aW) return bW - aW;                   // 1. Wins desc
+
+      const aL = a.losses ?? 0; const bL = b.losses ?? 0;
+      if (aL !== bL) return aL - bL;                   // 2. Losses asc
+
+      const aTotal = aW + aL + (a.draws ?? 0);
+      const bTotal = bW + bL + (b.draws ?? 0);
+      const aRate  = aTotal > 0 ? aW / aTotal : 0;
+      const bRate  = bTotal > 0 ? bW / bTotal : 0;
+      if (bRate !== aRate) return bRate - aRate;        // 3. Win-rate desc
+
+      return (b.reputation ?? 0) - (a.reputation ?? 0); // 4. Reputation desc
+    });
+  }, [players]);
 
   // Find player's rank
   const playerRank = React.useMemo(() => {
@@ -215,24 +237,16 @@ export const Rankings: React.FC = () => {
           )}
         </div>
 
-        {/* Sort Controls */}
-        <div className="flex flex-wrap gap-2">
-          {(['reputation', 'wins'] as const).map((sort) => (
-            <motion.button
-              key={sort}
-              onClick={() => setSortBy(sort)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className={`px-6 py-2 rounded-lg font-semibold transition-all uppercase tracking-wider text-sm ${
-                sortBy === sort
-                  ? 'bg-neon-green text-dark-bg shadow-lg shadow-neon-green/50'
-                  : 'glass-card text-gray-300 hover:text-neon-green border border-neon-green/20 hover:border-neon-green/50'
-              }`}
-            >
-              {sort === 'reputation' && t('sort_by_reputation')}
-              {sort === 'wins' && t('sort_by_wins')}
-            </motion.button>
-          ))}
+        {/* Ranking criteria legend */}
+        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400 uppercase tracking-wider">
+          <span className="flex items-center gap-1"><span className="text-neon-green font-bold">1.</span> {t('sort_by_wins')}</span>
+          <span className="text-dark-tertiary">›</span>
+          <span className="flex items-center gap-1"><span className="text-yellow-400 font-bold">2.</span> {t('fewest_losses')}</span>
+          <span className="text-dark-tertiary">›</span>
+          <span className="flex items-center gap-1"><span className="text-orange-400 font-bold">3.</span> {t('win_rate')}</span>
+          <span className="text-dark-tertiary">›</span>
+          <span className="flex items-center gap-1"><span className="text-purple-400 font-bold">4.</span> {t('reputation')}</span>
+          <span className="ml-auto text-gray-600 italic normal-case">{t('debut_required')}</span>
         </div>
       </motion.div>
 
