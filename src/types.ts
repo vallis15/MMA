@@ -6,6 +6,15 @@ export interface FighterStats {
   grappling: number;
 }
 
+export interface VisualConfig {
+  bodyId: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  skinToneId?: string;
+  hairId?: number;    // 0 or undefined = no hair; 2–9 = active style (1 deprecated)
+  hairColor?: string; // id from HAIR_COLORS
+  /** @deprecated use hairId + hairColor */
+  hairStyle?: string;
+}
+
 // 30 detailed MMA attributes from Supabase profiles table
 export interface DetailedFighterStats {
   // Striking (10)
@@ -70,6 +79,8 @@ export interface Fighter {
   skill_points: number;
   /** Array of unlocked skill node ids, e.g. ["striking_1_jab_mastery"]. */
   unlocked_skills: string[];
+  /** Appearance settings – body archetype, skin tone, future hair. */
+  visual_config?: VisualConfig;
 }
 
 export interface AIFighter {

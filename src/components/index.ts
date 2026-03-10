@@ -13,3 +13,5 @@ export { LeagueBadge } from './LeagueBadge';
 export { ErrorBoundary } from './ErrorBoundary';
 export { LanguageSwitcher } from './LanguageSwitcher';
 export { SplashScreen } from './SplashScreen';
+export { FighterVisual, ARCHETYPES, SKIN_TONES, HAIR_STYLES, HAIR_COLORS, HAIR_ALIGNMENT_MAPPING } from './FighterVisual';
+export type { VisualConfig, BodyId, SkinTonePreset, HairStyle, HairColorPreset, HairSlot } from './FighterVisual';

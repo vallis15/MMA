@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Zap, Flame, Shield } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Zap, Flame, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import {
+  FighterVisual,
+  ARCHETYPES,
+  SKIN_TONES,
+  HAIR_STYLES,
+  HAIR_COLORS,
+  type BodyId,
+  type VisualConfig,
+} from './FighterVisual';
 
 // ─── Country helpers ──────────────────────────────────────────────────────────
 
@@ -139,12 +148,26 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
   const [nickname, setNickname] = useState('');
   const [countryCode, setCountryCode] = useState('');
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
+  const [selectedBodyId, setSelectedBodyId] = useState<BodyId>(1);
+  const [selectedSkinToneId, setSelectedSkinToneId] = useState<string>('light');
+  const [selectedHairId, setSelectedHairId] = useState<number>(0);
+  const [selectedHairColor, setSelectedHairColor] = useState<string>('brown');
+  const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const handleContinueToStep2 = () => {
+    if (!fighterName.trim()) {
+      setError('Please enter a fighter name');
+      return;
+    }
+    setError(null);
+    setStep(2);
+  };
+
   const handleStartCareer = async () => {
-    if (!fighterName.trim() || !selectedStyle) {
-      setError('Please enter a fighter name and select a fighting style');
+    if (!selectedStyle) {
+      setError('Please select a fighting style');
       return;
     }
 
@@ -180,6 +203,13 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
 
       console.log('🔵 [FIGHTER INIT] Updated stats:', newStats);
 
+      const visualConfig: VisualConfig = {
+        bodyId: selectedBodyId,
+        skinToneId: selectedSkinToneId,
+        hairId: selectedHairId > 0 ? selectedHairId : undefined,
+        hairColor: selectedHairId > 0 ? selectedHairColor : undefined,
+      };
+
       // Update profile in Supabase
       const { data, error: updateError } = await supabase
         .from('profiles')
@@ -192,6 +222,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
           speed: newStats.speed,
           strength: newStats.strength,
           cardio: newStats.cardio,
+          visual_config: visualConfig,
           updated_at: new Date().toISOString(),
         })
         .eq('id', userId)
@@ -227,22 +258,29 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="bg-gradient-to-br from-dark-secondary via-dark-secondary/90 to-dark-tertiary border-2 border-neon-green/50 rounded-2xl p-8 w-full max-w-2xl shadow-2xl shadow-neon-green/20 max-h-[90vh] overflow-y-auto"
+        className={`bg-gradient-to-br from-dark-secondary via-dark-secondary/90 to-dark-tertiary border-2 border-neon-green/50 rounded-2xl p-8 w-full shadow-2xl shadow-neon-green/20 transition-all duration-300 ${step === 1 ? 'max-w-md max-h-[90vh] overflow-y-auto' : 'max-w-4xl h-[90vh] flex flex-col overflow-hidden'}`}
       >
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="text-center mb-10"
+          className="text-center mb-6"
         >
-          <div className="text-6xl mb-4">🥋</div>
-          <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-green via-cyan-400 to-neon-green mb-2 tracking-tight">
+          <div className="text-5xl mb-3">🥋</div>
+          <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-green via-cyan-400 to-neon-green mb-2 tracking-tight">
             Welcome to the Octagon
           </h1>
-          <p className="text-gray-300 text-lg">Create your fighter and choose your path to glory</p>
+          <p className="text-gray-300 text-sm">
+            {step === 1 ? 'Step 1 / 2 – Fighter Identity' : 'Step 2 / 2 – Appearance & Fighting Style'}
+          </p>
+          <div className="flex items-center justify-center gap-2 mt-3">
+            <div className={`w-8 h-1.5 rounded-full transition-all ${step === 1 ? 'bg-neon-green' : 'bg-neon-green/40'}`} />
+            <div className={`w-8 h-1.5 rounded-full transition-all ${step === 2 ? 'bg-neon-green' : 'bg-gray-700'}`} />
+          </div>
         </motion.div>
 
+        {step === 1 ? (<>
         {/* Fighter Name Input */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -318,144 +356,341 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
             )}
           </div>
         </motion.div>
-
-        {/* Fighting Styles */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mb-10"
-        >
-          <label className="block text-lg font-bold text-neon-green mb-4">Choose Your Fighting Style</label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {FIGHTING_STYLES.map((style) => (
-              <motion.button
-                key={style.id}
-                whileHover={{ scale: 1.05, y: -5 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => {
-                  setSelectedStyle(style.id);
-                  setError(null);
-                }}
-                disabled={loading}
-                className={`relative rounded-lg p-6 border-2 transition-all ${
-                  selectedStyle === style.id
-                    ? `${style.color} bg-gradient-to-br ${style.gradient} shadow-lg shadow-current/50`
-                    : 'border-gray-600 bg-dark-tertiary/30 hover:border-gray-400'
-                } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                {/* Selected Check */}
-                {selectedStyle === style.id && (
-                  <motion.div
-                    layoutId="selected-style"
-                    className="absolute inset-0 border-2 border-current rounded-lg"
-                  />
-                )}
-
-                {/* Content */}
-                <div className="relative z-10">
-                  <div className="text-4xl mb-3 text-center">{style.icon}</div>
-                  <h3 className="text-xl font-bold text-white text-center mb-2">{style.name}</h3>
-                  <p className="text-sm text-gray-300 text-center mb-3">{style.description}</p>
-
-                  {/* Bonus Stat */}
-                  <div className="text-xs font-semibold uppercase tracking-wider text-center">
-                    <span className="text-neon-green">+{style.bonusAmount}</span>
-                    <span className="text-gray-400"> {style.bonusStat}</span>
-                  </div>
-                </div>
-              </motion.button>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Error Message */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-alert-red/20 border border-alert-red/50 rounded-lg text-alert-red text-sm"
+        </>) : (<>
+        {/* ── Fighter Summary / Back ─────────────────────────────────────── */}
+        <div className="flex items-center justify-between mb-4 pb-4 border-b border-neon-green/20 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => { setStep(1); setError(null); }}
+            className="flex items-center gap-1 text-sm text-gray-400 hover:text-neon-green transition-colors"
           >
-            {error}
-          </motion.div>
-        )}
-
-        {/* Stats Preview */}
-        {selectedStyle && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-10 p-5 bg-dark-tertiary/50 border border-neon-green/30 rounded-lg"
-          >
-            <h3 className="text-sm font-bold text-neon-green mb-3 uppercase tracking-wider">Starting Stats</h3>
-            <div className="space-y-2">
-              {Object.entries({
-                striking: 40,
-                grappling: 40,
-                speed: 40,
-                strength: 40,
-                cardio: 40,
-              }).map(([stat, baseValue]) => {
-                const styleBonus =
-                  FIGHTING_STYLES.find((s) => s.id === selectedStyle)?.bonusStat === stat
-                    ? FIGHTING_STYLES.find((s) => s.id === selectedStyle)!.bonusAmount
-                    : 0;
-                const finalValue = baseValue + styleBonus;
-
-                return (
-                  <div key={stat} className="flex items-center gap-3">
-                    <span className="capitalize text-gray-400 w-20 text-sm font-medium">{stat}:</span>
-                    <div className="flex-1 bg-dark-bg/50 rounded-full h-2 overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(finalValue / 100) * 100}%` }}
-                        transition={{ duration: 0.5, delay: 0.1 }}
-                        className="h-full bg-gradient-to-r from-neon-green to-cyan-400"
-                      />
-                    </div>
-                    <span className="text-white font-bold w-12 text-right text-sm">
-                      {finalValue}
-                      {styleBonus > 0 && <span className="text-neon-green">+{styleBonus}</span>}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Action Buttons */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="flex gap-4"
-        >
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleStartCareer}
-            disabled={loading || !fighterName.trim() || !selectedStyle}
-            className="flex-1 bg-gradient-to-r from-neon-green to-cyan-400 text-dark-bg font-bold py-3 rounded-lg hover:shadow-lg hover:shadow-neon-green/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none transition-all text-lg"
-          >
-            {loading ? (
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity }}
-                className="inline-block"
-              >
-                ⏳
-              </motion.div>
-            ) : (
-              '⚡ Start Career'
+            <ChevronLeft size={16} /> Back
+          </button>
+          <div className="text-center">
+            <p className="text-white font-bold">
+              {fighterName}{nickname ? ` "${nickname}"` : ''}
+            </p>
+            {countryCode && (
+              <p className="text-xs text-gray-400 mt-0.5">
+                {getFlagEmoji(countryCode)} {COUNTRIES_SORTED.find((c) => c.code === countryCode)?.name}
+              </p>
             )}
-          </motion.button>
-        </motion.div>
+          </div>
+          <div className="w-16" />
+        </div>
+
+        {/* ── Two-Column Layout ──────────────────────────────────────────── */}
+        <div className="flex gap-6 flex-1 min-h-0">
+
+          {/* LEFT: Fighter Preview + Archetype Navigation */}
+          <div className="w-52 flex-shrink-0 flex flex-col items-center gap-3">
+            <p className="text-sm font-bold text-neon-green self-start">Base Archetype</p>
+
+            {/* Large animated preview */}
+            <div className="relative flex items-end justify-center w-full" style={{ height: 320 }}>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={selectedBodyId}
+                  initial={{ opacity: 0, x: 30, scale: 0.92 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: -30, scale: 0.92 }}
+                  transition={{ duration: 0.22, ease: 'easeOut' }}
+                >
+                  <FighterVisual
+                    config={{
+                      bodyId: selectedBodyId,
+                      skinToneId: selectedSkinToneId,
+                      hairId: selectedHairId,
+                      hairColor: selectedHairColor,
+                    }}
+                    height={300}
+                    disableAnimation={false}
+                  />
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Navigation arrows + dot indicators */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => setSelectedBodyId((prev) => (prev === 1 ? 8 : ((prev - 1) as BodyId)))}
+                className="w-8 h-8 rounded-full border-2 border-neon-green/40 hover:border-neon-green flex items-center justify-center text-neon-green hover:bg-neon-green/10 transition-all disabled:opacity-40"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <div className="flex gap-1.5">
+                {ARCHETYPES.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    disabled={loading}
+                    onClick={() => setSelectedBodyId(a.id)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      selectedBodyId === a.id ? 'bg-neon-green scale-125' : 'bg-gray-600 hover:bg-gray-400'
+                    }`}
+                  />
+                ))}
+              </div>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => setSelectedBodyId((prev) => (prev === 8 ? 1 : ((prev + 1) as BodyId)))}
+                className="w-8 h-8 rounded-full border-2 border-neon-green/40 hover:border-neon-green flex items-center justify-center text-neon-green hover:bg-neon-green/10 transition-all disabled:opacity-40"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* RIGHT: Scrollable Panels */}
+          <div className="flex-1 overflow-y-auto pr-1 space-y-6">
+
+            {/* 1. HAIR STYLE (top priority – most visible) */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <label className="block text-lg font-bold text-neon-green mb-1">Hair Style</label>
+              <p className="text-xs text-gray-500 mb-3">Choose a hairstyle – it&apos;ll be applied to your fighter</p>
+              <div className="grid grid-cols-5 gap-2">
+                <button
+                  type="button"
+                  disabled={loading}
+                  title="No Hair"
+                  onClick={() => setSelectedHairId(0)}
+                  className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
+                    selectedHairId === 0
+                      ? 'border-neon-green bg-neon-green/10'
+                      : 'border-dark-tertiary hover:border-gray-500 bg-dark-tertiary/30'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-full border border-gray-600 flex items-center justify-center text-gray-500 text-lg">✕</div>
+                  <span className="text-xs text-gray-400">None</span>
+                </button>
+                {HAIR_STYLES.map((hair) => (
+                  <button
+                    key={hair.id}
+                    type="button"
+                    disabled={loading}
+                    title={hair.label}
+                    onClick={() => setSelectedHairId(hair.id)}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
+                      selectedHairId === hair.id
+                        ? 'border-neon-green bg-neon-green/10'
+                        : 'border-dark-tertiary hover:border-gray-500 bg-dark-tertiary/30'
+                    }`}
+                  >
+                    <img
+                      src={hair.imagePath}
+                      alt={hair.label}
+                      className="w-10 h-10 object-contain"
+                      style={{
+                        filter: selectedHairId === hair.id
+                          ? HAIR_COLORS.find((c) => c.id === selectedHairColor)?.filter ?? 'none'
+                          : 'brightness(0.55) contrast(1.1)',
+                      }}
+                      draggable={false}
+                    />
+                    <span className="text-xs text-gray-400 truncate w-full text-center leading-tight">{hair.label}</span>
+                  </button>
+                ))}
+              </div>
+              {selectedHairId > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="mt-4"
+                >
+                  <p className="text-sm font-semibold text-gray-300 mb-2">Hair Color</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {HAIR_COLORS.map((hc) => (
+                      <button
+                        key={hc.id}
+                        type="button"
+                        disabled={loading}
+                        title={hc.label}
+                        onClick={() => setSelectedHairColor(hc.id)}
+                        className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${
+                          selectedHairColor === hc.id
+                            ? 'border-neon-green scale-110 ring-2 ring-neon-green/40'
+                            : 'border-transparent hover:border-gray-400'
+                        }`}
+                        style={{ backgroundColor: hc.swatch }}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {HAIR_COLORS.find((c) => c.id === selectedHairColor)?.label}
+                  </p>
+                </motion.div>
+              )}
+            </motion.div>
+
+            {/* 2. SKIN TONE */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+            >
+              <label className="block text-lg font-bold text-neon-green mb-3">Skin Tone</label>
+              <div className="flex gap-3 flex-wrap">
+                {SKIN_TONES.map((tone) => (
+                  <button
+                    key={tone.id}
+                    type="button"
+                    disabled={loading}
+                    title={tone.label}
+                    onClick={() => setSelectedSkinToneId(tone.id)}
+                    className={`w-9 h-9 rounded-full border-2 transition-all hover:scale-110 ${
+                      selectedSkinToneId === tone.id
+                        ? 'border-neon-green scale-110 ring-2 ring-neon-green/40'
+                        : 'border-transparent hover:border-gray-400'
+                    }`}
+                    style={{ backgroundColor: tone.swatch }}
+                  />
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {SKIN_TONES.find((t) => t.id === selectedSkinToneId)?.label}
+              </p>
+            </motion.div>
+
+            {/* 3. FIGHTING STYLE */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <label className="block text-lg font-bold text-neon-green mb-4">Choose Your Fighting Style</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {FIGHTING_STYLES.map((style) => (
+                  <motion.button
+                    key={style.id}
+                    whileHover={{ scale: 1.05, y: -5 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => { setSelectedStyle(style.id); setError(null); }}
+                    disabled={loading}
+                    className={`relative rounded-lg p-5 border-2 transition-all ${
+                      selectedStyle === style.id
+                        ? `${style.color} bg-gradient-to-br ${style.gradient} shadow-lg shadow-current/50`
+                        : 'border-gray-600 bg-dark-tertiary/30 hover:border-gray-400'
+                    } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  >
+                    {selectedStyle === style.id && (
+                      <motion.div layoutId="selected-style" className="absolute inset-0 border-2 border-current rounded-lg" />
+                    )}
+                    <div className="relative z-10">
+                      <div className="text-3xl mb-2 text-center">{style.icon}</div>
+                      <h3 className="text-lg font-bold text-white text-center mb-1">{style.name}</h3>
+                      <p className="text-xs text-gray-300 text-center mb-2">{style.description}</p>
+                      <div className="text-xs font-semibold uppercase tracking-wider text-center">
+                        <span className="text-neon-green">+{style.bonusAmount}</span>
+                        <span className="text-gray-400"> {style.bonusStat}</span>
+                      </div>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* 4. STATS PREVIEW */}
+            {selectedStyle && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-5 bg-dark-tertiary/50 border border-neon-green/30 rounded-lg"
+              >
+                <h3 className="text-sm font-bold text-neon-green mb-3 uppercase tracking-wider">Starting Stats</h3>
+                <div className="space-y-2">
+                  {Object.entries({ striking: 40, grappling: 40, speed: 40, strength: 40, cardio: 40 }).map(([stat, baseValue]) => {
+                    const styleBonus =
+                      FIGHTING_STYLES.find((s) => s.id === selectedStyle)?.bonusStat === stat
+                        ? FIGHTING_STYLES.find((s) => s.id === selectedStyle)!.bonusAmount
+                        : 0;
+                    const finalValue = baseValue + styleBonus;
+                    return (
+                      <div key={stat} className="flex items-center gap-3">
+                        <span className="capitalize text-gray-400 w-20 text-sm font-medium">{stat}:</span>
+                        <div className="flex-1 bg-dark-bg/50 rounded-full h-2 overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${(finalValue / 100) * 100}%` }}
+                            transition={{ duration: 0.5, delay: 0.1 }}
+                            className="h-full bg-gradient-to-r from-neon-green to-cyan-400"
+                          />
+                        </div>
+                        <span className="text-white font-bold w-12 text-right text-sm">
+                          {finalValue}{styleBonus > 0 && <span className="text-neon-green">+{styleBonus}</span>}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+
+            {/* 5. Error + Start Career button */}
+            <div className="space-y-3 pb-4">
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="p-3 bg-alert-red/20 border border-alert-red/50 rounded-lg text-alert-red text-sm"
+                >
+                  {error}
+                </motion.div>
+              )}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleStartCareer}
+                disabled={loading || !selectedStyle}
+                className="w-full bg-gradient-to-r from-neon-green to-cyan-400 text-dark-bg font-bold py-3 rounded-lg hover:shadow-lg hover:shadow-neon-green/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none transition-all text-lg"
+              >
+                {loading ? (
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity }} className="inline-block">⏳</motion.div>
+                ) : '⚡ Start Career'}
+              </motion.button>
+              <p className="text-center text-gray-500 text-xs">Stats can always be retrained later!</p>
+            </div>
+
+          </div>
+        </div>
+        </>)}
+
+        {/* Step 1 – Continue */}
+        {step === 1 && (
+          <div className="mt-6 space-y-3">
+            {error && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="p-3 bg-alert-red/20 border border-alert-red/50 rounded-lg text-alert-red text-sm"
+              >
+                {error}
+              </motion.div>
+            )}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleContinueToStep2}
+              disabled={!fighterName.trim()}
+              className="w-full bg-gradient-to-r from-neon-green to-cyan-400 text-dark-bg font-bold py-3 rounded-lg hover:shadow-lg hover:shadow-neon-green/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-lg"
+            >
+              Continue →
+            </motion.button>
+          </div>
+        )}
+
+
 
         {/* Info Text */}
-        <p className="text-center text-gray-500 text-xs mt-6">
-          Don't worry, you can always change your name and retrain your stats later!
-        </p>
+        {step === 1 && (
+          <p className="text-center text-gray-500 text-xs mt-6">These details can be changed at any time.</p>
+        )}
       </motion.div>
     </motion.div>
   );
