@@ -5,6 +5,19 @@ import { motion } from 'framer-motion';
 
 export type BodyId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
+export interface TattooPlacement {
+  /** Asset id, e.g. 'tatoo05' (matches /images/tatoo05.png) */
+  id: string;
+  /** Horizontal centre as % of body container width (0–100) */
+  x: number;
+  /** Vertical centre as % of body container height (0–100) */
+  y: number;
+  /** Size multiplier – 1.0 renders the tattoo at ~22% of body width */
+  scale: number;
+  /** Rotation in degrees */
+  rotation: number;
+}
+
 export interface VisualConfig {
   bodyId: BodyId;
   skinToneId?: string;
@@ -14,7 +27,22 @@ export interface VisualConfig {
   beardColor?: string; // id from HAIR_COLORS; defaults to hairColor when omitted
   /** @deprecated use hairId + hairColor */
   hairStyle?: string;
+  /** Free-placement tattoo layers applied over the body */
+  tattoos?: TattooPlacement[];
 }
+
+// ─── Tattoo Assets ────────────────────────────────────────────────────────────
+
+export interface TattooAsset {
+  id: string;
+  label: string;
+  imagePath: string;
+}
+
+export const TATTOOS: TattooAsset[] = Array.from({ length: 17 }, (_, i) => {
+  const num = String(i + 1).padStart(2, '0');
+  return { id: `tatoo${num}`, label: `Tattoo ${i + 1}`, imagePath: `/images/tatoo${num}.png` };
+});
 
 // ─── Archetypes ───────────────────────────────────────────────────────────────
 
@@ -420,6 +448,256 @@ const HAIR_ASSET_OVERRIDES: Record<string, { extraScale: number; extraY: string;
   default: { extraScale: 1.0,  extraY: '0%',   extraX: '0%'   },
 };
 
+// ─── Tattoo Layer (drag / resize / rotate) ───────────────────────────────────
+
+type DragType = 'move' | 'resize' | 'rotate';
+
+interface DragState {
+  type: DragType;
+  tattooId: string;
+  startX: number;
+  startY: number;
+  startTX: number;
+  startTY: number;
+  startScale: number;
+  startDist: number;   // initial mouse-to-centre distance (resize)
+  startAngle: number;  // initial atan2 angle in degrees (rotate)
+  startRotation: number;
+}
+
+const _clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
+
+interface TattooLayerProps {
+  tattoos: TattooPlacement[];
+  editMode: boolean;
+  onTattoosChange?: (t: TattooPlacement[]) => void;
+  containerRef: React.RefObject<HTMLDivElement>;
+}
+
+const TattooLayer: React.FC<TattooLayerProps> = ({ tattoos, editMode, onTattoosChange, containerRef }) => {
+  const setSelectedId = React.useCallback((_id: string | null) => {}, []);
+  const dragRef  = React.useRef<DragState | null>(null);
+  const tRef     = React.useRef(tattoos);
+  tRef.current   = tattoos;
+  const cbRef    = React.useRef(onTattoosChange);
+  cbRef.current  = onTattoosChange;
+
+  React.useEffect(() => {
+    if (!editMode) { dragRef.current = null; return; }
+
+    const coords = (e: MouseEvent | TouchEvent) => {
+      if ('touches' in e) {
+        const t = e.touches[0] ?? (e as TouchEvent).changedTouches?.[0];
+        return t ? { cx: t.clientX, cy: t.clientY } : null;
+      }
+      return { cx: (e as MouseEvent).clientX, cy: (e as MouseEvent).clientY };
+    };
+
+    const onMove = (e: MouseEvent | TouchEvent) => {
+      const s = dragRef.current;
+      if (!s) return;
+      e.preventDefault();
+      const xy = coords(e);
+      if (!xy) return;
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const cb = cbRef.current;
+      if (!cb) return;
+      const cur = tRef.current;
+
+      if (s.type === 'move') {
+        const dx = ((xy.cx - s.startX) / rect.width)  * 100;
+        const dy = ((xy.cy - s.startY) / rect.height) * 100;
+        cb(cur.map(t => t.id === s.tattooId
+          ? { ...t, x: _clamp(s.startTX + dx, 2, 98), y: _clamp(s.startTY + dy, 2, 98) }
+          : t));
+      } else if (s.type === 'resize') {
+        const cx = rect.left + (s.startTX / 100) * rect.width;
+        const cy = rect.top  + (s.startTY / 100) * rect.height;
+        const newDist = Math.hypot(xy.cx - cx, xy.cy - cy);
+        if (s.startDist < 1) return;
+        cb(cur.map(t => t.id === s.tattooId
+          ? { ...t, scale: _clamp(s.startScale * (newDist / s.startDist), 0.15, 6) }
+          : t));
+      } else if (s.type === 'rotate') {
+        const cx = rect.left + (s.startTX / 100) * rect.width;
+        const cy = rect.top  + (s.startTY / 100) * rect.height;
+        const newAngle = Math.atan2(xy.cy - cy, xy.cx - cx) * (180 / Math.PI);
+        cb(cur.map(t => t.id === s.tattooId
+          ? { ...t, rotation: s.startRotation + (newAngle - s.startAngle) }
+          : t));
+      }
+    };
+
+    const onUp = () => { dragRef.current = null; };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend',  onUp);
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend',  onUp);
+    };
+  }, [editMode, containerRef]);
+
+  const startDrag = (e: React.MouseEvent | React.TouchEvent, tattoo: TattooPlacement, type: DragType) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedId(tattoo.id);
+    const isTouch = 'touches' in e;
+    const raw = isTouch ? (e as React.TouchEvent).touches[0] : (e as React.MouseEvent);
+    const rect = containerRef.current?.getBoundingClientRect();
+    let startDist = 0;
+    let startAngle = 0;
+    if (rect) {
+      const cx = rect.left + (tattoo.x / 100) * rect.width;
+      const cy = rect.top  + (tattoo.y / 100) * rect.height;
+      startDist  = Math.hypot(raw.clientX - cx, raw.clientY - cy);
+      startAngle = Math.atan2(raw.clientY - cy, raw.clientX - cx) * (180 / Math.PI);
+    }
+    dragRef.current = {
+      type,
+      tattooId: tattoo.id,
+      startX: raw.clientX,
+      startY: raw.clientY,
+      startTX: tattoo.x,
+      startTY: tattoo.y,
+      startScale: tattoo.scale,
+      startDist,
+      startAngle,
+      startRotation: tattoo.rotation,
+    };
+  };
+
+  // handle colours
+  const HANDLE_WHITE = '#ffffff';
+  const BLUE_ROTATE  = '#60a5fa';
+  const RED_DELETE   = '#ef4444';
+  const WHITE_RESIZE = '#e5e7eb';
+
+  return (
+    <>
+      {tattoos.map((t) => {
+        const bw = t.scale * 22; // base width in % of container
+        return (
+          <div
+            key={t.id}
+            data-tattoo-id={t.id}
+            style={{
+              position: 'absolute',
+              left: `${t.x}%`,
+              top:  `${t.y}%`,
+              width: `${bw}%`,
+              transform: `translateX(-50%) translateY(-50%) rotate(${t.rotation}deg)`,
+              zIndex: 20,
+              cursor: editMode ? 'move' : undefined,
+              pointerEvents: editMode ? 'auto' : 'none',
+            }}
+            onMouseDown={editMode ? (e) => startDrag(e, t, 'move') : undefined}
+            onTouchStart={editMode ? (e) => startDrag(e, t, 'move') : undefined}
+          >
+            {/* ── Tattoo image ── */}
+            <img
+              src={`/images/${t.id}.png`}
+              alt={t.id}
+              className="w-full h-auto block"
+              style={{ mixBlendMode: 'multiply', opacity: 0.82, pointerEvents: 'none' }}
+              draggable={false}
+            />
+
+            {/* ── Edit-mode handles ── */}
+            {editMode && (
+              <>
+                {/* Subtle hover outline – only white, no green */}
+                <div style={{
+                  position: 'absolute', inset: -2,
+                  border: `1px solid rgba(255,255,255,0.35)`,
+                  borderRadius: 4, pointerEvents: 'none',
+                }} />
+
+                {/* ── Rotate handle – top-centre (blue arc icon) ── */}
+                <div
+                  title="Rotate"
+                  onMouseDown={(e) => { e.stopPropagation(); startDrag(e, t, 'rotate'); }}
+                  onTouchStart={(e) => { e.stopPropagation(); startDrag(e, t, 'rotate'); }}
+                  style={{
+                    position: 'absolute', top: -26, left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 20, height: 20, borderRadius: '50%',
+                    background: BLUE_ROTATE,
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.6)',
+                    cursor: 'crosshair', zIndex: 35,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  {/* Rotate SVG icon */}
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={HANDLE_WHITE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }}>
+                    <path d="M21.5 2v6h-6" />
+                    <path d="M21.34 15.57a10 10 0 1 1-.57-8.38" />
+                  </svg>
+                </div>
+                {/* Connector dot */}
+                <div style={{
+                  position: 'absolute', top: -8, left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: 1, height: 8,
+                  background: 'rgba(255,255,255,0.3)', pointerEvents: 'none',
+                }} />
+
+                {/* ── Resize handle – bottom-right (white grip) ── */}
+                <div
+                  title="Resize"
+                  onMouseDown={(e) => { e.stopPropagation(); startDrag(e, t, 'resize'); }}
+                  onTouchStart={(e) => { e.stopPropagation(); startDrag(e, t, 'resize'); }}
+                  style={{
+                    position: 'absolute', bottom: -8, right: -8,
+                    width: 16, height: 16, borderRadius: 3,
+                    background: WHITE_RESIZE,
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.6)',
+                    cursor: 'nwse-resize', zIndex: 35,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  {/* Resize grip icon */}
+                  <svg width="8" height="8" viewBox="0 0 10 10" style={{ pointerEvents: 'none' }}>
+                    <line x1="2" y1="10" x2="10" y2="2" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" />
+                    <line x1="6" y1="10" x2="10" y2="6" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+
+                {/* ── Delete button – top-right (red circle) ── */}
+                <button
+                  title="Remove tattoo"
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    cbRef.current?.(tRef.current.filter(tt => tt.id !== t.id));
+                    setSelectedId(null);
+                  }}
+                  style={{
+                    position: 'absolute', top: -10, right: -10,
+                    width: 18, height: 18, borderRadius: '50%',
+                    background: RED_DELETE,
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.6)',
+                    fontSize: 9, color: HANDLE_WHITE,
+                    cursor: 'pointer', zIndex: 35,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    lineHeight: 1, border: 'none', padding: 0,
+                  }}
+                >✕</button>
+              </>
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+};
+
 // ─── FighterVisual Component ──────────────────────────────────────────────────
 
 interface FighterVisualProps {
@@ -433,6 +711,10 @@ interface FighterVisualProps {
   disableAnimation?: boolean;
   /** Show a debug outline around the hair container. */
   debugHair?: boolean;
+  /** Activate drag/resize/rotate handles for tattoos. */
+  tattooEditMode?: boolean;
+  /** Called whenever a tattoo is moved, resized, rotated or deleted. */
+  onTattoosChange?: (tattoos: TattooPlacement[]) => void;
 }
 
 export const FighterVisual: React.FC<FighterVisualProps> = ({
@@ -441,7 +723,10 @@ export const FighterVisual: React.FC<FighterVisualProps> = ({
   className = '',
   disableAnimation = false,
   debugHair = false,
+  tattooEditMode = false,
+  onTattoosChange,
 }) => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
   const { bodyId, skinToneId = 'light', hairId = 0, hairColor = 'brown', beardId = 0, beardColor } = config;
   // hair01 (Buzz Cut) was deprecated – treat legacy hairId=1 as no hair
   const safeHairId  = hairId === 1 ? 0 : hairId;
@@ -477,12 +762,13 @@ export const FighterVisual: React.FC<FighterVisualProps> = ({
 
   return (
     <div
+      ref={containerRef}
       className={`relative select-none ${className}`}
       style={{ height, width: 'auto', display: 'inline-block' }}
     >
       {/* ── Base body layer ── */}
       <motion.div
-        animate={disableAnimation ? {} : { y: [0, -6, 0] }}
+        animate={(disableAnimation || tattooEditMode) ? {} : { y: [0, -6, 0] }}
         transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
         className="relative h-full"
         style={{ isolation: 'isolate' }}
@@ -546,6 +832,14 @@ export const FighterVisual: React.FC<FighterVisualProps> = ({
             />
           </div>
         )}
+
+        {/* ── Tattoo overlays ──────────────────────────────────────────────── */}
+        <TattooLayer
+          tattoos={config.tattoos ?? []}
+          editMode={tattooEditMode}
+          onTattoosChange={onTattoosChange}
+          containerRef={containerRef}
+        />
       </motion.div>
     </div>
   );

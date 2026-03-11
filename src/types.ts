@@ -6,6 +6,19 @@ export interface FighterStats {
   grappling: number;
 }
 
+export interface TattooPlacement {
+  /** Asset id, e.g. 'tatoo05' (matches /images/tatoo05.png) */
+  id: string;
+  /** Horizontal centre as % of body container width (0–100) */
+  x: number;
+  /** Vertical centre as % of body container height (0–100) */
+  y: number;
+  /** Size multiplier – 1.0 renders the tattoo at ~22% of body width */
+  scale: number;
+  /** Rotation in degrees */
+  rotation: number;
+}
+
 export interface VisualConfig {
   bodyId: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   skinToneId?: string;
@@ -14,6 +27,8 @@ export interface VisualConfig {
   beardId?: number;   // 0 or undefined = no beard; 2–10 = active style (1 skipped)
   /** @deprecated use hairId + hairColor */
   hairStyle?: string;
+  /** Free-placement tattoo layers applied over the body */
+  tattoos?: TattooPlacement[];
 }
 
 // 30 detailed MMA attributes from Supabase profiles table

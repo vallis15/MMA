@@ -9,8 +9,10 @@ import {
   HAIR_STYLES,
   HAIR_COLORS,
   BEARD_STYLES,
+  TATTOOS,
   type BodyId,
   type VisualConfig,
+  type TattooPlacement,
 } from './FighterVisual';
 
 // ─── Country helpers ──────────────────────────────────────────────────────────
@@ -156,6 +158,8 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
   const [selectedBeardId, setSelectedBeardId] = useState<number>(0);
   const [selectedBeardColor, setSelectedBeardColor] = useState<string>('brown');
   const [syncBeardWithHair, setSyncBeardWithHair] = useState<boolean>(true);
+  const [tattoos, setTattoos] = useState<TattooPlacement[]>([]);
+  const [tattooEditMode, setTattooEditMode] = useState<boolean>(false);
 
   // When hair color changes and sync is on, mirror the change to beard color.
   const handleHairColorChange = (colorId: string) => {
@@ -220,6 +224,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
         hairColor: selectedHairId > 0 ? selectedHairColor : undefined,
         beardId: selectedBeardId > 0 ? selectedBeardId : undefined,
         beardColor: selectedBeardId > 0 ? selectedBeardColor : undefined,
+        tattoos: tattoos.length > 0 ? tattoos : undefined,
       };
 
       // Update profile in Supabase
@@ -399,7 +404,16 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
             <p className="text-sm font-bold text-neon-green self-start">Base Archetype</p>
 
             {/* Large animated preview */}
-            <div className="relative flex items-end justify-center w-full" style={{ height: 320 }}>
+            <div
+              className="relative flex items-end justify-center w-full"
+              style={{ height: 320 }}
+            >
+              {/* Edit mode ring indicator */}
+              {tattooEditMode && (
+                <div className="absolute inset-0 border-2 border-blue-400/60 rounded-lg pointer-events-none z-30"
+                  style={{ boxShadow: '0 0 12px 2px rgba(96,165,250,0.25)' }}
+                />
+              )}
               <AnimatePresence mode="wait">
                 <motion.div
                   key={selectedBodyId}
@@ -416,9 +430,12 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                       hairColor: selectedHairColor,
                       beardId: selectedBeardId,
                       beardColor: selectedBeardColor,
+                      tattoos,
                     }}
                     height={300}
                     disableAnimation={false}
+                    tattooEditMode={tattooEditMode}
+                    onTattoosChange={setTattoos}
                   />
                 </motion.div>
               </AnimatePresence>
@@ -681,6 +698,120 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
               <p className="text-xs text-gray-500 mt-2">
                 {SKIN_TONES.find((t) => t.id === selectedSkinToneId)?.label}
               </p>
+            </motion.div>
+
+            {/* ── TATTOO LAYER ──────────────────────────────────────────────── */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.27 }}
+            >
+              {/* Header row */}
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-lg font-bold text-neon-green">Tattoos</label>
+                {tattoos.length > 0 && (
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => setTattooEditMode(!tattooEditMode)}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+                      tattooEditMode
+                        ? 'bg-blue-400/15 border-blue-400 text-blue-300'
+                        : 'bg-dark-tertiary/50 border-gray-600 text-gray-400 hover:border-gray-400'
+                    }`}
+                  >
+                    🖊 {tattooEditMode ? 'Done Editing' : 'Edit Placement'}
+                  </button>
+                )}
+              </div>
+
+              {/* Edit mode hint */}
+              {tattooEditMode && (
+                <p className="text-xs text-blue-300 bg-blue-400/10 border border-blue-400/30 rounded-lg p-2 mb-3 leading-relaxed">
+                  <strong>Drag</strong> a tattoo on the body to reposition it. 
+                  <strong> Green corner</strong> = resize. 
+                  <strong> Blue circle</strong> = rotate. 
+                  <strong> ✕</strong> = remove.
+                </p>
+              )}
+
+              <p className="text-xs text-gray-500 mb-3">Click a design to add it to your fighter</p>
+
+              {/* Tattoo gallery – 6 per row */}
+              <div className="grid grid-cols-6 gap-1.5">
+                {TATTOOS.map((tattoo) => {
+                  const isActive = tattoos.some((t) => t.id === tattoo.id);
+                  return (
+                    <button
+                      key={tattoo.id}
+                      type="button"
+                      disabled={loading}
+                      title={`${tattoo.label}${isActive ? ' (active)' : ''}`}
+                      onClick={() => {
+                        if (isActive) {
+                          setTattoos((prev) => prev.filter((t) => t.id !== tattoo.id));
+                        } else {
+                          setTattoos((prev) => [
+                            ...prev,
+                            { id: tattoo.id, x: 50, y: 42, scale: 1, rotation: 0 },
+                          ]);
+                          setTattooEditMode(true);
+                        }
+                      }}
+                      className={`relative flex flex-col items-center gap-0.5 p-1.5 rounded-lg border-2 transition-all ${
+                        isActive
+                          ? 'border-neon-green bg-neon-green/10'
+                          : 'border-dark-tertiary hover:border-gray-500 bg-dark-tertiary/30'
+                      }`}
+                    >
+                      <img
+                        src={tattoo.imagePath}
+                        alt={tattoo.label}
+                        className="w-9 h-9 object-contain"
+                        style={{ opacity: isActive ? 1 : 0.55 }}
+                        draggable={false}
+                      />
+                      {isActive && (
+                        <div className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-neon-green" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Active tattoo list */}
+              {tattoos.length > 0 && (
+                <div className="mt-3 space-y-1">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Active ({tattoos.length})</p>
+                  {tattoos.map((t) => (
+                    <div
+                      key={t.id}
+                      className="flex items-center justify-between bg-dark-tertiary/40 rounded-lg px-2.5 py-1.5 border border-dark-tertiary"
+                    >
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={`/images/${t.id}.png`}
+                          alt={t.id}
+                          className="w-7 h-7 object-contain"
+                          draggable={false}
+                        />
+                        <span className="text-xs text-gray-300">
+                          {t.id.replace('tatoo', 'Tattoo ')}
+                        </span>
+                        <span className="text-xs text-gray-600">
+                          {Math.round(t.x)}%,{Math.round(t.y)}% · ×{t.scale.toFixed(1)}
+                          {t.rotation !== 0 ? ` · ${Math.round(t.rotation)}°` : ''}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setTattoos((prev) => prev.filter((tt) => tt.id !== t.id))}
+                        className="text-gray-600 hover:text-red-400 transition-colors text-sm px-1"
+                      >✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </motion.div>
 
             {/* 3. FIGHTING STYLE */}
