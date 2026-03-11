@@ -11,6 +11,7 @@ export interface VisualConfig {
   skinToneId?: string;
   hairId?: number;    // 0 or undefined = no hair; 2–9 = active style (1 deprecated)
   hairColor?: string; // id from HAIR_COLORS
+  beardId?: number;   // 0 or undefined = no beard; 2–10 = active style (1 skipped)
   /** @deprecated use hairId + hairColor */
   hairStyle?: string;
 }

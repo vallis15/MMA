@@ -8,6 +8,7 @@ import {
   SKIN_TONES,
   HAIR_STYLES,
   HAIR_COLORS,
+  BEARD_STYLES,
   type BodyId,
   type VisualConfig,
 } from './FighterVisual';
@@ -152,6 +153,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
   const [selectedSkinToneId, setSelectedSkinToneId] = useState<string>('light');
   const [selectedHairId, setSelectedHairId] = useState<number>(0);
   const [selectedHairColor, setSelectedHairColor] = useState<string>('brown');
+  const [selectedBeardId, setSelectedBeardId] = useState<number>(0);
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -208,6 +210,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
         skinToneId: selectedSkinToneId,
         hairId: selectedHairId > 0 ? selectedHairId : undefined,
         hairColor: selectedHairId > 0 ? selectedHairColor : undefined,
+        beardId: selectedBeardId > 0 ? selectedBeardId : undefined,
       };
 
       // Update profile in Supabase
@@ -402,6 +405,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                       skinToneId: selectedSkinToneId,
                       hairId: selectedHairId,
                       hairColor: selectedHairColor,
+                      beardId: selectedBeardId,
                     }}
                     height={300}
                     disableAnimation={false}
@@ -529,7 +533,60 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
               )}
             </motion.div>
 
-            {/* 2. SKIN TONE */}
+            {/* 2. BEARD STYLE */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.22 }}
+            >
+              <label className="block text-lg font-bold text-neon-green mb-1">Beard Style</label>
+              <p className="text-xs text-gray-500 mb-3">Beard colour automatically matches your hair colour</p>
+              <div className="grid grid-cols-5 gap-2">
+                <button
+                  type="button"
+                  disabled={loading}
+                  title="No Beard"
+                  onClick={() => setSelectedBeardId(0)}
+                  className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
+                    selectedBeardId === 0
+                      ? 'border-neon-green bg-neon-green/10'
+                      : 'border-dark-tertiary hover:border-gray-500 bg-dark-tertiary/30'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-full border border-gray-600 flex items-center justify-center text-gray-500 text-lg">✕</div>
+                  <span className="text-xs text-gray-400">None</span>
+                </button>
+                {BEARD_STYLES.map((beard) => (
+                  <button
+                    key={beard.id}
+                    type="button"
+                    disabled={loading}
+                    title={beard.label}
+                    onClick={() => setSelectedBeardId(beard.id)}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
+                      selectedBeardId === beard.id
+                        ? 'border-neon-green bg-neon-green/10'
+                        : 'border-dark-tertiary hover:border-gray-500 bg-dark-tertiary/30'
+                    }`}
+                  >
+                    <img
+                      src={beard.imagePath}
+                      alt={beard.label}
+                      className="w-10 h-10 object-contain"
+                      style={{
+                        filter: selectedBeardId === beard.id
+                          ? HAIR_COLORS.find((c) => c.id === selectedHairColor)?.filter ?? 'none'
+                          : 'brightness(0.55) contrast(1.1)',
+                      }}
+                      draggable={false}
+                    />
+                    <span className="text-xs text-gray-400 truncate w-full text-center leading-tight">{beard.label}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* 3. SKIN TONE */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

@@ -10,6 +10,7 @@ export interface VisualConfig {
   skinToneId?: string;
   hairId?: number;    // 0 = no hair; 1–9 = active style
   hairColor?: string; // id from HAIR_COLORS
+  beardId?: number;   // 0 = no beard; 2–10 = active style (1 skipped)
   /** @deprecated use hairId + hairColor */
   hairStyle?: string;
 }
@@ -117,6 +118,26 @@ export const HAIR_COLORS: HairColorPreset[] = [
     swatch: '#e8e8e8',
     filter: 'grayscale(1) brightness(1.2)',
   },
+];
+
+// ─── Beard Styles ────────────────────────────────────────────────────────────
+
+export interface BeardStyle {
+  id: number;
+  label: string;
+  imagePath: string;
+}
+
+export const BEARD_STYLES: BeardStyle[] = [
+  { id: 2,  label: 'Corporate',    imagePath: '/images/beard02.png' },
+  { id: 3,  label: 'Goatee',       imagePath: '/images/beard03.png' },
+  { id: 4,  label: 'Stubble',      imagePath: '/images/beard04.png' },
+  { id: 5,  label: 'Viking Braid', imagePath: '/images/beard05.png' },
+  { id: 6,  label: 'Wild',         imagePath: '/images/beard06.png' },
+  { id: 7,  label: 'Chin Strap',   imagePath: '/images/beard07.png' },
+  { id: 8,  label: 'Dwarven',      imagePath: '/images/beard08.png' },
+  { id: 9,  label: 'Dreadlock',    imagePath: '/images/beard09.png' },
+  { id: 10, label: 'Wizard',       imagePath: '/images/beard10.png' },
 ];
 
 // ─── Hair Alignment Mapping ───────────────────────────────────────────────────
@@ -240,6 +261,147 @@ export const HAIR_ALIGNMENT_MAPPING: Record<BodyKey, Record<HairKey, HairSlot>> 
   },
 };
 
+// ─── Beard Alignment Mapping ─────────────────────────────────────────────────
+//
+// Deep mapping mirroring HAIR_ALIGNMENT_MAPPING architecture exactly.
+// Every cell: { top, left, width } – % strings relative to the body container.
+//
+// top   = skull-top + per-style jawline offset  (~6.2–7.2% below skull crown)
+// left  = head horizontal centre (same cx column as hair)
+// width = skull_width × per-style scale factor
+// Beard element centered via translateX(-50%).
+//
+// Skull measurements re-used from hair analysis:
+//   body01 (396×1068)  skull-top 3.84%  cx 49.1%  skull-w 26.52%
+//   body02 (322×1064)  skull-top 4.42%  cx 50.5%  skull-w 32.61%
+//   body03 (360×1054)  skull-top 5.12%  cx 48.5%  skull-w 28.61%
+//   body04 (318×1068)  skull-top 9.64%  cx 48.4%  skull-w 27.04%
+//   body05 (350×1038)  skull-top 5.59%  cx 49.0%  skull-w 30.57%
+//   body06 (364×1044)  skull-top 4.02%  cx 48.4%  skull-w 29.67%
+//   body07 (332×1028)  skull-top 6.52%  cx 49.7%  skull-w 32.53%
+//   body08 (358×1030)  skull-top 2.62%  cx 51.8%  skull-w 29.89%
+//
+// Per-style top-offset from skull-top:
+//   beard02 (Corporate)  +6.7  |  beard03 (Goatee)    +7.0
+//   beard04 (Stubble)    +6.4  |  beard05 (Viking)    +6.7
+//   beard06 (Wild)       +6.5  |  beard07 (ChinStr.)  +7.2
+//   beard08 (Dwarven)    +6.2  |  beard09 (Dreadlk.)  +6.7
+//   beard10 (Wizard)     +6.2
+//
+// Per-style width factor (× skull-width):
+//   beard02 ×0.62 | beard03 ×0.58 | beard04 ×0.53
+//   beard05 ×0.68 | beard06 ×0.64 | beard07 ×0.58
+//   beard08 ×0.62 | beard09 ×0.54 | beard10 ×0.72
+
+type BeardKey = 'beard02'|'beard03'|'beard04'|'beard05'|'beard06'|'beard07'|'beard08'|'beard09'|'beard10';
+type Slot = HairSlot; // { top: string; left: string; width: string }
+
+export const BEARD_ALIGNMENT_MAPPING: Record<BodyKey, Record<BeardKey, Slot>> = {
+  // ── body01 – Heavyweight (396×1068) · skull-top 3.84% · cx 49.1% · sw 26.52% ──
+  body01: {
+    beard02: { top: '09.5%', left: '50.1%', width: '30.4%' }, // Corporate
+    beard03: { top: '10.8%', left: '49.1%', width: '26.4%' }, // Goatee
+    beard04: { top: '10.2%', left: '49.1%', width: '27.1%' }, // Stubble
+    beard05: { top: '09.5%', left: '49.1%', width: '28.0%' }, // Viking Braid
+    beard06: { top: '09.0%', left: '49.9%', width: '29.8%' }, // Wild
+    beard07: { top: '08.0%', left: '49.9%', width: '28.4%' }, // Chin Strap
+    beard08: { top: '08.4%', left: '48.1%', width: '28.4%' }, // Dwarven
+    beard09: { top: '10.0%', left: '50.4%', width: '30.3%' }, // Dreadlock
+    beard10: { top: '09.0%', left: '47.5%', width: '26.1%' }, // Wizard
+  },
+  
+  // ── body02 – Slim/Technical (322×1064) · skull-top 4.42% · cx 50.5% · sw 32.61% ─
+  body02: {
+    beard02: { top: '10.1%', left: '51.1%', width: '37.4%' }, // Corporate
+    beard03: { top: '11.4%', left: '50.5%', width: '28.5%' }, // Goatee
+    beard04: { top: '10.8%', left: '50.5%', width: '33.3%' }, // Stubble
+    beard05: { top: '10.1%', left: '50.5%', width: '34.4%' }, // Viking Braid
+    beard06: { top: '09.6%', left: '51.3%', width: '36.6%' }, // Wild
+    beard07: { top: '08.6%', left: '51.3%', width: '34.9%' }, // Chin Strap
+    beard08: { top: '09.0%', left: '49.5%', width: '34.9%' }, // Dwarven
+    beard09: { top: '10.6%', left: '51.8%', width: '37.2%' }, // Dreadlock
+    beard10: { top: '09.6%', left: '48.9%', width: '32.1%' }, // Wizard
+  },
+
+  // ── body03 – Athletic (360×1054) · skull-top 5.12% · cx 48.5% · sw 28.61% ──────
+  body03: {
+    beard02: { top: '10.8%', left: '48.8%', width: '32.8%' }, // Corporate
+    beard03: { top: '12.1%', left: '48.5%', width: '27.5%' }, // Goatee
+    beard04: { top: '11.5%', left: '48.5%', width: '29.2%' }, // Stubble
+    beard05: { top: '10.8%', left: '48.5%', width: '30.2%' }, // Viking Braid
+    beard06: { top: '10.3%', left: '49.3%', width: '32.1%' }, // Wild
+    beard07: { top: '09.3%', left: '49.3%', width: '30.6%' }, // Chin Strap
+    beard08: { top: '09.7%', left: '47.5%', width: '30.6%' }, // Dwarven
+    beard09: { top: '11.3%', left: '49.8%', width: '32.7%' }, // Dreadlock
+    beard10: { top: '10.3%', left: '46.9%', width: '28.2%' }, // Wizard
+  },
+
+  // ── body04 – Striker (318×1068) · skull-top 9.64% · cx 48.4% · sw 27.04% ───────
+  body04: {
+    beard02: { top: '16.3%', left: '49.9%', width: '31.0%' }, // Corporate
+    beard03: { top: '16.6%', left: '48.4%', width: '26.9%' }, // Goatee
+    beard04: { top: '16.8%', left: '48.4%', width: '27.6%' }, // Stubble
+    beard05: { top: '15.9%', left: '48.4%', width: '30.5%' }, // Viking Braid
+    beard06: { top: '14.8%', left: '49.2%', width: '32.4%' }, // Wild
+    beard07: { top: '14.8%', left: '49.2%', width: '28.9%' }, // Chin Strap
+    beard08: { top: '14.0%', left: '47.9%', width: '35.9%' }, // Dwarven
+    beard09: { top: '16.2%', left: '49.7%', width: '31.9%' }, // Dreadlock
+    beard10: { top: '14.8%', left: '46.8%', width: '26.6%' }, // Wizard
+  },
+
+  // ── body05 – Balanced (350×1038) · skull-top 5.59% · cx 49.0% · sw 30.57% ──────
+  body05: {
+    beard02: { top: '11.3%', left: '49.0%', width: '35.0%' }, // Corporate
+    beard03: { top: '12.6%', left: '49.0%', width: '30.4%' }, // Goatee
+    beard04: { top: '12.0%', left: '49.0%', width: '31.2%' }, // Stubble
+    beard05: { top: '11.3%', left: '49.0%', width: '32.3%' }, // Viking Braid
+    beard06: { top: '10.8%', left: '49.8%', width: '34.3%' }, // Wild
+    beard07: { top: '09.8%', left: '49.8%', width: '32.7%' }, // Chin Strap
+    beard08: { top: '10.2%', left: '48.0%', width: '32.7%' }, // Dwarven
+    beard09: { top: '11.8%', left: '50.3%', width: '34.9%' }, // Dreadlock
+    beard10: { top: '10.8%', left: '47.4%', width: '30.1%' }, // Wizard
+  },
+
+  // ── body06 – Brawler (364×1044) · skull-top 4.02% · cx 48.4% · sw 29.67% ───────
+  body06: {
+    beard02: { top: '09.4%', left: '49.6%', width: '36.0%' }, // Corporate
+    beard03: { top: '10.6%', left: '48.7%', width: '29.8%' }, // Goatee
+    beard04: { top: '09.3%', left: '48.4%', width: '32.3%' }, // Stubble
+    beard05: { top: '08.7%', left: '48.4%', width: '33.3%' }, // Viking Braid
+    beard06: { top: '08.0%', left: '49.2%', width: '35.3%' }, // Wild
+    beard07: { top: '07.0%', left: '49.4%', width: '34.8%' }, // Chin Strap
+    beard08: { top: '07.8%', left: '47.4%', width: '33.8%' }, // Dwarven
+    beard09: { top: '09.2%', left: '49.7%', width: '36.9%' }, // Dreadlock
+    beard10: { top: '08.2%', left: '46.8%', width: '31.2%' }, // Wizard
+  },
+
+  // ── body07 – Grappler (332×1028) · skull-top 6.52% · cx 49.7% · sw 32.53% ──────
+  body07: {
+    beard02: { top: '12.2%', left: '50.7%', width: '37.3%' }, // Corporate
+    beard03: { top: '13.5%', left: '49.9%', width: '31.4%' }, // Goatee
+    beard04: { top: '12.9%', left: '49.7%', width: '33.2%' }, // Stubble
+    beard05: { top: '12.2%', left: '49.7%', width: '34.3%' }, // Viking Braid
+    beard06: { top: '11.7%', left: '50.5%', width: '36.5%' }, // Wild
+    beard07: { top: '10.7%', left: '50.5%', width: '34.8%' }, // Chin Strap
+    beard08: { top: '11.1%', left: '48.7%', width: '34.8%' }, // Dwarven
+    beard09: { top: '12.7%', left: '51.0%', width: '37.2%' }, // Dreadlock
+    beard10: { top: '11.7%', left: '48.1%', width: '32.0%' }, // Wizard
+  },
+
+  // ── body08 – Southpaw (358×1030) · skull-top 2.62% · cx 51.8% · sw 29.89% ──────
+  body08: {
+    beard02: { top: '09.3%', left: '52.3%', width: '36.3%' }, // Corporate
+    beard03: { top: '10.6%', left: '51.8%', width: '27.8%' }, // Goatee
+    beard04: { top: '10.0%', left: '51.8%', width: '31.5%' }, // Stubble
+    beard05: { top: '09.3%', left: '51.8%', width: '32.6%' }, // Viking Braid
+    beard06: { top: '08.8%', left: '52.6%', width: '33.6%' }, // Wild
+    beard07: { top: '07.8%', left: '52.6%', width: '33.0%' }, // Chin Strap
+    beard08: { top: '08.2%', left: '50.8%', width: '32.0%' }, // Dwarven
+    beard09: { top: '09.8%', left: '53.1%', width: '34.2%' }, // Dreadlock
+    beard10: { top: '08.8%', left: '50.2%', width: '29.4%' }, // Wizard
+  },
+};
+
 // ─── Bounding-box Y compensation ────────────────────────────────────────────
 //
 // ─── Hair file padding/scale fixes ───────────────────────────────────────
@@ -279,7 +441,7 @@ export const FighterVisual: React.FC<FighterVisualProps> = ({
   disableAnimation = false,
   debugHair = false,
 }) => {
-  const { bodyId, skinToneId = 'light', hairId = 0, hairColor = 'brown' } = config;
+  const { bodyId, skinToneId = 'light', hairId = 0, hairColor = 'brown', beardId = 0 } = config;
   // hair01 (Buzz Cut) was deprecated – treat legacy hairId=1 as no hair
   const safeHairId  = hairId === 1 ? 0 : hairId;
 
@@ -287,6 +449,7 @@ export const FighterVisual: React.FC<FighterVisualProps> = ({
   const skinTone    = SKIN_TONES.find((s) => s.id === skinToneId) ?? SKIN_TONES[0];
   const hairStyle   = safeHairId > 0 ? HAIR_STYLES.find((h) => h.id === safeHairId) : null;
   const hairColorP  = HAIR_COLORS.find((c) => c.id === hairColor) ?? HAIR_COLORS[2];
+  const beardStyle  = beardId > 1 ? BEARD_STYLES.find((b) => b.id === beardId) : null;
 
   // Resolve mapping slot
   const bodyKey  = `body0${bodyId}` as BodyKey;
@@ -294,6 +457,10 @@ export const FighterVisual: React.FC<FighterVisualProps> = ({
   const hairSlot = hairKey && HAIR_ALIGNMENT_MAPPING[bodyKey]
     ? HAIR_ALIGNMENT_MAPPING[bodyKey][hairKey]
     : null;
+
+  // Beard slot – resolved from deep mapping (mirrors hair lookup exactly).
+  const beardKey = beardStyle ? (`beard${String(beardStyle.id).padStart(2, '0')}` as BeardKey) : null;
+  const beardSlot = beardKey ? (BEARD_ALIGNMENT_MAPPING[bodyKey]?.[beardKey] ?? null) : null;
 
   // Resolve hard correction override (applied on the img, not the anchor div)
   const override = hairKey
@@ -320,6 +487,29 @@ export const FighterVisual: React.FC<FighterVisualProps> = ({
           draggable={false}
         />
 
+        {/* ── Beard overlay (under hair, over body) ────────────────────── */}
+        {beardStyle && beardSlot && (
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              top: beardSlot.top,
+              left: beardSlot.left,
+              width: beardSlot.width,
+              transform: 'translateX(-50%)',
+              zIndex: 5,
+            }}
+            data-beard-id={beardStyle.id}
+            data-body-key={bodyKey}
+          >
+            <img
+              src={beardStyle.imagePath}
+              className="w-full h-auto block"
+              style={{ filter: hairColorP.filter }}
+              draggable={false}
+            />
+          </div>
+        )}
+
         {/* ── Hair overlay ─────────────────────────────────────────────────── */}
         {hairStyle && hairSlot && (
           <div
@@ -329,6 +519,7 @@ export const FighterVisual: React.FC<FighterVisualProps> = ({
               left: hairSlot.left,
               width: hairSlot.width,
               transform: 'translateX(-50%)',
+              zIndex: 10,
               outline: debugHair ? '1px dashed red' : undefined,
             }}
             data-hair-id={hairStyle.id}
