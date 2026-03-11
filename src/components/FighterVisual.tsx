@@ -11,6 +11,7 @@ export interface VisualConfig {
   hairId?: number;    // 0 = no hair; 1–9 = active style
   hairColor?: string; // id from HAIR_COLORS
   beardId?: number;   // 0 = no beard; 2–10 = active style (1 skipped)
+  beardColor?: string; // id from HAIR_COLORS; defaults to hairColor when omitted
   /** @deprecated use hairId + hairColor */
   hairStyle?: string;
 }
@@ -441,7 +442,7 @@ export const FighterVisual: React.FC<FighterVisualProps> = ({
   disableAnimation = false,
   debugHair = false,
 }) => {
-  const { bodyId, skinToneId = 'light', hairId = 0, hairColor = 'brown', beardId = 0 } = config;
+  const { bodyId, skinToneId = 'light', hairId = 0, hairColor = 'brown', beardId = 0, beardColor } = config;
   // hair01 (Buzz Cut) was deprecated – treat legacy hairId=1 as no hair
   const safeHairId  = hairId === 1 ? 0 : hairId;
 
@@ -449,6 +450,13 @@ export const FighterVisual: React.FC<FighterVisualProps> = ({
   const skinTone    = SKIN_TONES.find((s) => s.id === skinToneId) ?? SKIN_TONES[0];
   const hairStyle   = safeHairId > 0 ? HAIR_STYLES.find((h) => h.id === safeHairId) : null;
   const hairColorP  = HAIR_COLORS.find((c) => c.id === hairColor) ?? HAIR_COLORS[2];
+  // Beard color: explicit beardColor overrides, else falls back to hairColor.
+  // A brightness pre-boost ensures color tints are visible on dark beard assets.
+  const beardColorId = beardColor ?? hairColor;
+  const beardColorP  = HAIR_COLORS.find((c) => c.id === beardColorId) ?? HAIR_COLORS[2];
+  const beardFilter  = beardColorP.filter === 'none'
+    ? 'none'
+    : `brightness(1.8) ${beardColorP.filter}`;
   const beardStyle  = beardId > 1 ? BEARD_STYLES.find((b) => b.id === beardId) : null;
 
   // Resolve mapping slot
@@ -504,7 +512,7 @@ export const FighterVisual: React.FC<FighterVisualProps> = ({
             <img
               src={beardStyle.imagePath}
               className="w-full h-auto block"
-              style={{ filter: hairColorP.filter }}
+              style={{ filter: beardFilter }}
               draggable={false}
             />
           </div>

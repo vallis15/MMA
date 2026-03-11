@@ -154,6 +154,14 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
   const [selectedHairId, setSelectedHairId] = useState<number>(0);
   const [selectedHairColor, setSelectedHairColor] = useState<string>('brown');
   const [selectedBeardId, setSelectedBeardId] = useState<number>(0);
+  const [selectedBeardColor, setSelectedBeardColor] = useState<string>('brown');
+  const [syncBeardWithHair, setSyncBeardWithHair] = useState<boolean>(true);
+
+  // When hair color changes and sync is on, mirror the change to beard color.
+  const handleHairColorChange = (colorId: string) => {
+    setSelectedHairColor(colorId);
+    if (syncBeardWithHair) setSelectedBeardColor(colorId);
+  };
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -211,6 +219,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
         hairId: selectedHairId > 0 ? selectedHairId : undefined,
         hairColor: selectedHairId > 0 ? selectedHairColor : undefined,
         beardId: selectedBeardId > 0 ? selectedBeardId : undefined,
+        beardColor: selectedBeardId > 0 ? selectedBeardColor : undefined,
       };
 
       // Update profile in Supabase
@@ -406,6 +415,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                       hairId: selectedHairId,
                       hairColor: selectedHairColor,
                       beardId: selectedBeardId,
+                      beardColor: selectedBeardColor,
                     }}
                     height={300}
                     disableAnimation={false}
@@ -516,7 +526,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                         type="button"
                         disabled={loading}
                         title={hc.label}
-                        onClick={() => setSelectedHairColor(hc.id)}
+                        onClick={() => handleHairColorChange(hc.id)}
                         className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${
                           selectedHairColor === hc.id
                             ? 'border-neon-green scale-110 ring-2 ring-neon-green/40'
@@ -540,7 +550,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
               transition={{ delay: 0.22 }}
             >
               <label className="block text-lg font-bold text-neon-green mb-1">Beard Style</label>
-              <p className="text-xs text-gray-500 mb-3">Beard colour automatically matches your hair colour</p>
+              <p className="text-xs text-gray-500 mb-3">Choose a beard – set a separate colour below or sync it to your hair</p>
               <div className="grid grid-cols-5 gap-2">
                 <button
                   type="button"
@@ -575,7 +585,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                       className="w-10 h-10 object-contain"
                       style={{
                         filter: selectedBeardId === beard.id
-                          ? HAIR_COLORS.find((c) => c.id === selectedHairColor)?.filter ?? 'none'
+                          ? `brightness(1.8) ${HAIR_COLORS.find((c) => c.id === selectedBeardColor)?.filter ?? 'none'}`
                           : 'brightness(0.55) contrast(1.1)',
                       }}
                       draggable={false}
@@ -586,7 +596,65 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
               </div>
             </motion.div>
 
-            {/* 3. SKIN TONE */}
+            {/* 2b. BEARD STYLE footer: Color picker + Sync toggle */}
+            {selectedBeardId > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="-mt-4"
+              >
+                {/* Sync toggle */}
+                <div className="flex items-center gap-2 mb-3">
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => {
+                      const next = !syncBeardWithHair;
+                      setSyncBeardWithHair(next);
+                      if (next) setSelectedBeardColor(selectedHairColor);
+                    }}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                      syncBeardWithHair ? 'bg-neon-green' : 'bg-gray-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
+                        syncBeardWithHair ? 'translate-x-4' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  <span className="text-xs text-gray-400">Sync beard colour with hair</span>
+                </div>
+
+                {/* Beard color swatches (only editable when sync is off) */}
+                <p className="text-sm font-semibold text-gray-300 mb-2">
+                  Beard Color
+                  {syncBeardWithHair && <span className="text-xs text-gray-500 ml-2">(synced with hair)</span>}
+                </p>
+                <div className={`flex gap-2 flex-wrap transition-opacity ${
+                  syncBeardWithHair ? 'opacity-40 pointer-events-none' : 'opacity-100'
+                }`}>
+                  {HAIR_COLORS.map((hc) => (
+                    <button
+                      key={hc.id}
+                      type="button"
+                      disabled={loading || syncBeardWithHair}
+                      title={hc.label}
+                      onClick={() => setSelectedBeardColor(hc.id)}
+                      className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${
+                        selectedBeardColor === hc.id
+                          ? 'border-neon-green scale-110 ring-2 ring-neon-green/40'
+                          : 'border-transparent hover:border-gray-400'
+                      }`}
+                      style={{ backgroundColor: hc.swatch }}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {HAIR_COLORS.find((c) => c.id === selectedBeardColor)?.label}
+                </p>
+              </motion.div>
+            )}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
