@@ -266,7 +266,17 @@ const evaluateSkillTriggers = (
     if (m.isDefensive === true  && !isDefender) return;
     if (m.isDefensive === false &&  isDefender) return;
     const normalizedChance = m.chance > 1 ? m.chance / 100 : m.chance;
-    if (Math.random() < normalizedChance) {
+    const roll = Math.random();
+    const fires = roll < normalizedChance;
+    // ── Temporary skill-activation debug log (remove after diagnostics) ─
+    console.log(
+      `🎯 [SKILL] Checking: "${node.name}" | Learned: true` +
+      ` | Role: ${isDefender ? 'DEFENDER' : 'ATTACKER'}` +
+      ` | Trigger: ${triggerType}` +
+      ` | Roll: ${roll.toFixed(3)} vs Chance: ${normalizedChance.toFixed(3)}` +
+      ` | Fires: ${fires}`,
+    );
+    if (fires) {
       results.push({ skillId: id, skillName: node.name, domain: node.domain, effect: m.effect, effectValue: m.effectValue, logText: m.logText });
     }
   };
@@ -768,6 +778,10 @@ export const FightProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
         const attackerSkillIds = event.attacker === 'player' ? playerSkillsRef.current : [];
         const defenderSkillIds = event.attacker === 'player' ? [] : playerSkillsRef.current;
+        // ── Skill debug: guard against empty skills ──────────────────────
+        if (playerSkillsRef.current.length === 0) {
+          console.warn('⚠️ [SKILL ENGINE] playerSkillsRef is EMPTY → skills will not trigger. Check that unlocked_skills loaded correctly from Supabase.');
+        }
         let effectiveDamage    = event.damage;
         const skillLogEntries: BattleLogEntry[] = [];
 

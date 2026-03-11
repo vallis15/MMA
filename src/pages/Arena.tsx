@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { Zap } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useFighter } from '../context/FighterContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useFight, HealthStatus, BattleLogEntry, FightPhase, BodyPart, DOMAIN_COLORS, RoundResult } from '../context/FightContext';
 import { OpponentCard } from '../components/OpponentCard';
-import { FighterSilhouette } from '../components/FighterSilhouette';
-import { AIFighter } from '../types';
+import { FighterVisual } from '../components/FighterVisual';
+import { AIFighter, VisualConfig } from '../types';
 import { supabase } from '../lib/supabase';
 
 import type { SkillDomain } from '../types/skills';
@@ -121,7 +121,7 @@ export const Arena: React.FC = () => {
         // Fetch all players from database sorted by reputation
         const { data: allPlayers, error: fetchError } = await supabase
           .from('profiles')
-          .select('id, username, reputation, wins, losses, draws, strength, speed, cardio, striking, grappling')
+          .select('id, username, reputation, wins, losses, draws, strength, speed, cardio, striking, grappling, visual_config')
           .order('reputation', { ascending: false });
 
         if (fetchError) {
@@ -196,6 +196,8 @@ export const Arena: React.FC = () => {
           avatar: '🥊',
           health: 100,
           maxHealth: 100,
+          // Use DB stored config or generate a unique random one so each opponent looks different
+          visual_config: (p.visual_config as VisualConfig | null) ?? generateRandomVisualConfig(),
         }));
 
         console.log('✅ [ARENA] Matched opponents:', matchedOpponents.length);
@@ -306,6 +308,261 @@ export const Arena: React.FC = () => {
         </AnimatePresence>
       </div>
     </motion.div>
+  );
+};
+
+// ============ VISUAL HELPERS ============
+
+/** Generate a unique random visual config for NPC opponents */
+function generateRandomVisualConfig(): VisualConfig {
+  const bodyIds = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+  const skinIds = ['light', 'fair', 'medium', 'olive', 'dark', 'deep'] as const;
+  // 0 = bald (appears twice for higher weight)
+  const hairIds = [0, 0, 2, 3, 4, 5, 6, 7, 8, 9] as const;
+  const hairColorIds = ['black', 'darkbrown', 'brown', 'auburn', 'blond', 'gray'] as const;
+  // 0 = no beard (appears twice for higher weight)
+  const beardIds = [0, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+  const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)];
+  return {
+    bodyId: pick(bodyIds),
+    skinToneId: pick(skinIds),
+    hairId: pick(hairIds),
+    hairColor: pick(hairColorIds),
+    beardId: pick(beardIds),
+  };
+}
+
+/** HP → neon color for zone mini-bars */
+const getZoneNeonColor = (hp: number): string => {
+  if (hp <= 0)  return '#2a0000';
+  if (hp <= 20) return '#ff1744';
+  if (hp <= 40) return '#ff3d00';
+  if (hp <= 60) return '#ff9100';
+  if (hp <= 80) return '#c6ff00';
+  return '#00e5ff';
+};
+
+const combatShakeVariants = {
+  idle:  { x: 0, y: 0 },
+  shake: {
+    x: [0, -9, 11, -11, 9, -7, 7, -4, 4, 0],
+    y: [0, 4, -5, 4, -3, 3, -2, 2, -1, 0],
+    transition: { duration: 0.20, ease: 'linear' },
+  },
+};
+
+// ============ ARENA COMBATANT – replaces FighterSilhouette ============
+
+interface ArenaCombatantProps {
+  visualConfig?: VisualConfig | null;
+  name: string;
+  healthStatus: HealthStatus;
+  lastHitPart: BodyPart | null;
+  lastHitCategory?: string | null;
+  isAttacking: boolean;
+  isPlayer: boolean;
+  stance: FightPhase;
+  groundPosition?: 'TOP' | 'BOTTOM' | null;
+  mirror?: boolean;
+}
+
+const ArenaCombatant: React.FC<ArenaCombatantProps> = ({
+  visualConfig,
+  name,
+  healthStatus,
+  lastHitPart,
+  lastHitCategory,
+  isAttacking,
+  isPlayer,
+  stance,
+  groundPosition,
+  mirror = false,
+}) => {
+  const [isFlashing, setIsFlashing] = useState(false);
+  const shakeControls = useAnimation();
+
+  const resolvedConfig: VisualConfig = visualConfig ?? { bodyId: 1, skinToneId: 'medium' };
+  const accentColor = isPlayer ? '#00e5ff' : '#ff1744';
+  const nameColor   = isPlayer ? '#00e5ff' : '#ff4444';
+  const isGround    = stance === 'GROUND';
+  const isDominant  = isGround && groundPosition === 'TOP';
+
+  // Damage flash: red filter on each hit
+  useEffect(() => {
+    if (!lastHitPart) return;
+    setIsFlashing(true);
+    const t = setTimeout(() => setIsFlashing(false), 200);
+    return () => clearTimeout(t);
+  }, [lastHitPart]);
+
+  // Full-body shake on critical/finisher
+  useEffect(() => {
+    if (lastHitCategory === 'CRITICAL_HIT' || lastHitCategory === 'FINISHER') {
+      shakeControls.start('shake').then(() => shakeControls.start('idle'));
+    }
+  }, [lastHitCategory, shakeControls]);
+
+  // Preload fighter images so they're ready when the fight starts
+  useEffect(() => {
+    const { bodyId, hairId = 0, beardId = 0 } = resolvedConfig;
+    const urls: string[] = [`/images/body0${bodyId}.png`];
+    if (hairId > 1) urls.push(`/images/hair${String(hairId).padStart(2, '0')}.png`);
+    if (beardId > 1) urls.push(`/images/beard${String(beardId).padStart(2, '0')}.png`);
+    resolvedConfig.tattoos?.forEach((t) => urls.push(`/images/${t.id}.png`));
+    urls.forEach((url) => { const img = new window.Image(); img.src = url; });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Combined filter: glow when attacking + red flash when hit
+  const filterParts: string[] = [];
+  if (isAttacking) filterParts.push(`drop-shadow(0 0 18px ${accentColor}bb) drop-shadow(0 0 8px ${accentColor}66)`);
+  if (isFlashing)  filterParts.push('brightness(1.5) sepia(1) hue-rotate(-50deg) saturate(5)');
+  const combinedFilter = filterParts.join(' ') || undefined;
+
+  return (
+    <div className="flex flex-col items-center gap-2 select-none w-full">
+      {/* Ground position badge */}
+      <AnimatePresence>
+        {isGround && groundPosition && (
+          <motion.div
+            key="ground-badge"
+            initial={{ opacity: 0, y: -8, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.8 }}
+            className={`text-[9px] font-black tracking-widest uppercase px-3 py-0.5 rounded-full border ${
+              groundPosition === 'TOP'
+                ? 'bg-cyan-950/60 border-cyan-400/50 text-cyan-300'
+                : 'bg-red-950/60 border-red-500/40 text-red-300'
+            }`}
+          >
+            {groundPosition === 'TOP' ? '▲ TOP' : '▼ BOTTOM'}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/*
+       * Fighter visual – ground layout wrapper.
+       * When isGround: fixed-height container (overflow:visible) reserves layout
+       * space while the fighter rotates 90° so they appear lying on the mat.
+       * Player rotates +90° (head toward center); opponent's outer scaleX(-1)
+       * mirrors the rotation so they face inward from the right side too.
+       */}
+      <div style={isGround ? {
+        height: 110,
+        width: '100%',
+        position: 'relative',
+        overflow: 'visible',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      } : undefined}>
+        {/* Flip wrapper keeps name/bars unmirrored */}
+        <div style={{ transform: mirror ? 'scaleX(-1)' : undefined }}>
+          <motion.div
+            variants={combatShakeVariants}
+            animate={shakeControls}
+            className="relative"
+            style={isGround ? {
+              transform: 'rotate(90deg) scale(0.70)',
+              transformOrigin: 'center center',
+            } : undefined}
+          >
+            {/* Dominant ground pulse ring */}
+            {isDominant && (
+              <motion.div
+                className="absolute inset-0 pointer-events-none rounded-full"
+                animate={{
+                  boxShadow: [
+                    `0 0 0 0 ${accentColor}00`,
+                    `0 0 0 14px ${accentColor}44`,
+                    `0 0 0 0 ${accentColor}00`,
+                  ],
+                }}
+                transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+              />
+            )}
+
+            {/* Glow + damage flash applied to the full layered visual stack
+                (Body + Hair + Beard + Tattoos all receive the effect) */}
+            <div
+              style={{
+                filter: combinedFilter,
+                transition: 'filter 0.08s ease',
+                // z-index: fighters sit above background, below floating UI
+                position: 'relative',
+                zIndex: 1,
+              }}
+            >
+              <FighterVisual
+                config={resolvedConfig as any}
+                height={220}
+                disableAnimation={false}
+              />
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Name + Stamina bar */}
+      <div className="w-full" style={{ maxWidth: 140 }}>
+        <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-widest mb-1">
+          <span style={{ color: nameColor, textShadow: `0 0 8px ${nameColor}88` }}>
+            {name.length > 10 ? name.slice(0, 10) + '…' : name}
+          </span>
+          <span
+            className={healthStatus.stamina < 25 ? 'animate-pulse' : ''}
+            style={{ color: healthStatus.stamina < 25 ? '#ff1744' : '#00e5ff' }}
+          >
+            ⚡{Math.ceil(healthStatus.stamina)}
+          </span>
+        </div>
+        <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+          <motion.div
+            className="h-full rounded-full"
+            style={{
+              background: healthStatus.stamina < 25
+                ? 'linear-gradient(90deg,#ff1744,#ff4444)'
+                : healthStatus.stamina < 50
+                  ? 'linear-gradient(90deg,#ff9100,#ffab40)'
+                  : 'linear-gradient(90deg,#00b8d9,#00e5ff)',
+              boxShadow: healthStatus.stamina < 25 ? '0 0 6px #ff174488' : '0 0 4px #00e5ff55',
+            }}
+            animate={{ width: `${Math.max(0, healthStatus.stamina)}%` }}
+            transition={{ type: 'spring', stiffness: 80, damping: 16 }}
+          />
+        </div>
+      </div>
+
+      {/* Zone HP mini-bars: HEAD / BODY / LEGS */}
+      <div className="w-full space-y-0.5" style={{ maxWidth: 140 }}>
+        {(['head', 'body', 'legs'] as BodyPart[]).map((zone) => {
+          const hp     = healthStatus[zone];
+          const stroke = getZoneNeonColor(hp);
+          const label  = zone === 'head' ? 'HEAD' : zone === 'body' ? 'BODY' : 'LEGS';
+          return (
+            <div key={zone} className="flex items-center gap-1">
+              <span className="text-[8px] font-bold w-7 uppercase"
+                    style={{ color: 'rgba(130,140,150,0.7)' }}>
+                {label}
+              </span>
+              <div className="flex-1 h-[3px] rounded-full overflow-hidden"
+                   style={{ background: 'rgba(255,255,255,0.05)' }}>
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{ background: stroke, boxShadow: `0 0 4px ${stroke}66` }}
+                  animate={{ width: `${Math.max(0, hp)}%` }}
+                  transition={{ type: 'spring', stiffness: 90, damping: 15 }}
+                />
+              </div>
+              <span className="text-[8px] font-mono w-5 text-right"
+                    style={{ color: hp <= 20 ? '#ff1744' : 'rgba(130,140,150,0.6)' }}>
+                {Math.ceil(hp)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 };
 
@@ -640,7 +897,8 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
             <p className="text-[9px] font-black uppercase tracking-[0.2em]"
                style={{ color: '#00e5ff', textShadow: '0 0 8px #00e5ff88' }}>YOU</p>
           </div>
-          <FighterSilhouette
+          <ArenaCombatant
+            visualConfig={fighter.visual_config}
             name={fighter.name}
             healthStatus={playerHS}
             lastHitPart={lastPlayerHitPart}
@@ -727,7 +985,8 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
             <p className="text-[9px] font-black uppercase tracking-[0.2em]"
                style={{ color: '#ff4444', textShadow: '0 0 8px #ff174488' }}>OPP</p>
           </div>
-          <FighterSilhouette
+          <ArenaCombatant
+            visualConfig={opponent.visual_config}
             name={opponent.name}
             healthStatus={opponentHS}
             lastHitPart={lastOpponentHitPart}

@@ -110,6 +110,8 @@ export interface AIFighter {
   avatar: string;
   health?: number;
   maxHealth?: number;
+  /** Visual appearance – loaded from DB or randomly generated for NPCs */
+  visual_config?: VisualConfig;
 }
 
 export interface LeaderboardEntry {
