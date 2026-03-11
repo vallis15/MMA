@@ -8,3 +8,4 @@ export { AdminLogin } from './AdminLogin';
 export { AdminDashboard } from './AdminDashboard';
 export { FighterProfile } from './FighterProfile';
 export { SkillTree } from './SkillTree';
+export { CreateFighter } from './CreateFighter';

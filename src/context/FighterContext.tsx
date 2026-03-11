@@ -60,6 +60,8 @@ const createDefaultFighter = (): Fighter => ({
   createdAt: new Date(),
   skill_points: 1,
   unlocked_skills: [],
+  visual_config: undefined,
+  has_character: false,
 });
 
 interface FighterProviderProps {
@@ -187,6 +189,27 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
             // ── Skill Tree ────────────────────────────────────────────────────
             skill_points: typeof data.skill_points === 'number' ? data.skill_points : 0,
             unlocked_skills: Array.isArray(data.unlocked_skills) ? (data.unlocked_skills as string[]) : [],
+            // ── Visual / Character (load) ──────────────────────────────────────────────────
+            // If has_character is explicitly false OR username was reset to 'Undefined',
+            // NEVER fall back to localStorage — the admin wants a forced re-onboard.
+            visual_config: (() => {
+              if (data.has_character === false || data.username === 'Undefined') return undefined;
+              if (data.visual_config != null) return data.visual_config;
+              try {
+                const local = localStorage.getItem(`visual_config_${user.id}`);
+                return local ? JSON.parse(local) : undefined;
+              } catch { return undefined; }
+            })(),
+            has_character: (() => {
+              // Explicit false from DB → always false (admin reset)
+              if (data.has_character === false) return false;
+              // Explicit true from DB
+              if (data.has_character === true) return true;
+              // Username reset to 'Undefined' → treat as not created
+              if (data.username === 'Undefined') return false;
+              // Column doesn’t exist — fall back to visual_config / localStorage
+              return (data.visual_config != null || !!localStorage.getItem(`visual_config_${user.id}`));
+            })(),
           };
 
           // ── Offline energy recovery ──────────────────────────────────────────
@@ -307,6 +330,21 @@ export const FighterProvider: React.FC<FighterProviderProps> = ({ children }) =>
           // ── Skill Tree ──────────────────────────────────────────────────
           skill_points: typeof data.skill_points === 'number' ? data.skill_points : 0,
           unlocked_skills: Array.isArray(data.unlocked_skills) ? (data.unlocked_skills as string[]) : [],
+          // ── Visual / Character (reload) ───────────────────────────────────────
+          visual_config: (() => {
+            if (data.has_character === false || data.username === 'Undefined') return undefined;
+            if (data.visual_config != null) return data.visual_config;
+            try {
+              const local = localStorage.getItem(`visual_config_${user.id}`);
+              return local ? JSON.parse(local) : undefined;
+            } catch { return undefined; }
+          })(),
+          has_character: (() => {
+            if (data.has_character === false) return false;
+            if (data.has_character === true) return true;
+            if (data.username === 'Undefined') return false;
+            return (data.visual_config != null || !!localStorage.getItem(`visual_config_${user.id}`));
+          })(),
         };
 
         console.log('✅ [FIGHTER RELOAD] Fighter object updated:', fighterData);

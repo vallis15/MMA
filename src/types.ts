@@ -97,6 +97,8 @@ export interface Fighter {
   unlocked_skills: string[];
   /** Appearance settings – body archetype, skin tone, future hair. */
   visual_config?: VisualConfig;
+  /** Whether the character creation flow has been completed. */
+  has_character?: boolean;
 }
 
 export interface AIFighter {

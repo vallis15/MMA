@@ -227,10 +227,11 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
         tattoos: tattoos.length > 0 ? tattoos : undefined,
       };
 
-      // Update profile in Supabase
+      // Step 1: Upsert core fighter data (name, stats) — must succeed
       const { data, error: updateError } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          id: userId,
           username: fighterName,
           nickname: nickname.trim() || null,
           country_code: countryCode || null,
@@ -239,10 +240,8 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
           speed: newStats.speed,
           strength: newStats.strength,
           cardio: newStats.cardio,
-          visual_config: visualConfig,
           updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId)
+        }, { onConflict: 'id' })
         .select();
 
       if (updateError) {
@@ -252,8 +251,27 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
       }
 
       console.log('✅ [FIGHTER INIT] Career initialized successfully!', data);
-      console.log('✅ [FIGHTER INIT] Fighter name:', fighterName);
-      console.log('✅ [FIGHTER INIT] Stats updated:', newStats);
+
+      // Step 2: Save visual_config separately — silently ignore if column doesn't exist yet
+      // (run migration 005_add_visual_config.sql in Supabase to enable)
+      try {
+        const { error: visualError } = await supabase
+          .from('profiles')
+          .update({ visual_config: visualConfig, updated_at: new Date().toISOString() })
+          .eq('id', userId);
+        if (visualError) {
+          console.warn('⚠️ [FIGHTER INIT] visual_config not saved (column may not exist yet):', visualError.message);
+        } else {
+          console.log('✅ [FIGHTER INIT] visual_config saved');
+        }
+      } catch {
+        console.warn('⚠️ [FIGHTER INIT] visual_config save skipped');
+      }
+
+      // Store visual config locally as fallback
+      try {
+        localStorage.setItem(`visual_config_${userId}`, JSON.stringify(visualConfig));
+      } catch { /* ignore */ }
 
       // Call parent callback
       onComplete(fighterName, newStats);

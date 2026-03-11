@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Bell, X, Swords, Shield, Atom, Brain, ChevronRight, Zap, Trophy, TrendingUp, Dumbbell, BookOpen } from 'lucide-react';
+import { Plus, Bell, X, Swords, Shield, Atom, Brain, ChevronRight, Zap, Trophy, TrendingUp, Dumbbell, BookOpen, RotateCcw } from 'lucide-react';
 import { useFighter } from '../context/FighterContext';
 import { ALL_SKILLS } from '../constants/skillTree';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +9,8 @@ import { FighterInitialization } from '../components/FighterInitialization';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { useNavigate } from 'react-router-dom';
 import { DetailedFighterStats } from '../types';
+import { FighterVisual } from '../components/FighterVisual';
+import { supabase } from '../lib/supabase';
 
 // ─── Aggregation helpers ─────────────────────────────────────────────────────
 
@@ -291,7 +293,7 @@ const MasteredTechniques: React.FC<MasteredTechniquesProps> = ({ unlockedIds, de
 
 export const Dashboard: React.FC = () => {
   const { fighter, createFighter, reloadFighter, fighterLoading } = useFighter();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
 
@@ -300,6 +302,26 @@ export const Dashboard: React.FC = () => {
   const [formData, setFormData] = useState({ name: '', nickname: '' });
   const [announcement, setAnnouncement] = useState<string | null>(null);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handleAdminReset = async () => {
+    if (!user) return;
+    setIsResetting(true);
+    try {
+      await supabase
+        .from('profiles')
+        .update({ visual_config: null, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+      await reloadFighter();
+      navigate('/create-fighter', { replace: true });
+    } catch (err) {
+      console.error('Admin reset failed:', err);
+    } finally {
+      setIsResetting(false);
+      setShowResetConfirm(false);
+    }
+  };
 
   useEffect(() => {
     if (!user || !fighter) return;
@@ -379,21 +401,72 @@ export const Dashboard: React.FC = () => {
               style={{ boxShadow: '0 0 50px rgba(0,255,65,0.05)' }}
             >
               <div className="absolute -top-16 -right-16 w-56 h-56 bg-neon-green/5 rounded-full blur-3xl pointer-events-none" />
-              <div className="flex flex-col md:flex-row md:items-center gap-6">
-                {/* Octagon avatar + OVR */}
-                <div className="relative flex-shrink-0 self-start md:self-auto">
-                  <div
-                    className="w-20 h-20 flex items-center justify-center text-3xl font-black bg-dark-tertiary border-2 border-neon-green/50 text-neon-green"
-                    style={{
-                      clipPath: 'polygon(30% 0%,70% 0%,100% 30%,100% 70%,70% 100%,30% 100%,0% 70%,0% 30%)',
-                      boxShadow: '0 0 24px rgba(0,255,65,0.25)',
-                    }}
-                  >
-                    {fighter.name[0]?.toUpperCase() ?? '?'}
-                  </div>
-                  <div className="absolute -bottom-2 -right-2 bg-neon-green text-dark-primary text-[10px] font-black px-1.5 py-0.5 rounded-md leading-none">
-                    {overallRating}
-                  </div>
+
+              {/* ── Admin reset button (hidden in corner, admin-only) ── */}
+              {isAdmin && (
+                <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+                  {showResetConfirm ? (
+                    <div className="flex items-center gap-2 bg-red-950/90 border border-red-700/60 rounded-lg px-3 py-1.5 text-xs backdrop-blur-sm">
+                      <span className="text-red-400 font-semibold">Reset character?</span>
+                      <button
+                        onClick={handleAdminReset}
+                        disabled={isResetting}
+                        className="text-red-300 hover:text-white font-black uppercase tracking-wider transition-colors"
+                      >
+                        {isResetting ? '...' : 'YES'}
+                      </button>
+                      <span className="text-gray-600">|</span>
+                      <button
+                        onClick={() => setShowResetConfirm(false)}
+                        className="text-gray-500 hover:text-gray-300 font-semibold uppercase tracking-wider transition-colors"
+                      >
+                        NO
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowResetConfirm(true)}
+                      title="Admin: Reset Character"
+                      className="text-gray-700 hover:text-red-500 transition-colors p-1 rounded"
+                    >
+                      <RotateCcw size={11} />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <div className="flex flex-col md:flex-row md:items-end gap-6">
+                {/* ── Fighter Visual (3D silhouette with idle float) ── */}
+                <div className="flex-shrink-0 self-center md:self-auto relative">
+                  {fighter.visual_config ? (
+                    <>
+                      <FighterVisual
+                        config={fighter.visual_config}
+                        height={260}
+                        className="drop-shadow-[0_0_24px_rgba(0,255,65,0.12)]"
+                      />
+                      {/* OVR pill pinned below the figure */}
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-neon-green text-dark-primary text-[10px] font-black px-2 py-0.5 rounded-md leading-none whitespace-nowrap z-10">
+                        OVR {overallRating}
+                      </div>
+                    </>
+                  ) : (
+                    /* Fallback octagon letter avatar */
+                    <div className="relative">
+                      <div
+                        className="w-20 h-20 flex items-center justify-center text-3xl font-black bg-dark-tertiary border-2 border-neon-green/50 text-neon-green"
+                        style={{
+                          clipPath: 'polygon(30% 0%,70% 0%,100% 30%,100% 70%,70% 100%,30% 100%,0% 70%,0% 30%)',
+                          boxShadow: '0 0 24px rgba(0,255,65,0.25)',
+                        }}
+                      >
+                        {fighter.name[0]?.toUpperCase() ?? '?'}
+                      </div>
+                      <div className="absolute -bottom-2 -right-2 bg-neon-green text-dark-primary text-[10px] font-black px-1.5 py-0.5 rounded-md leading-none">
+                        {overallRating}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Name + meta */}

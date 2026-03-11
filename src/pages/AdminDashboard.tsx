@@ -38,6 +38,9 @@ const AdminDashboardContent: React.FC = () => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [resetResult, setResetResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [showCharResetConfirm, setShowCharResetConfirm] = useState(false);
+  const [charResetLoading, setCharResetLoading] = useState(false);
+  const [charResetResult, setCharResetResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Ensure admin access with useEffect
   useEffect(() => {
@@ -213,6 +216,48 @@ const AdminDashboardContent: React.FC = () => {
 
     setResetLoading(false);
     setShowResetConfirm(false);
+  };
+
+  // ── Nuclear: reset ALL characters (forces re-onboarding) ────────────────
+  const handleResetAllCharacters = async () => {
+    setCharResetLoading(true);
+    setCharResetResult(null);
+
+    const failed: string[] = [];
+
+    for (const u of users) {
+      if (!u.id) continue;
+
+      // Step 1: reset username so legacy name-check in CharacterGate also fails
+      const { error: nameError } = await supabase
+        .from('profiles')
+        .update({ username: 'Undefined', updated_at: new Date().toISOString() })
+        .eq('id', u.id);
+
+      if (nameError) { failed.push(u.username ?? u.id); continue; }
+
+      // Step 2: clear visual_config (ignore error if column doesn't exist)
+      await supabase
+        .from('profiles')
+        .update({ visual_config: null, updated_at: new Date().toISOString() })
+        .eq('id', u.id);
+
+      // Step 3: set has_character = false (ignore error if column doesn't exist)
+      await supabase
+        .from('profiles')
+        .update({ has_character: false, updated_at: new Date().toISOString() })
+        .eq('id', u.id);
+    }
+
+    if (failed.length === 0) {
+      setUsers(prev => prev.map(u => ({ ...u, username: 'Undefined' })));
+      setCharResetResult({ success: true, message: `✅ ${users.length} účtů resetováno. Všichni hráči budou přesměrováni na /create-fighter.` });
+    } else {
+      setCharResetResult({ success: false, message: `⚠️ ${users.length - failed.length}/${users.length} resetováno. Selhalo: ${failed.join(', ')}` });
+    }
+
+    setCharResetLoading(false);
+    setShowCharResetConfirm(false);
   };
 
   const saveAnnouncement = () => {
@@ -575,6 +620,85 @@ const AdminDashboardContent: React.FC = () => {
                           whileTap={{ scale: 0.97 }}
                           onClick={() => setShowResetConfirm(false)}
                           disabled={resetLoading}
+                          className="flex-1 py-2 px-3 bg-dark-tertiary text-gray-300 rounded-lg hover:bg-dark-tertiary/80 transition text-sm"
+                        >
+                          Zrušit
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+
+              {/* ── DANGER: Reset All Characters ──────────────────── */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="bg-dark-secondary border-2 border-red-700/60 rounded-lg p-6"
+                style={{ boxShadow: '0 0 24px rgba(220,38,38,0.12)' }}
+              >
+                <h3 className="text-lg font-black text-red-500 mb-1 flex items-center gap-2 uppercase tracking-widest">
+                  <AlertTriangle className="w-5 h-5" />
+                  DANGER ZONE
+                </h3>
+                <p className="text-sm font-bold text-white mb-1">Reset All User Characters</p>
+                <p className="text-xs text-gray-500 mb-4">
+                  Vymaže <span className="text-red-400 font-semibold">visual_config</span> a nastaví <span className="text-red-400 font-semibold">username = 'Undefined'</span> pro všechny účty. Každý hráč bude po přihlášení přesměrován na <code className="text-yellow-400">/create-fighter</code> a nebude mít přístup na dashboard, dokud nedokončí tvorbu postavy.
+                </p>
+
+                {charResetResult && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                    className={`mb-3 p-3 rounded text-xs font-semibold ${charResetResult.success ? 'bg-neon-green/10 text-neon-green border border-neon-green/30' : 'bg-alert-red/10 text-alert-red border border-alert-red/30'}`}
+                  >
+                    {charResetResult.message}
+                  </motion.div>
+                )}
+
+                <AnimatePresence>
+                  {!showCharResetConfirm ? (
+                    <motion.button
+                      key="char-reset-btn"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => { setShowCharResetConfirm(true); setCharResetResult(null); }}
+                      className="w-full py-3 px-4 bg-red-600 text-white font-black rounded-lg hover:bg-red-500 transition flex items-center justify-center gap-2 uppercase tracking-wider text-sm"
+                    >
+                      <AlertTriangle className="w-4 h-4" />
+                      DANGER: Reset All User Characters
+                    </motion.button>
+                  ) : (
+                    <motion.div
+                      key="char-confirm-panel"
+                      initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
+                      className="space-y-3"
+                    >
+                      <div className="flex items-start gap-2 p-3 bg-red-950/60 border border-red-700/50 rounded-lg">
+                        <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                        <div className="text-xs text-red-300 space-y-1">
+                          <p className="font-black text-red-400 text-sm">⚠️ NEVRATNÁ AKCE</p>
+                          <p>Všechny postavy budou smazány. <span className="font-bold text-white">{users.length} hráčů</span> bude přesměrováno na create-fighter.</p>
+                          <p className="text-red-500">Opravdu to chceš spustit?</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <motion.button
+                          whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                          onClick={handleResetAllCharacters}
+                          disabled={charResetLoading}
+                          className="flex-1 py-2 px-3 bg-red-600 text-white font-black rounded-lg hover:bg-red-500 transition text-sm disabled:opacity-50 flex items-center justify-center gap-1"
+                        >
+                          {charResetLoading ? (
+                            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+                              <RotateCcw className="w-4 h-4" />
+                            </motion.div>
+                          ) : 'ANO, SMAZAT VŠE'}
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                          onClick={() => setShowCharResetConfirm(false)}
+                          disabled={charResetLoading}
                           className="flex-1 py-2 px-3 bg-dark-tertiary text-gray-300 rounded-lg hover:bg-dark-tertiary/80 transition text-sm"
                         >
                           Zrušit
