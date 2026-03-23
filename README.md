@@ -247,3 +247,6 @@ The Fighter Logic module will be added next to handle:
 ## License
 
 MIT
+
+<img width="1467" height="794" alt="image" src="https://github.com/user-attachments/assets/a5f0ee63-2c69-4166-be77-dca205cbe79d" />
+
