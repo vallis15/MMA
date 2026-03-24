@@ -277,7 +277,7 @@ const AdminDashboardContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-dark-bg p-6">
+    <div className="min-h-screen bg-iron-dark p-6">
       {/* DEBUG INFO PANEL - ALWAYS VISIBLE */}
       {!adminCheckPassed && (
         <motion.div
@@ -287,7 +287,7 @@ const AdminDashboardContent: React.FC = () => {
         >
           <h3 className="font-bold mb-2 text-yellow-400">🔍 ADMIN CHECK FAILED - DEBUG INFO</h3>
           <p className="mb-2">{redirectReason}</p>
-          <p className="mb-1">isAdmin: <span className="text-alert-red font-bold">{isAdmin.toString()}</span></p>
+          <p className="mb-1">isAdmin: <span className="text-red-400 font-bold">{isAdmin.toString()}</span></p>
           <p className="mb-1">User: <span className="text-gray-300">{user?.email || 'null'}</span></p>
           <p className="mb-1">localStorage.isAdmin: <span className="text-gray-300">{localStorage.getItem('isAdmin')}</span></p>
           <p className="text-yellow-500 mt-2">⏱️ Redirecting in 3 seconds... Check console for details (F12)</p>
@@ -299,12 +299,12 @@ const AdminDashboardContent: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 p-4 bg-neon-green/20 border-2 border-neon-green rounded-lg text-neon-green font-mono text-xs"
+          className="mb-8 p-4 bg-forge-gold/20 border-2 border-forge-gold rounded-lg text-forge-gold font-mono text-xs"
         >
           <h3 className="font-bold mb-2">✅ ADMIN ACCESS GRANTED</h3>
           <p className="mb-1">Admin User: <span className="text-gray-300">{user?.email}</span></p>
           <p className="mb-1">User ID: <span className="text-gray-300">{user?.id}</span></p>
-          <p className="mb-1">isAdmin: <span className="text-neon-green font-bold">true</span></p>
+          <p className="mb-1">isAdmin: <span className="text-forge-gold font-bold">true</span></p>
         </motion.div>
       )}
       {/* Main Content - Only show if admin check passed */}
@@ -312,7 +312,7 @@ const AdminDashboardContent: React.FC = () => {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="text-6xl mb-4">🔒</div>
-            <h2 className="text-2xl font-bold text-alert-red mb-2">Admin Access Required</h2>
+            <h2 className="text-2xl font-bold text-red-400 mb-2">Admin Access Required</h2>
             <p className="text-gray-400">Your login is being verified. Check the console (F12) for debug information.</p>
           </div>
         </div>
@@ -323,10 +323,10 @@ const AdminDashboardContent: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-8 p-4 bg-alert-red/20 border border-alert-red/50 rounded-lg flex items-start gap-3"
+              className="mb-8 p-4 bg-red-800/20 border border-red-800/50 rounded-lg flex items-start gap-3"
             >
               <div className="flex-1">
-                <p className="text-alert-red font-bold">⚠️ Database Connection Error</p>
+                <p className="text-red-400 font-bold">⚠️ Database Connection Error</p>
                 <p className="text-gray-300 text-sm mt-1">{error}</p>
                 <p className="text-gray-400 text-xs mt-2">
                   ℹ️ Make sure the 'profiles' table is created in Supabase. See BACKEND_SETUP.md for instructions.
@@ -336,7 +336,7 @@ const AdminDashboardContent: React.FC = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => window.location.reload()}
-                className="px-3 py-1 bg-alert-red/30 text-alert-red rounded text-xs hover:bg-alert-red/50 transition flex-shrink-0 whitespace-nowrap"
+                className="px-3 py-1 bg-red-800/30 text-red-400 rounded text-xs hover:bg-red-800/50 transition flex-shrink-0 whitespace-nowrap"
               >
                 Retry
               </motion.button>
@@ -347,7 +347,7 @@ const AdminDashboardContent: React.FC = () => {
           {loading && !error && (
             <div className="flex items-center justify-center min-h-screen">
               <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity }}>
-                <div className="w-12 h-12 border-4 border-neon-green/20 border-t-neon-green rounded-full"></div>
+                <div className="w-12 h-12 border-4 border-forge-gold/20 border-t-forge-gold rounded-full"></div>
               </motion.div>
             </div>
           )}
@@ -362,14 +362,14 @@ const AdminDashboardContent: React.FC = () => {
             className="mb-8 flex justify-between items-center"
           >
             <div>
-              <h1 className="text-4xl font-black text-alert-red mb-2">ADMIN DASHBOARD</h1>
+              <h1 className="text-4xl font-black text-red-400 mb-2">ADMIN DASHBOARD</h1>
               <p className="text-gray-400">System Control Center</p>
             </div>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 bg-alert-red text-white rounded-lg hover:bg-alert-red/80 transition"
+              className="flex items-center gap-2 px-4 py-2 bg-red-800 text-white rounded-lg hover:bg-red-800/80 transition"
             >
               <LogOut className="w-4 h-4" />
               Logout
@@ -383,13 +383,13 @@ const AdminDashboardContent: React.FC = () => {
             transition={{ delay: 0.1 }}
             className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"
           >
-            <div className="bg-dark-secondary border border-neon-green/20 rounded-lg p-4">
-              <Users className="w-6 h-6 text-neon-green mb-2" />
-              <div className="text-3xl font-bold text-neon-green">{users?.length || 0}</div>
+            <div className="bg-iron-mid border border-forge-gold/20 rounded-lg p-4">
+              <Users className="w-6 h-6 text-forge-gold mb-2" />
+              <div className="text-3xl font-bold text-forge-gold">{users?.length || 0}</div>
               <p className="text-gray-400 text-sm">Total Players</p>
             </div>
 
-            <div className="bg-dark-secondary border border-yellow-400/20 rounded-lg p-4">
+            <div className="bg-iron-mid border border-yellow-400/20 rounded-lg p-4">
               <Heart className="w-6 h-6 text-yellow-400 mb-2" />
               <div className="text-3xl font-bold text-yellow-400">
                 {users?.reduce((sum, u) => sum + (u?.wins || 0), 0) || 0}
@@ -397,7 +397,7 @@ const AdminDashboardContent: React.FC = () => {
               <p className="text-gray-400 text-sm">Total Wins</p>
             </div>
 
-            <div className="bg-dark-secondary border border-blue-400/20 rounded-lg p-4">
+            <div className="bg-iron-mid border border-blue-400/20 rounded-lg p-4">
               <Sword className="w-6 h-6 text-blue-400 mb-2" />
               <div className="text-3xl font-bold text-blue-400">
                 {Math.round(users?.reduce((sum, u) => sum + (u?.striking || 0), 0) / Math.max(users?.length || 1, 1)) || 0}
@@ -405,9 +405,9 @@ const AdminDashboardContent: React.FC = () => {
               <p className="text-gray-400 text-sm">Avg Striking</p>
             </div>
 
-            <div className="bg-dark-secondary border border-alert-red/20 rounded-lg p-4">
-              <Zap className="w-6 h-6 text-alert-red mb-2" />
-              <div className="text-3xl font-bold text-alert-red">
+            <div className="bg-iron-mid border border-red-800/20 rounded-lg p-4">
+              <Zap className="w-6 h-6 text-red-400 mb-2" />
+              <div className="text-3xl font-bold text-red-400">
                 {Math.round(users?.reduce((sum, u) => sum + (u?.reputation || 0), 0) / Math.max(users?.length || 1, 1)) || 0}
               </div>
               <p className="text-gray-400 text-sm">Avg Reputation</p>
@@ -421,11 +421,11 @@ const AdminDashboardContent: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="bg-dark-secondary border border-dark-tertiary rounded-lg overflow-hidden"
+                className="bg-iron-mid border border-iron-light rounded-lg overflow-hidden"
               >
-                <div className="p-6 border-b border-dark-tertiary">
+                <div className="p-6 border-b border-iron-light">
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Users className="w-5 h-5 text-neon-green" />
+                    <Users className="w-5 h-5 text-forge-gold" />
                     Player Management
                   </h2>
                 </div>
@@ -437,7 +437,7 @@ const AdminDashboardContent: React.FC = () => {
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-dark-tertiary text-gray-400 text-xs font-semibold">
+                      <thead className="bg-iron-light text-gray-400 text-xs font-semibold">
                         <tr>
                           <th className="px-6 py-3 text-left">Player</th>
                           <th className="px-6 py-3 text-right">W-L-D</th>
@@ -470,7 +470,7 @@ const AdminDashboardContent: React.FC = () => {
                               initial={{ opacity: 0, x: -20 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: idx * 0.05 }}
-                              className="border-t border-dark-tertiary hover:bg-dark-tertiary/50 transition cursor-pointer"
+                              className="border-t border-iron-light hover:bg-iron-light/50 transition cursor-pointer"
                               onClick={() => setSelectedUser(user)}
                             >
                               <td className="px-6 py-3 text-white font-semibold">{username}</td>
@@ -478,11 +478,11 @@ const AdminDashboardContent: React.FC = () => {
                                 {wins}-{losses}-{draws}
                               </td>
                               <td className="px-6 py-3 text-right">
-                                <span className="text-neon-green font-bold">{reputation}</span>
+                                <span className="text-forge-gold font-bold">{reputation}</span>
                               </td>
                               <td className="px-6 py-3 text-right text-blue-400">{striking}</td>
                               <td className="px-6 py-3 text-right">
-                                <span className={energy > 50 ? 'text-neon-green' : 'text-alert-red'}>
+                                <span className={energy > 50 ? 'text-forge-gold' : 'text-red-400'}>
                                   {Math.ceil(energy)}
                                 </span>
                               </td>
@@ -516,10 +516,10 @@ const AdminDashboardContent: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="bg-dark-secondary border border-dark-tertiary rounded-lg p-6"
+                className="bg-iron-mid border border-iron-light rounded-lg p-6"
               >
                 <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-alert-red" />
+                  <Bell className="w-5 h-5 text-red-400" />
                   Global Announcement
                 </h3>
                 <div className="space-y-3">
@@ -527,13 +527,13 @@ const AdminDashboardContent: React.FC = () => {
                     value={announcement}
                     onChange={(e) => setAnnouncement(e.target.value)}
                     placeholder="Enter announcement message..."
-                    className="w-full h-24 bg-dark-tertiary border border-dark-tertiary focus:border-alert-red rounded p-3 text-white placeholder-gray-500 focus:outline-none resize-none"
+                    className="w-full h-24 bg-iron-light border border-iron-light focus:border-red-800 rounded p-3 text-white placeholder-gray-500 focus:outline-none resize-none"
                   />
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={saveAnnouncement}
-                    className="w-full py-2 px-4 bg-gradient-to-r from-alert-red to-orange-500 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-alert-red/50 transition"
+                    className="w-full py-2 px-4 bg-gradient-to-r from-red-800 to-orange-500 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-red-900/50 transition"
                   >
                     Broadcast Message
                   </motion.button>
@@ -546,9 +546,9 @@ const AdminDashboardContent: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.35 }}
-                className="bg-dark-secondary border border-alert-red/30 rounded-lg p-6"
+                className="bg-iron-mid border border-red-800/30 rounded-lg p-6"
               >
-                <h3 className="text-lg font-bold text-alert-red mb-1 flex items-center gap-2">
+                <h3 className="text-lg font-bold text-red-400 mb-1 flex items-center gap-2">
                   <RotateCcw className="w-5 h-5" />
                   Reset hráčů
                 </h3>
@@ -562,8 +562,8 @@ const AdminDashboardContent: React.FC = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className={`mb-3 p-3 rounded text-xs font-semibold ${
                       resetResult.success
-                        ? 'bg-neon-green/10 text-neon-green border border-neon-green/30'
-                        : 'bg-alert-red/10 text-alert-red border border-alert-red/30'
+                        ? 'bg-forge-gold/10 text-forge-gold border border-forge-gold/30'
+                        : 'bg-red-800/10 text-red-400 border border-red-800/30'
                     }`}
                   >
                     {resetResult.message}
@@ -577,7 +577,7 @@ const AdminDashboardContent: React.FC = () => {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => { setShowResetConfirm(true); setResetResult(null); }}
-                      className="w-full py-2 px-4 bg-alert-red/20 text-alert-red border border-alert-red/40 font-bold rounded-lg hover:bg-alert-red/30 transition flex items-center justify-center gap-2"
+                      className="w-full py-2 px-4 bg-red-800/20 text-red-400 border border-red-800/40 font-bold rounded-lg hover:bg-red-800/30 transition flex items-center justify-center gap-2"
                     >
                       <RotateCcw className="w-4 h-4" />
                       Reset všech hráčů
@@ -590,9 +590,9 @@ const AdminDashboardContent: React.FC = () => {
                       exit={{ opacity: 0, scale: 0.97 }}
                       className="space-y-3"
                     >
-                      <div className="flex items-start gap-2 p-3 bg-alert-red/10 border border-alert-red/30 rounded-lg">
-                        <AlertTriangle className="w-4 h-4 text-alert-red flex-shrink-0 mt-0.5" />
-                        <p className="text-xs text-alert-red">
+                      <div className="flex items-start gap-2 p-3 bg-red-800/10 border border-red-800/30 rounded-lg">
+                        <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-red-400">
                           Tato akce je nevratná! Opravdu chceš resetovat <span className="font-bold">{users.length} hráčů</span>?
                         </p>
                       </div>
@@ -602,7 +602,7 @@ const AdminDashboardContent: React.FC = () => {
                           whileTap={{ scale: 0.97 }}
                           onClick={handleResetAllPlayers}
                           disabled={resetLoading}
-                          className="flex-1 py-2 px-3 bg-alert-red text-white font-bold rounded-lg hover:bg-alert-red/80 transition text-sm disabled:opacity-50 flex items-center justify-center gap-1"
+                          className="flex-1 py-2 px-3 bg-red-800 text-white font-bold rounded-lg hover:bg-red-800/80 transition text-sm disabled:opacity-50 flex items-center justify-center gap-1"
                         >
                           {resetLoading ? (
                             <motion.div
@@ -620,7 +620,7 @@ const AdminDashboardContent: React.FC = () => {
                           whileTap={{ scale: 0.97 }}
                           onClick={() => setShowResetConfirm(false)}
                           disabled={resetLoading}
-                          className="flex-1 py-2 px-3 bg-dark-tertiary text-gray-300 rounded-lg hover:bg-dark-tertiary/80 transition text-sm"
+                          className="flex-1 py-2 px-3 bg-iron-light text-gray-300 rounded-lg hover:bg-iron-light/80 transition text-sm"
                         >
                           Zrušit
                         </motion.button>
@@ -635,7 +635,7 @@ const AdminDashboardContent: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="bg-dark-secondary border-2 border-red-700/60 rounded-lg p-6"
+                className="bg-iron-mid border-2 border-red-700/60 rounded-lg p-6"
                 style={{ boxShadow: '0 0 24px rgba(220,38,38,0.12)' }}
               >
                 <h3 className="text-lg font-black text-red-500 mb-1 flex items-center gap-2 uppercase tracking-widest">
@@ -650,7 +650,7 @@ const AdminDashboardContent: React.FC = () => {
                 {charResetResult && (
                   <motion.div
                     initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-                    className={`mb-3 p-3 rounded text-xs font-semibold ${charResetResult.success ? 'bg-neon-green/10 text-neon-green border border-neon-green/30' : 'bg-alert-red/10 text-alert-red border border-alert-red/30'}`}
+                    className={`mb-3 p-3 rounded text-xs font-semibold ${charResetResult.success ? 'bg-forge-gold/10 text-forge-gold border border-forge-gold/30' : 'bg-red-800/10 text-red-400 border border-red-800/30'}`}
                   >
                     {charResetResult.message}
                   </motion.div>
@@ -699,7 +699,7 @@ const AdminDashboardContent: React.FC = () => {
                           whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                           onClick={() => setShowCharResetConfirm(false)}
                           disabled={charResetLoading}
-                          className="flex-1 py-2 px-3 bg-dark-tertiary text-gray-300 rounded-lg hover:bg-dark-tertiary/80 transition text-sm"
+                          className="flex-1 py-2 px-3 bg-iron-light text-gray-300 rounded-lg hover:bg-iron-light/80 transition text-sm"
                         >
                           Zrušit
                         </motion.button>
@@ -715,9 +715,9 @@ const AdminDashboardContent: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
-                  className="bg-dark-secondary border border-neon-green/20 rounded-lg p-6"
+                  className="bg-iron-mid border border-forge-gold/20 rounded-lg p-6"
                 >
-                  <h3 className="text-lg font-bold text-neon-green mb-4 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-forge-gold mb-4 flex items-center gap-2">
                     <Settings className="w-5 h-5" />
                     God Mode Editor
                   </h3>
@@ -734,7 +734,7 @@ const AdminDashboardContent: React.FC = () => {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => setShowEditor(true)}
-                      className="w-full py-2 px-4 bg-neon-green text-dark-bg font-bold rounded-lg hover:shadow-lg hover:shadow-neon-green/50 transition"
+                      className="w-full py-2 px-4 bg-forge-gold text-iron-dark font-bold rounded-lg hover:shadow-lg hover:shadow-forge-gold/50 transition"
                     >
                       Edit Stats
                     </motion.button>
@@ -749,7 +749,7 @@ const AdminDashboardContent: React.FC = () => {
                             max="100"
                             defaultValue={selectedUser?.[stat as keyof UserProfile] ?? 0}
                             onChange={(e) => setEditingStat({ user: selectedUser?.id ?? '', stat, value: parseInt(e.target.value) })}
-                            className="flex-1 bg-dark-tertiary border border-neon-green/30 rounded px-2 py-1 text-white text-sm focus:outline-none focus:border-neon-green"
+                            className="flex-1 bg-iron-light border border-forge-gold/30 rounded px-2 py-1 text-white text-sm focus:outline-none focus:border-forge-gold"
                           />
                           <motion.button
                             whileHover={{ scale: 1.05 }}
@@ -759,7 +759,7 @@ const AdminDashboardContent: React.FC = () => {
                                 handleStatEdit(selectedUser.id, stat, editingStat.value);
                               }
                             }}
-                            className="px-2 py-1 bg-neon-green/20 text-neon-green rounded text-xs hover:bg-neon-green/40 transition"
+                            className="px-2 py-1 bg-forge-gold/20 text-forge-gold rounded text-xs hover:bg-forge-gold/40 transition"
                           >
                             Save
                           </motion.button>
@@ -769,7 +769,7 @@ const AdminDashboardContent: React.FC = () => {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => setShowEditor(false)}
-                        className="w-full py-2 px-4 bg-dark-tertiary text-gray-300 rounded-lg hover:bg-dark-tertiary/80 transition"
+                        className="w-full py-2 px-4 bg-iron-light text-gray-300 rounded-lg hover:bg-iron-light/80 transition"
                       >
                         Done
                       </motion.button>

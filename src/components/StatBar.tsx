@@ -37,10 +37,10 @@ export const StatBar: React.FC<StatBarProps> = ({
         };
       default:
         return {
-          gradient: 'from-neon-green to-emerald-500',
-          glow: 'shadow-lg shadow-neon-green/50',
-          text: 'text-neon-green',
-          borderGlow: 'border-neon-green/30',
+          gradient: 'from-forge-gold to-emerald-500',
+          glow: 'shadow-lg shadow-forge-gold/50',
+          text: 'text-forge-gold',
+          borderGlow: 'border-forge-gold/30',
         };
     }
   };
@@ -80,7 +80,7 @@ export const StatBar: React.FC<StatBarProps> = ({
       </div>
 
       {/* Progress Bar Container */}
-      <div className={`relative h-3 bg-dark-tertiary/40 rounded-full overflow-hidden border ${classes.borderGlow} backdrop-blur-sm`}>
+      <div className={`relative h-3 bg-iron-light/40 rounded-full overflow-hidden border ${classes.borderGlow} backdrop-blur-sm`}>
         {/* Background glow */}
         <motion.div
           className={`absolute inset-0 bg-gradient-to-r ${classes.gradient} opacity-0 blur-lg`}

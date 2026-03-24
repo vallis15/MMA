@@ -44,7 +44,7 @@ export const AdminLogin: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-bg via-dark-secondary to-dark-bg flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-iron-dark via-iron-mid to-iron-dark flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -56,7 +56,7 @@ export const AdminLogin: React.FC = () => {
           <motion.div
             initial={{ y: -20 }}
             animate={{ y: 0 }}
-            className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-alert-red to-orange-500 mb-2"
+            className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-700 to-orange-500 mb-2"
           >
             ADMIN PANEL
           </motion.div>
@@ -68,20 +68,20 @@ export const AdminLogin: React.FC = () => {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="bg-dark-secondary border border-alert-red/20 rounded-lg p-8 backdrop-blur-sm"
+          className="bg-iron-mid border border-red-900/25 rounded-lg p-8 backdrop-blur-sm"
         >
           <form onSubmit={handleAdminLogin} className="space-y-4">
             {/* Username Input */}
             <div>
               <label className="block text-sm font-semibold text-gray-300 mb-2">Username</label>
               <div className="relative">
-                <User className="absolute left-3 top-3 w-5 h-5 text-alert-red" />
+                <User className="absolute left-3 top-3 w-5 h-5 text-red-500" />
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Admin username"
-                  className="w-full bg-dark-tertiary border border-dark-tertiary focus:border-alert-red pl-10 pr-4 py-2 rounded-lg text-white placeholder-gray-500 focus:outline-none transition"
+                  className="w-full bg-iron-light border border-iron-light focus:border-red-700 pl-10 pr-4 py-2 rounded-lg text-white placeholder-gray-500 focus:outline-none transition"
                 />
               </div>
             </div>
@@ -90,13 +90,13 @@ export const AdminLogin: React.FC = () => {
             <div>
               <label className="block text-sm font-semibold text-gray-300 mb-2">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 w-5 h-5 text-alert-red" />
+                <Lock className="absolute left-3 top-3 w-5 h-5 text-red-500" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Admin password"
-                  className="w-full bg-dark-tertiary border border-dark-tertiary focus:border-alert-red pl-10 pr-4 py-2 rounded-lg text-white placeholder-gray-500 focus:outline-none transition"
+                  className="w-full bg-iron-light border border-iron-light focus:border-red-700 pl-10 pr-4 py-2 rounded-lg text-white placeholder-gray-500 focus:outline-none transition"
                 />
               </div>
             </div>
@@ -106,7 +106,7 @@ export const AdminLogin: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 p-3 bg-alert-red/20 border border-alert-red/50 rounded-lg text-alert-red text-sm"
+                className="flex items-center gap-2 p-3 bg-red-900/20 border border-red-900/50 rounded-lg text-red-400 text-sm"
               >
                 <AlertCircle className="w-4 h-4" />
                 {error}
@@ -119,7 +119,7 @@ export const AdminLogin: React.FC = () => {
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading}
-              className="w-full py-2 px-4 bg-gradient-to-r from-alert-red to-orange-500 text-white font-bold rounded-lg hover:shadow-lg hover:shadow-alert-red/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-2 px-4 bg-gradient-to-r from-red-800 to-orange-600 text-white font-bold rounded-lg hover:shadow-lg hover:shadow-red-900/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -136,7 +136,7 @@ export const AdminLogin: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/login')}
-                className="flex items-center justify-center gap-2 w-full text-gray-400 hover:text-neon-green text-sm transition"
+                className="flex items-center justify-center gap-2 w-full text-gray-400 hover:text-forge-gold text-sm transition"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back to Login
@@ -150,7 +150,7 @@ export const AdminLogin: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="mt-6 p-4 bg-alert-red/10 border border-alert-red/30 rounded-lg text-alert-red text-xs text-center"
+          className="mt-6 p-4 bg-red-900/10 border border-red-900/30 rounded-lg text-red-400 text-xs text-center"
         >
           ⚠️ Unauthorized access attempts are monitored and logged
         </motion.div>

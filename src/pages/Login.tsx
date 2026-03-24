@@ -67,8 +67,8 @@ export const Login: React.FC = () => {
       <motion.div
         className="fixed inset-0 opacity-10"
         style={{
-          backgroundImage: `linear-gradient(rgba(0, 255, 65, 0.1) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(0, 255, 65, 0.1) 1px, transparent 1px)`,
+          backgroundImage: `linear-gradient(rgba(201, 168, 76, 0.04) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(201, 168, 76, 0.04) 1px, transparent 1px)`,
           backgroundSize: '50px 50px',
         }}
         animate={{ backgroundPosition: ['0px 0px', '50px 50px'] }}
@@ -77,12 +77,12 @@ export const Login: React.FC = () => {
 
       {/* Glowing Orbs */}
       <motion.div
-        className="fixed top-20 left-10 w-60 h-60 bg-neon-green/10 rounded-full blur-3xl"
+        className="fixed top-20 left-10 w-60 h-60 bg-forge-gold/8 rounded-full blur-3xl"
         animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
         transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
       />
       <motion.div
-        className="fixed bottom-20 right-10 w-72 h-72 bg-alert-red/5 rounded-full blur-3xl"
+        className="fixed bottom-20 right-10 w-72 h-72 bg-oxblood/5 rounded-full blur-3xl"
         animate={{ x: [0, -50, 0], y: [0, -30, 0] }}
         transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
       />
@@ -105,10 +105,10 @@ export const Login: React.FC = () => {
               {/* Octagon Shape */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div
-                  className="w-20 h-20 border-2 border-neon-green/80"
+                  className="w-20 h-20 border-2 border-forge-gold/70"
                   style={{
                     clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)',
-                    boxShadow: '0 0 20px #00ff41, inset 0 0 20px rgba(0, 255, 65, 0.2)',
+                    boxShadow: '0 0 20px #C9A84C, inset 0 0 20px rgba(201, 168, 76, 0.15)',
                   }}
                 />
               </div>
@@ -117,12 +117,12 @@ export const Login: React.FC = () => {
               <svg
                 className="absolute inset-0 w-full h-full"
                 viewBox="0 0 100 100"
-                style={{ filter: 'drop-shadow(0 0 8px #00ff41)' }}
+                style={{ filter: 'drop-shadow(0 0 8px #C9A84C)' }}
               >
                 <path
                   d="M50 10 L60 35 L75 35 L50 70 L55 90 L30 50 L15 50 Z"
                   fill="none"
-                  stroke="#00ff41"
+                  stroke="#C9A84C"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -138,7 +138,7 @@ export const Login: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, type: 'spring', stiffness: 120 }}
           >
-            <h1 className="title-mma text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-green via-emerald-400 to-neon-green tracking-wider mb-3">
+            <h1 className="title-mma text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-forge-gold via-yellow-400 to-forge-gold tracking-wider mb-3">
               {t('mma_manager')}
             </h1>
           </motion.div>
@@ -154,7 +154,7 @@ export const Login: React.FC = () => {
               <span key={index}>
                 {index > 0 && ' '}
                 {word === 'Octagon' || word === 'oktagonu' || word === 'oktagonu' ? (
-                  <span className="text-neon-green glow-electric">{word}</span>
+                  <span className="text-forge-gold">{word}</span>
                 ) : (
                   word
                 )}
@@ -185,13 +185,13 @@ export const Login: React.FC = () => {
                 {t('email_address')}
               </label>
               <div className="relative group">
-                <Mail className="absolute left-4 top-4 w-5 h-5 text-neon-green/70 group-focus-within:text-neon-green transition" />
+                <Mail className="absolute left-4 top-4 w-5 h-5 text-forge-gold/60 group-focus-within:text-forge-gold transition" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={t('placeholder_email')}
-                  className="w-full bg-dark-tertiary/50 border border-dark-tertiary group-focus-within:border-neon-green/50 pl-12 pr-4 py-3 rounded-lg text-white placeholder-gray-600 focus:outline-none transition-all duration-300 backdrop-blur-sm"
+                  className="w-full bg-iron-light/50 border border-iron-light group-focus-within:border-forge-gold/50 pl-12 pr-4 py-3 rounded-lg text-white placeholder-gray-600 focus:outline-none transition-all duration-300 backdrop-blur-sm"
                 />
               </div>
             </div>
@@ -202,13 +202,13 @@ export const Login: React.FC = () => {
                 {t('password')}
               </label>
               <div className="relative group">
-                <Lock className="absolute left-4 top-4 w-5 h-5 text-neon-green/70 group-focus-within:text-neon-green transition" />
+                <Lock className="absolute left-4 top-4 w-5 h-5 text-forge-gold/60 group-focus-within:text-forge-gold transition" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t('placeholder_password')}
-                  className="w-full bg-dark-tertiary/50 border border-dark-tertiary group-focus-within:border-neon-green/50 pl-12 pr-4 py-3 rounded-lg text-white placeholder-gray-600 focus:outline-none transition-all duration-300 backdrop-blur-sm"
+                  className="w-full bg-iron-light/50 border border-iron-light group-focus-within:border-forge-gold/50 pl-12 pr-4 py-3 rounded-lg text-white placeholder-gray-600 focus:outline-none transition-all duration-300 backdrop-blur-sm"
                 />
               </div>
             </div>
@@ -219,7 +219,7 @@ export const Login: React.FC = () => {
                 type="checkbox"
                 checked={showPassword}
                 onChange={(e) => setShowPassword(e.target.checked)}
-                className="w-4 h-4 rounded accent-neon-green"
+                className="w-4 h-4 rounded accent-yellow-500"
               />
               {t('show_password')}
             </label>
@@ -229,7 +229,7 @@ export const Login: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 p-4 bg-alert-red/20 border border-alert-red/50 rounded-lg text-alert-red text-sm backdrop-blur-sm"
+                className="flex items-center gap-3 p-4 bg-red-900/20 border border-red-900/50 rounded-lg text-red-400 text-sm backdrop-blur-sm"
               >
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
                 <span>{error}</span>
@@ -242,7 +242,7 @@ export const Login: React.FC = () => {
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading}
-              className="relative w-full py-3 px-4 font-bold rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider text-dark-bg shimmer-button overflow-hidden"
+              className="relative w-full py-3 px-4 font-bold rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider text-iron-dark shimmer-button overflow-hidden"
             >
               <span className="relative z-10 flex items-center justify-center gap-2">
                 {loading ? (
@@ -264,7 +264,7 @@ export const Login: React.FC = () => {
                   type="button"
                   onClick={() => navigate('/register')}
                   whileHover={{ scale: 1.05 }}
-                  className="text-neon-green hover:underline font-semibold hover:text-emerald-300 transition"
+                  className="text-forge-gold hover:underline font-semibold hover:text-yellow-300 transition"
                 >
                   {t('create_account')}
                 </motion.button>
@@ -274,7 +274,7 @@ export const Login: React.FC = () => {
 
           {/* Admin Panel Section */}
           <motion.div
-            className="mt-8 pt-8 border-t border-neon-green/20"
+            className="mt-8 pt-8 border-t border-forge-gold/15"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
@@ -287,7 +287,7 @@ export const Login: React.FC = () => {
               whileTap={{ scale: 0.98 }}
               type="button"
               onClick={() => navigate('/admin-login')}
-              className="pulse-button w-full py-3 px-4 bg-gradient-to-r from-alert-red/30 to-orange-600/30 border border-alert-red/50 text-alert-red font-semibold rounded-lg hover:from-alert-red/40 hover:to-orange-600/40 transition-all uppercase tracking-wider text-sm"
+              className="pulse-button w-full py-3 px-4 bg-gradient-to-r from-red-900/30 to-orange-700/30 border border-red-800/50 text-red-400 font-semibold rounded-lg hover:from-red-900/40 hover:to-orange-700/40 transition-all uppercase tracking-wider text-sm"
             >
               {t('admin_panel')}
             </motion.button>

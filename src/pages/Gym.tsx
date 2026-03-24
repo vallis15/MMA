@@ -280,9 +280,9 @@ export const Gym: React.FC = () => {
         <motion.div className="mb-8" initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-center gap-4 mb-3">
             <motion.div animate={{ rotate: [0, 5, -5, 0] }} transition={{ duration: 2.5, repeat: Infinity }}>
-              <Dumbbell size={32} className="text-neon-green glow-electric" />
+              <Dumbbell size={32} className="text-forge-gold" />
             </motion.div>
-            <h1 className="page-header text-neon-green glow-electric text-4xl">{t('gym')}</h1>
+            <h1 className="page-header text-forge-gold text-4xl">{t('gym')}</h1>
           </div>
           <p className="text-gray-400 text-sm uppercase tracking-widest font-light">
             {canTrain
@@ -341,12 +341,12 @@ export const Gym: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass-card-premium rounded-2xl p-16 text-center border-2 border-dashed border-neon-green/40"
+            className="glass-card-premium rounded-2xl p-16 text-center border-2 border-dashed border-forge-gold/35"
           >
             <motion.div className="text-6xl mb-6" animate={{ y: [0, -10, 0] }} transition={{ duration: 3, repeat: Infinity }}>
               🥋
             </motion.div>
-            <h3 className="section-header text-neon-green mb-3 text-3xl">{t('no_fighter_yet') ?? 'No fighter yet'}</h3>
+            <h3 className="section-header text-forge-gold mb-3 text-3xl">{t('no_fighter_yet') ?? 'No fighter yet'}</h3>
             <p className="text-gray-400 uppercase tracking-widest text-sm">{t('gym_create_prompt') ?? 'Register a fighter first'}</p>
           </motion.div>
         )}
@@ -363,14 +363,14 @@ export const Gym: React.FC = () => {
               <div className="relative">
                 <Search
                   size={16}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-neon-green/60 pointer-events-none"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-forge-gold/60 pointer-events-none"
                 />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   placeholder='Search exercises (e.g., "Leg Kick", "Power", "Stamina")...'
-                  className="w-full glass-card-premium rounded-xl pl-10 pr-10 py-3 text-sm text-gray-200 placeholder-gray-600 bg-gray-900/60 border border-neon-green/20 focus:border-neon-green/60 focus:outline-none focus:ring-1 focus:ring-neon-green/30 transition-all duration-200"
+                  className="w-full glass-card-premium rounded-xl pl-10 pr-10 py-3 text-sm text-gray-200 placeholder-gray-600 bg-gray-900/60 border border-forge-gold/20 focus:border-forge-gold/55 focus:outline-none focus:ring-1 focus:ring-forge-gold/25 transition-all duration-200"
                 />
                 {searchTerm && (
                   <button
@@ -407,7 +407,7 @@ export const Gym: React.FC = () => {
                         active
                           ? cfg
                             ? `${cfg.bg} ${cfg.color} ${cfg.border}`
-                            : 'bg-neon-green/20 text-neon-green border-neon-green/50'
+                            : 'bg-forge-gold/15 text-forge-gold border-forge-gold/40'
                           : 'bg-gray-800/40 text-gray-500 border-gray-700/30 hover:border-gray-500/50 hover:text-gray-300'
                       }`}
                     >
@@ -448,7 +448,7 @@ export const Gym: React.FC = () => {
               <div className="ml-auto self-center text-xs text-gray-600 font-mono hidden sm:block">
                 {filteredExercises.length} / {GYM_EXERCISES.length} exercises
                 {searchTerm.trim() && (
-                  <span className="ml-1 text-neon-green/60">— "{searchTerm.trim()}"</span>
+                  <span className="ml-1 text-forge-gold/60">— "{searchTerm.trim()}"</span>
                 )}
               </div>
             </motion.div>
@@ -497,7 +497,7 @@ export const Gym: React.FC = () => {
                     {searchTerm.trim() && (
                       <button
                         onClick={() => setSearchTerm('')}
-                        className="text-xs text-neon-green/70 hover:text-neon-green underline underline-offset-2 transition-colors"
+                        className="text-xs text-forge-gold/70 hover:text-forge-gold underline underline-offset-2 transition-colors"
                       >
                         Clear search
                       </button>

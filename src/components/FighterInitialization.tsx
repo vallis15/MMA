@@ -293,7 +293,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className={`bg-gradient-to-br from-dark-secondary via-dark-secondary/90 to-dark-tertiary border-2 border-neon-green/50 rounded-2xl p-8 w-full shadow-2xl shadow-neon-green/20 transition-all duration-300 ${step === 1 ? 'max-w-md max-h-[90vh] overflow-y-auto' : 'max-w-4xl h-[90vh] flex flex-col overflow-hidden'}`}
+        className={`bg-gradient-to-br from-iron-mid via-iron-mid/90 to-iron-light border-2 border-forge-gold/50 rounded-2xl p-8 w-full shadow-2xl shadow-forge-gold/20 transition-all duration-300 ${step === 1 ? 'max-w-md max-h-[90vh] overflow-y-auto' : 'max-w-4xl h-[90vh] flex flex-col overflow-hidden'}`}
       >
         {/* Header */}
         <motion.div
@@ -303,15 +303,15 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
           className="text-center mb-6"
         >
           <div className="text-5xl mb-3">🥋</div>
-          <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-green via-cyan-400 to-neon-green mb-2 tracking-tight">
+          <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-forge-gold via-cyan-400 to-forge-gold mb-2 tracking-tight">
             Welcome to the Octagon
           </h1>
           <p className="text-gray-300 text-sm">
             {step === 1 ? 'Step 1 / 2 – Fighter Identity' : 'Step 2 / 2 – Appearance & Fighting Style'}
           </p>
           <div className="flex items-center justify-center gap-2 mt-3">
-            <div className={`w-8 h-1.5 rounded-full transition-all ${step === 1 ? 'bg-neon-green' : 'bg-neon-green/40'}`} />
-            <div className={`w-8 h-1.5 rounded-full transition-all ${step === 2 ? 'bg-neon-green' : 'bg-gray-700'}`} />
+            <div className={`w-8 h-1.5 rounded-full transition-all ${step === 1 ? 'bg-forge-gold' : 'bg-forge-gold/40'}`} />
+            <div className={`w-8 h-1.5 rounded-full transition-all ${step === 2 ? 'bg-forge-gold' : 'bg-gray-700'}`} />
           </div>
         </motion.div>
 
@@ -323,7 +323,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
           transition={{ delay: 0.2 }}
           className="mb-6"
         >
-          <label className="block text-lg font-bold text-neon-green mb-3">Fighter Name <span className="text-alert-red">*</span></label>
+          <label className="block text-lg font-bold text-forge-gold mb-3">Fighter Name <span className="text-red-400">*</span></label>
           <input
             type="text"
             value={fighterName}
@@ -332,7 +332,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
               setError(null);
             }}
             placeholder="Enter your fighter name..."
-            className="w-full bg-dark-tertiary/50 border-2 border-neon-green/30 rounded-lg px-5 py-3 text-white text-lg placeholder-gray-500 focus:border-neon-green focus:outline-none focus:shadow-lg focus:shadow-neon-green/30 transition-all"
+            className="w-full bg-iron-light/50 border-2 border-forge-gold/30 rounded-lg px-5 py-3 text-white text-lg placeholder-gray-500 focus:border-forge-gold focus:outline-none focus:shadow-lg focus:shadow-forge-gold/30 transition-all"
             disabled={loading}
           />
         </motion.div>
@@ -344,7 +344,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
           transition={{ delay: 0.25 }}
           className="mb-6"
         >
-          <label className="block text-lg font-bold text-neon-green mb-1">
+          <label className="block text-lg font-bold text-forge-gold mb-1">
             Nickname <span className="text-gray-500 text-sm font-normal">(optional)</span>
           </label>
           <p className="text-xs text-gray-500 mb-3">If set, displayed as: Firstname &ldquo;Nickname&rdquo; Lastname</p>
@@ -353,7 +353,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             placeholder='e.g. "The Iceman", "Notorious", "Spider"'
-            className="w-full bg-dark-tertiary/50 border-2 border-neon-green/20 rounded-lg px-5 py-3 text-white text-lg placeholder-gray-500 focus:border-neon-green/60 focus:outline-none transition-all"
+            className="w-full bg-iron-light/50 border-2 border-forge-gold/20 rounded-lg px-5 py-3 text-white text-lg placeholder-gray-500 focus:border-forge-gold/60 focus:outline-none transition-all"
             disabled={loading}
             maxLength={40}
           />
@@ -366,7 +366,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
           transition={{ delay: 0.3 }}
           className="mb-10"
         >
-          <label className="block text-lg font-bold text-neon-green mb-1">
+          <label className="block text-lg font-bold text-forge-gold mb-1">
             Country <span className="text-gray-500 text-sm font-normal">(optional)</span>
           </label>
           <p className="text-xs text-gray-500 mb-3">Displayed next to your name in the octagon</p>
@@ -375,7 +375,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
               value={countryCode}
               onChange={(e) => setCountryCode(e.target.value)}
               disabled={loading}
-              className="w-full bg-dark-tertiary/50 border-2 border-neon-green/20 rounded-lg px-5 py-3 text-white text-base focus:border-neon-green/60 focus:outline-none transition-all appearance-none cursor-pointer"
+              className="w-full bg-iron-light/50 border-2 border-forge-gold/20 rounded-lg px-5 py-3 text-white text-base focus:border-forge-gold/60 focus:outline-none transition-all appearance-none cursor-pointer"
             >
               <option value="">— Select country —</option>
               {COUNTRIES_SORTED.map((c) => (
@@ -393,11 +393,11 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
         </motion.div>
         </>) : (<>
         {/* ── Fighter Summary / Back ─────────────────────────────────────── */}
-        <div className="flex items-center justify-between mb-4 pb-4 border-b border-neon-green/20 flex-shrink-0">
+        <div className="flex items-center justify-between mb-4 pb-4 border-b border-forge-gold/20 flex-shrink-0">
           <button
             type="button"
             onClick={() => { setStep(1); setError(null); }}
-            className="flex items-center gap-1 text-sm text-gray-400 hover:text-neon-green transition-colors"
+            className="flex items-center gap-1 text-sm text-gray-400 hover:text-forge-gold transition-colors"
           >
             <ChevronLeft size={16} /> Back
           </button>
@@ -419,7 +419,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
 
           {/* LEFT: Fighter Preview + Archetype Navigation */}
           <div className="w-52 flex-shrink-0 flex flex-col items-center gap-3">
-            <p className="text-sm font-bold text-neon-green self-start">Base Archetype</p>
+            <p className="text-sm font-bold text-forge-gold self-start">Base Archetype</p>
 
             {/* Large animated preview */}
             <div
@@ -465,7 +465,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                 type="button"
                 disabled={loading}
                 onClick={() => setSelectedBodyId((prev) => (prev === 1 ? 8 : ((prev - 1) as BodyId)))}
-                className="w-8 h-8 rounded-full border-2 border-neon-green/40 hover:border-neon-green flex items-center justify-center text-neon-green hover:bg-neon-green/10 transition-all disabled:opacity-40"
+                className="w-8 h-8 rounded-full border-2 border-forge-gold/40 hover:border-forge-gold flex items-center justify-center text-forge-gold hover:bg-forge-gold/10 transition-all disabled:opacity-40"
               >
                 <ChevronLeft size={16} />
               </button>
@@ -477,7 +477,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                     disabled={loading}
                     onClick={() => setSelectedBodyId(a.id)}
                     className={`w-2 h-2 rounded-full transition-all ${
-                      selectedBodyId === a.id ? 'bg-neon-green scale-125' : 'bg-gray-600 hover:bg-gray-400'
+                      selectedBodyId === a.id ? 'bg-forge-gold scale-125' : 'bg-gray-600 hover:bg-gray-400'
                     }`}
                   />
                 ))}
@@ -486,7 +486,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                 type="button"
                 disabled={loading}
                 onClick={() => setSelectedBodyId((prev) => (prev === 8 ? 1 : ((prev + 1) as BodyId)))}
-                className="w-8 h-8 rounded-full border-2 border-neon-green/40 hover:border-neon-green flex items-center justify-center text-neon-green hover:bg-neon-green/10 transition-all disabled:opacity-40"
+                className="w-8 h-8 rounded-full border-2 border-forge-gold/40 hover:border-forge-gold flex items-center justify-center text-forge-gold hover:bg-forge-gold/10 transition-all disabled:opacity-40"
               >
                 <ChevronRight size={16} />
               </button>
@@ -502,7 +502,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <label className="block text-lg font-bold text-neon-green mb-1">Hair Style</label>
+              <label className="block text-lg font-bold text-forge-gold mb-1">Hair Style</label>
               <p className="text-xs text-gray-500 mb-3">Choose a hairstyle – it&apos;ll be applied to your fighter</p>
               <div className="grid grid-cols-5 gap-2">
                 <button
@@ -512,8 +512,8 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                   onClick={() => setSelectedHairId(0)}
                   className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
                     selectedHairId === 0
-                      ? 'border-neon-green bg-neon-green/10'
-                      : 'border-dark-tertiary hover:border-gray-500 bg-dark-tertiary/30'
+                      ? 'border-forge-gold bg-forge-gold/10'
+                      : 'border-iron-light hover:border-gray-500 bg-iron-light/30'
                   }`}
                 >
                   <div className="w-10 h-10 rounded-full border border-gray-600 flex items-center justify-center text-gray-500 text-lg">✕</div>
@@ -528,8 +528,8 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                     onClick={() => setSelectedHairId(hair.id)}
                     className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
                       selectedHairId === hair.id
-                        ? 'border-neon-green bg-neon-green/10'
-                        : 'border-dark-tertiary hover:border-gray-500 bg-dark-tertiary/30'
+                        ? 'border-forge-gold bg-forge-gold/10'
+                        : 'border-iron-light hover:border-gray-500 bg-iron-light/30'
                     }`}
                   >
                     <img
@@ -564,7 +564,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                         onClick={() => handleHairColorChange(hc.id)}
                         className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${
                           selectedHairColor === hc.id
-                            ? 'border-neon-green scale-110 ring-2 ring-neon-green/40'
+                            ? 'border-forge-gold scale-110 ring-2 ring-forge-gold/40'
                             : 'border-transparent hover:border-gray-400'
                         }`}
                         style={{ backgroundColor: hc.swatch }}
@@ -584,7 +584,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.22 }}
             >
-              <label className="block text-lg font-bold text-neon-green mb-1">Beard Style</label>
+              <label className="block text-lg font-bold text-forge-gold mb-1">Beard Style</label>
               <p className="text-xs text-gray-500 mb-3">Choose a beard – set a separate colour below or sync it to your hair</p>
               <div className="grid grid-cols-5 gap-2">
                 <button
@@ -594,8 +594,8 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                   onClick={() => setSelectedBeardId(0)}
                   className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
                     selectedBeardId === 0
-                      ? 'border-neon-green bg-neon-green/10'
-                      : 'border-dark-tertiary hover:border-gray-500 bg-dark-tertiary/30'
+                      ? 'border-forge-gold bg-forge-gold/10'
+                      : 'border-iron-light hover:border-gray-500 bg-iron-light/30'
                   }`}
                 >
                   <div className="w-10 h-10 rounded-full border border-gray-600 flex items-center justify-center text-gray-500 text-lg">✕</div>
@@ -610,8 +610,8 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                     onClick={() => setSelectedBeardId(beard.id)}
                     className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
                       selectedBeardId === beard.id
-                        ? 'border-neon-green bg-neon-green/10'
-                        : 'border-dark-tertiary hover:border-gray-500 bg-dark-tertiary/30'
+                        ? 'border-forge-gold bg-forge-gold/10'
+                        : 'border-iron-light hover:border-gray-500 bg-iron-light/30'
                     }`}
                   >
                     <img
@@ -649,7 +649,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                       if (next) setSelectedBeardColor(selectedHairColor);
                     }}
                     className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                      syncBeardWithHair ? 'bg-neon-green' : 'bg-gray-600'
+                      syncBeardWithHair ? 'bg-forge-gold' : 'bg-gray-600'
                     }`}
                   >
                     <span
@@ -678,7 +678,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                       onClick={() => setSelectedBeardColor(hc.id)}
                       className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${
                         selectedBeardColor === hc.id
-                          ? 'border-neon-green scale-110 ring-2 ring-neon-green/40'
+                          ? 'border-forge-gold scale-110 ring-2 ring-forge-gold/40'
                           : 'border-transparent hover:border-gray-400'
                       }`}
                       style={{ backgroundColor: hc.swatch }}
@@ -695,7 +695,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
             >
-              <label className="block text-lg font-bold text-neon-green mb-3">Skin Tone</label>
+              <label className="block text-lg font-bold text-forge-gold mb-3">Skin Tone</label>
               <div className="flex gap-3 flex-wrap">
                 {SKIN_TONES.map((tone) => (
                   <button
@@ -706,7 +706,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                     onClick={() => setSelectedSkinToneId(tone.id)}
                     className={`w-9 h-9 rounded-full border-2 transition-all hover:scale-110 ${
                       selectedSkinToneId === tone.id
-                        ? 'border-neon-green scale-110 ring-2 ring-neon-green/40'
+                        ? 'border-forge-gold scale-110 ring-2 ring-forge-gold/40'
                         : 'border-transparent hover:border-gray-400'
                     }`}
                     style={{ backgroundColor: tone.swatch }}
@@ -726,7 +726,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
             >
               {/* Header row */}
               <div className="flex items-center justify-between mb-2">
-                <label className="text-lg font-bold text-neon-green">Tattoos</label>
+                <label className="text-lg font-bold text-forge-gold">Tattoos</label>
                 {tattoos.length > 0 && (
                   <button
                     type="button"
@@ -735,7 +735,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                     className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
                       tattooEditMode
                         ? 'bg-blue-400/15 border-blue-400 text-blue-300'
-                        : 'bg-dark-tertiary/50 border-gray-600 text-gray-400 hover:border-gray-400'
+                        : 'bg-iron-light/50 border-gray-600 text-gray-400 hover:border-gray-400'
                     }`}
                   >
                     🖊 {tattooEditMode ? 'Done Editing' : 'Edit Placement'}
@@ -778,8 +778,8 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                       }}
                       className={`relative flex flex-col items-center gap-0.5 p-1.5 rounded-lg border-2 transition-all ${
                         isActive
-                          ? 'border-neon-green bg-neon-green/10'
-                          : 'border-dark-tertiary hover:border-gray-500 bg-dark-tertiary/30'
+                          ? 'border-forge-gold bg-forge-gold/10'
+                          : 'border-iron-light hover:border-gray-500 bg-iron-light/30'
                       }`}
                     >
                       <img
@@ -790,7 +790,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                         draggable={false}
                       />
                       {isActive && (
-                        <div className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-neon-green" />
+                        <div className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-forge-gold" />
                       )}
                     </button>
                   );
@@ -804,7 +804,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                   {tattoos.map((t) => (
                     <div
                       key={t.id}
-                      className="flex items-center justify-between bg-dark-tertiary/40 rounded-lg px-2.5 py-1.5 border border-dark-tertiary"
+                      className="flex items-center justify-between bg-iron-light/40 rounded-lg px-2.5 py-1.5 border border-iron-light"
                     >
                       <div className="flex items-center gap-2">
                         <img
@@ -838,7 +838,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <label className="block text-lg font-bold text-neon-green mb-4">Choose Your Fighting Style</label>
+              <label className="block text-lg font-bold text-forge-gold mb-4">Choose Your Fighting Style</label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {FIGHTING_STYLES.map((style) => (
                   <motion.button
@@ -850,7 +850,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                     className={`relative rounded-lg p-5 border-2 transition-all ${
                       selectedStyle === style.id
                         ? `${style.color} bg-gradient-to-br ${style.gradient} shadow-lg shadow-current/50`
-                        : 'border-gray-600 bg-dark-tertiary/30 hover:border-gray-400'
+                        : 'border-gray-600 bg-iron-light/30 hover:border-gray-400'
                     } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
                     {selectedStyle === style.id && (
@@ -861,7 +861,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                       <h3 className="text-lg font-bold text-white text-center mb-1">{style.name}</h3>
                       <p className="text-xs text-gray-300 text-center mb-2">{style.description}</p>
                       <div className="text-xs font-semibold uppercase tracking-wider text-center">
-                        <span className="text-neon-green">+{style.bonusAmount}</span>
+                        <span className="text-forge-gold">+{style.bonusAmount}</span>
                         <span className="text-gray-400"> {style.bonusStat}</span>
                       </div>
                     </div>
@@ -875,9 +875,9 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-5 bg-dark-tertiary/50 border border-neon-green/30 rounded-lg"
+                className="p-5 bg-iron-light/50 border border-forge-gold/30 rounded-lg"
               >
-                <h3 className="text-sm font-bold text-neon-green mb-3 uppercase tracking-wider">Starting Stats</h3>
+                <h3 className="text-sm font-bold text-forge-gold mb-3 uppercase tracking-wider">Starting Stats</h3>
                 <div className="space-y-2">
                   {Object.entries({ striking: 40, grappling: 40, speed: 40, strength: 40, cardio: 40 }).map(([stat, baseValue]) => {
                     const styleBonus =
@@ -888,16 +888,16 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                     return (
                       <div key={stat} className="flex items-center gap-3">
                         <span className="capitalize text-gray-400 w-20 text-sm font-medium">{stat}:</span>
-                        <div className="flex-1 bg-dark-bg/50 rounded-full h-2 overflow-hidden">
+                        <div className="flex-1 bg-iron-dark/50 rounded-full h-2 overflow-hidden">
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${(finalValue / 100) * 100}%` }}
                             transition={{ duration: 0.5, delay: 0.1 }}
-                            className="h-full bg-gradient-to-r from-neon-green to-cyan-400"
+                            className="h-full bg-gradient-to-r from-forge-gold to-cyan-400"
                           />
                         </div>
                         <span className="text-white font-bold w-12 text-right text-sm">
-                          {finalValue}{styleBonus > 0 && <span className="text-neon-green">+{styleBonus}</span>}
+                          {finalValue}{styleBonus > 0 && <span className="text-forge-gold">+{styleBonus}</span>}
                         </span>
                       </div>
                     );
@@ -912,7 +912,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="p-3 bg-alert-red/20 border border-alert-red/50 rounded-lg text-alert-red text-sm"
+                  className="p-3 bg-red-800/20 border border-red-800/50 rounded-lg text-red-400 text-sm"
                 >
                   {error}
                 </motion.div>
@@ -922,7 +922,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
                 whileTap={{ scale: 0.95 }}
                 onClick={handleStartCareer}
                 disabled={loading || !selectedStyle}
-                className="w-full bg-gradient-to-r from-neon-green to-cyan-400 text-dark-bg font-bold py-3 rounded-lg hover:shadow-lg hover:shadow-neon-green/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none transition-all text-lg"
+                className="w-full bg-gradient-to-r from-forge-gold to-cyan-400 text-iron-dark font-bold py-3 rounded-lg hover:shadow-lg hover:shadow-forge-gold/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none transition-all text-lg"
               >
                 {loading ? (
                   <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity }} className="inline-block">⏳</motion.div>
@@ -942,7 +942,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="p-3 bg-alert-red/20 border border-alert-red/50 rounded-lg text-alert-red text-sm"
+                className="p-3 bg-red-800/20 border border-red-800/50 rounded-lg text-red-400 text-sm"
               >
                 {error}
               </motion.div>
@@ -952,7 +952,7 @@ export const FighterInitialization: React.FC<FighterInitializationProps> = ({
               whileTap={{ scale: 0.98 }}
               onClick={handleContinueToStep2}
               disabled={!fighterName.trim()}
-              className="w-full bg-gradient-to-r from-neon-green to-cyan-400 text-dark-bg font-bold py-3 rounded-lg hover:shadow-lg hover:shadow-neon-green/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-lg"
+              className="w-full bg-gradient-to-r from-forge-gold to-cyan-400 text-iron-dark font-bold py-3 rounded-lg hover:shadow-lg hover:shadow-forge-gold/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-lg"
             >
               Continue →
             </motion.button>

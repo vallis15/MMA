@@ -264,29 +264,29 @@ export const FighterProfile: React.FC = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative overflow-hidden rounded-2xl border border-neon-green/20 bg-gradient-to-br from-dark-secondary via-dark-tertiary to-dark-secondary p-6 md:p-8"
-        style={{ boxShadow: '0 0 40px rgba(0,255,65,0.05)' }}
+        className="relative overflow-hidden rounded-2xl border border-forge-gold/20 bg-gradient-to-br from-iron-mid via-iron-light to-iron-mid p-6 md:p-8"
+        style={{ boxShadow: '0 0 40px rgba(201,168,76,0.04)' }}
       >
         {/* Background decoration */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-12 -right-12 w-48 h-48 bg-neon-green/5 rounded-full blur-3xl" />
-          <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-neon-green/5 rounded-full blur-2xl" />
+          <div className="absolute -top-12 -right-12 w-48 h-48 bg-forge-gold/4 rounded-full blur-3xl" />
+          <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-forge-gold/4 rounded-full blur-2xl" />
         </div>
 
         <div className="relative flex flex-col md:flex-row md:items-center gap-6">
           {/* Avatar */}
           <div className="relative flex-shrink-0">
             <div
-              className="w-20 h-20 flex items-center justify-center text-3xl font-black bg-dark-tertiary border-2 border-neon-green/40"
+              className="w-20 h-20 flex items-center justify-center text-3xl font-black bg-iron-light border-2 border-forge-gold/35"
               style={{
                 clipPath: 'polygon(30% 0%,70% 0%,100% 30%,100% 70%,70% 100%,30% 100%,0% 70%,0% 30%)',
-                boxShadow: '0 0 20px rgba(0,255,65,0.2)',
+                boxShadow: '0 0 20px rgba(201,168,76,0.15)',
               }}
             >
               {fighter?.name?.[0]?.toUpperCase() ?? '?'}
             </div>
             {/* Overall badge */}
-            <div className="absolute -bottom-2 -right-2 bg-neon-green text-dark-primary text-xs font-black px-1.5 py-0.5 rounded-md">
+            <div className="absolute -bottom-2 -right-2 bg-forge-gold text-iron-dark text-xs font-black px-1.5 py-0.5 rounded-md">
               {overallRating}
             </div>
           </div>
@@ -297,7 +297,7 @@ export const FighterProfile: React.FC = () => {
               <h1 className="text-2xl md:text-3xl font-oswald font-black text-white uppercase tracking-wider leading-none">
                 {fighter?.name ?? 'Fighter'}
               </h1>
-              <span className="mt-0.5 px-2 py-0.5 rounded-full bg-neon-green/10 border border-neon-green/30 text-neon-green text-xs font-semibold uppercase tracking-wider">
+              <span className="mt-0.5 px-2 py-0.5 rounded-full bg-forge-gold/10 border border-forge-gold/30 text-forge-gold text-xs font-semibold uppercase tracking-wider">
                 {discipline}
               </span>
             </div>
@@ -326,21 +326,21 @@ export const FighterProfile: React.FC = () => {
           <div className="hidden md:flex flex-col items-center gap-1 flex-shrink-0">
             <div className="relative w-20 h-20">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#1a2a1a" strokeWidth="2.5" />
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#1a1a22" strokeWidth="2.5" />
                 <circle
                   cx="18" cy="18" r="15.9" fill="none"
-                  stroke="#00ff41" strokeWidth="2.5"
+                  stroke="#C9A84C" strokeWidth="2.5"
                   strokeDasharray={`${overallRating} 100`}
                   strokeLinecap="round"
-                  style={{ filter: 'drop-shadow(0 0 4px rgba(0,255,65,0.6))' }}
+                  style={{ filter: 'drop-shadow(0 0 4px rgba(201,168,76,0.55))' }}
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-black text-neon-green leading-none">{overallRating}</span>
+                <span className="text-xl font-black text-forge-gold leading-none">{overallRating}</span>
                 <span className="text-[9px] text-gray-500 uppercase">OVR</span>
               </div>
             </div>
-            <TrendingUp size={14} className="text-neon-green/60" />
+            <TrendingUp size={14} className="text-forge-gold/55" />
           </div>
         </div>
       </motion.div>
@@ -371,7 +371,7 @@ export const FighterProfile: React.FC = () => {
               className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border transition-all duration-300 ${
                 isActive
                   ? `${c.bgActive} shadow-lg ${c.glow}`
-                  : 'border-gray-700/50 bg-dark-secondary/50 hover:border-gray-600'
+                  : 'border-gray-700/50 bg-iron-mid/50 hover:border-gray-600'
               }`}
             >
               <Icon size={18} className={isActive ? c.textActive : 'text-gray-500'} />
@@ -394,7 +394,7 @@ export const FighterProfile: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.3 }}
-          className={`rounded-2xl border ${cfg.border} bg-dark-secondary/60 p-5 md:p-6`}
+          className={`rounded-2xl border ${cfg.border} bg-iron-mid/60 p-5 md:p-6`}
           style={{ boxShadow: `0 0 30px ${activeTab === 'striking' ? 'rgba(239,68,68,0.08)' : activeTab === 'wrestling' ? 'rgba(59,130,246,0.08)' : activeTab === 'bjj' ? 'rgba(168,85,247,0.08)' : 'rgba(16,185,129,0.08)'}` }}
         >
           {/* Section header */}
@@ -440,7 +440,7 @@ export const FighterProfile: React.FC = () => {
           return (
             <div
               key={tab}
-              className={`flex flex-col items-center gap-1 p-3 rounded-xl border ${c.border} bg-dark-tertiary/30`}
+              className={`flex flex-col items-center gap-1 p-3 rounded-xl border ${c.border} bg-iron-light/30`}
             >
               <Icon size={14} className={c.textActive} />
               <div className={`text-xl font-black ${c.textActive}`}>{avg}</div>
@@ -463,7 +463,7 @@ export const FighterProfile: React.FC = () => {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="rounded-2xl border border-gray-700/40 bg-dark-secondary/50 p-5"
+        className="rounded-2xl border border-gray-700/40 bg-iron-mid/50 p-5"
       >
         <div className="flex items-center gap-3 mb-4">
           <History size={18} className="text-cyan-400" />
@@ -504,7 +504,7 @@ export const FighterProfile: React.FC = () => {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.04 }}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-gray-700/30 bg-dark-tertiary/30 hover:bg-dark-tertiary/50 transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-xl border border-gray-700/30 bg-iron-light/30 hover:bg-iron-light/50 transition-colors"
                 >
                   {/* Result badge */}
                   <div className={`w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center font-black text-sm border ${resultColor}`}>

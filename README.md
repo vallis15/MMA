@@ -1,8 +1,27 @@
 # MMA Manager - Fight Management System
 
-Plnohodnotná dark-mode webová hra pro správu MMA zápasníků. Hráč si vytvoří vlastního zápasníka, trénuje ho, odemyká dovednosti a bojuje v PvP systému proti ostatním hráčům nebo AI soupeřům. Backend běží na Supabase (PostgreSQL + Auth + Realtime).
+Plnohodnotná webová hra pro správu MMA zápasníků s industriálním dark designem. Hráč si vytvoří vlastního zápasníka, trénuje ho, odemyká dovednosti a bojuje v PvP systému proti ostatním hráčům nebo AI soupeřům. Backend běží na Supabase (PostgreSQL + Auth + Realtime).
 
 > **Stav projektu:** Aktivní vývoj — core funkce jsou plně implementovány a funkční.
+
+---
+
+## Design systém — Forge & Octagon
+
+Projekt používá paletu **"Industrial Luxury"** inspirovanou kovárnou a oktagonem.
+
+| Token | Barva | Použití |
+|---|---|---|
+| `forge-gold` | `#C9A84C` | Primární akcent, CTA tlačítka, ikony |
+| `burnished` | `#A07830` | Hover stavy, sekundární zvýraznění |
+| `oxblood` | `#8B2020` | Nebezpečí, ztráta, destruktivní akce |
+| `steel` | `#7B8FA5` | Pomocný text, rámečky, ikony |
+| `iron` | `#2E3140` | Karty, oddíly |
+| `gunmetal` | `#1A1C24` | Pozadí panelů a sidebaru |
+| `concrete` | `#09090B` | Hlavní pozadí stránky |
+| `ash` | `#4A505E` | Tlumené texty, oddělovače |
+
+Pozadí stránky má jemný **chain-link mesh overlay** pro industriální texturu. Typografie kombinuje **Oswald** (nadpisy), **Montserrat** (akcenty) a **Inter** (tělo textu).
 
 ---
 
@@ -78,7 +97,8 @@ Plnohodnotná dark-mode webová hra pro správu MMA zápasníků. Hráč si vytv
 |---|---|
 | Frontend | React 18.3.1 + TypeScript |
 | Build | Vite 5.4.0 |
-| Styling | Tailwind CSS 3.4.1 + Oswald font |
+| Styling | Tailwind CSS 3.4.1 + custom Forge & Octagon paleta |
+| Fonty | Oswald + Montserrat + Inter (Google Fonts) |
 | Animace | Framer Motion 11.0.8 |
 | Routing | React Router DOM 7.x |
 | Backend / DB | Supabase (PostgreSQL + Auth + Realtime) |

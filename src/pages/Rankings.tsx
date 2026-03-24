@@ -158,7 +158,7 @@ export const Rankings: React.FC = () => {
 
   const getRowHighlight = (isPlayer: boolean) => {
     if (!isPlayer) return '';
-    return 'bg-neon-green/10 border-l-4 border-neon-green shadow-lg shadow-neon-green/30';
+    return 'bg-forge-gold/8 border-l-4 border-forge-gold shadow-lg shadow-forge-gold/20';
   };
 
   const getWinRate = (wins?: number, losses?: number, draws?: number) => {
@@ -221,9 +221,9 @@ export const Rankings: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <motion.div animate={{ rotate: [0, -10, 10, 0] }} transition={{ duration: 3, repeat: Infinity }}>
-              <Trophy className="w-8 h-8 text-neon-green glow-electric" />
+              <Trophy className="w-8 h-8 text-forge-gold" />
             </motion.div>
-            <h1 className="page-header text-neon-green glow-electric text-4xl">{t('global_leaderboard')}</h1>
+            <h1 className="page-header text-forge-gold text-4xl">{t('global_leaderboard')}</h1>
           </div>
           {playerRank && (
             <motion.div
@@ -231,7 +231,7 @@ export const Rankings: React.FC = () => {
               animate={{ scale: 1 }}
               className="text-center glass-card px-8 py-4 rounded-lg border-glow-electric"
             >
-              <div className="text-3xl font-black text-neon-green glow-electric">#{playerRank}</div>
+              <div className="text-3xl font-black text-forge-gold">#{playerRank}</div>
               <div className="text-gray-400 text-xs uppercase tracking-wider font-semibold">{t('your_rank')}</div>
             </motion.div>
           )}
@@ -239,12 +239,12 @@ export const Rankings: React.FC = () => {
 
         {/* Ranking criteria legend */}
         <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400 uppercase tracking-wider">
-          <span className="flex items-center gap-1"><span className="text-neon-green font-bold">1.</span> {t('sort_by_wins')}</span>
-          <span className="text-dark-tertiary">›</span>
+          <span className="flex items-center gap-1"><span className="text-forge-gold font-bold">1.</span> {t('sort_by_wins')}</span>
+          <span className="text-steel-gray/40">›</span>
           <span className="flex items-center gap-1"><span className="text-yellow-400 font-bold">2.</span> {t('fewest_losses')}</span>
-          <span className="text-dark-tertiary">›</span>
+          <span className="text-steel-gray/40">›</span>
           <span className="flex items-center gap-1"><span className="text-orange-400 font-bold">3.</span> {t('win_rate')}</span>
-          <span className="text-dark-tertiary">›</span>
+          <span className="text-steel-gray/40">›</span>
           <span className="flex items-center gap-1"><span className="text-purple-400 font-bold">4.</span> {t('reputation')}</span>
           <span className="ml-auto text-gray-600 italic normal-case">{t('debut_required')}</span>
         </div>
@@ -255,7 +255,7 @@ export const Rankings: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 glass-card-premium p-5 border-l-4 border-alert-red/80 rounded-lg text-alert-red"
+          className="mb-8 glass-card-premium p-5 border-l-4 border-red-800/70 rounded-lg text-red-400"
         >
           <p className="font-bold uppercase tracking-wider text-sm mb-1">{t('error_loading_leaderboard')}</p>
           <p className="text-sm">{error}</p>
@@ -266,7 +266,7 @@ export const Rankings: React.FC = () => {
       {loading && (
         <div className="flex items-center justify-center min-h-[400px]">
           <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity }}>
-            <div className="w-12 h-12 border-4 border-neon-green/20 border-t-neon-green rounded-full"></div>
+            <div className="w-12 h-12 border-4 border-forge-gold/20 border-t-forge-gold rounded-full"></div>
           </motion.div>
         </div>
       )}
@@ -277,10 +277,10 @@ export const Rankings: React.FC = () => {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="space-y-0 rounded-2xl overflow-hidden glass-card-premium border border-dark-secondary/30"
+          className="space-y-0 rounded-2xl overflow-hidden glass-card-premium border border-iron-mid/50"
         >
           {/* Header Row */}
-          <div className="bg-dark-secondary/40 grid grid-cols-1 md:grid-cols-7 gap-4 p-4 font-bold text-gray-400 text-xs uppercase tracking-widest sticky top-0 z-10 backdrop-blur-sm">
+          <div className="bg-iron-mid/60 grid grid-cols-1 md:grid-cols-7 gap-4 p-4 font-bold text-gray-400 text-xs uppercase tracking-widest sticky top-0 z-10 backdrop-blur-sm">
             <div className="md:col-span-1 text-center">{t('rank')}</div>
             <div className="md:col-span-2">{t('fighter')}</div>
             <div className="text-right">{t('reputation')}</div>
@@ -308,7 +308,7 @@ export const Rankings: React.FC = () => {
                 <motion.div
                   key={player.id}
                   variants={rowVariants}
-                  className={`grid grid-cols-1 md:grid-cols-7 gap-4 p-4 border-t border-dark-secondary/30 transition-all table-row-stripe ${getRowHighlight(
+                  className={`grid grid-cols-1 md:grid-cols-7 gap-4 p-4 border-t border-iron-mid/40 transition-all table-row-stripe ${getRowHighlight(
                     isCurrentPlayer
                   )}`}
                 >
@@ -324,7 +324,7 @@ export const Rankings: React.FC = () => {
                       <div className="font-bold text-white flex items-center gap-2">
                         {player.username}
                         {isCurrentPlayer && (
-                          <span className="text-neon-green text-xs font-semibold">({t('you').toUpperCase()})</span>
+                          <span className="text-forge-gold text-xs font-semibold">({t('you').toUpperCase()})</span>
                         )}
                         {player.isAI && (
                           <span className="px-1.5 py-0.5 bg-purple-900/60 border border-purple-500/40 text-purple-300 text-[9px] font-bold uppercase tracking-widest rounded">AI</span>
@@ -338,7 +338,7 @@ export const Rankings: React.FC = () => {
 
                   {/* Reputation */}
                   <div className="text-right flex items-center justify-end gap-2">
-                    <span className="text-neon-green font-bold">{reputation}</span>
+                    <span className="text-forge-gold font-bold">{reputation}</span>
                     <LeagueBadge league={league} showText={false} />
                   </div>
 
@@ -369,7 +369,7 @@ export const Rankings: React.FC = () => {
                         disabled={!fighter || fighter.currentEnergy < 50}
                         className={`flex items-center gap-1 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
                           fighter && fighter.currentEnergy >= 50
-                            ? 'bg-gradient-to-r from-alert-red to-orange-500 text-white hover:shadow-lg hover:shadow-alert-red/50'
+                            ? 'bg-gradient-to-r from-red-800 to-orange-600 text-white hover:shadow-lg hover:shadow-red-900/50'
                             : 'bg-gray-700 text-gray-500 cursor-not-allowed'
                         }`}
                       >
@@ -390,7 +390,7 @@ export const Rankings: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-8 p-6 bg-dark-secondary rounded-lg border border-neon-green/30"
+          className="mt-8 p-6 bg-iron-mid rounded-lg border border-forge-gold/20"
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* League Info */}
@@ -406,9 +406,9 @@ export const Rankings: React.FC = () => {
 
             {/* Stats */}
             <div className="text-center">
-              <Award className="w-6 h-6 text-neon-green mx-auto mb-2" />
+              <Award className="w-6 h-6 text-forge-gold mx-auto mb-2" />
               <div className="text-gray-400 text-sm mb-1">{t('total_reputation')}</div>
-              <div className="text-2xl font-bold text-neon-green">{fighter.reputation}</div>
+              <div className="text-2xl font-bold text-forge-gold">{fighter.reputation}</div>
             </div>
 
             {/* Reset Button */}
@@ -418,7 +418,7 @@ export const Rankings: React.FC = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowResetConfirm(true)}
-                  className="flex items-center justify-center gap-2 mx-auto px-4 py-2 bg-alert-red/20 border border-alert-red/50 text-alert-red rounded-lg hover:bg-alert-red/30 transition-colors"
+                  className="flex items-center justify-center gap-2 mx-auto px-4 py-2 bg-red-900/20 border border-red-900/40 text-red-400 rounded-lg hover:bg-red-900/30 transition-colors"
                 >
                   <RotateCcw className="w-4 h-4" />
                   {t('reset_career')}
@@ -429,20 +429,20 @@ export const Rankings: React.FC = () => {
                   animate={{ opacity: 1 }}
                   className="flex flex-col gap-2"
                 >
-                  <p className="text-alert-red text-sm font-bold">{t('are_you_sure')}</p>
+                  <p className="text-red-400 text-sm font-bold">{t('are_you_sure')}</p>
                   <div className="flex gap-2 justify-center">
                     <button
                       onClick={() => {
                         resetCareer();
                         setShowResetConfirm(false);
                       }}
-                      className="px-3 py-1 bg-alert-red text-white text-sm rounded hover:bg-alert-red/80 transition"
+                      className="px-3 py-1 bg-red-800 text-white text-sm rounded hover:bg-red-700 transition"
                     >
                       {t('yes_reset')}
                     </button>
                     <button
                       onClick={() => setShowResetConfirm(false)}
-                      className="px-3 py-1 bg-dark-tertiary text-gray-300 text-sm rounded hover:bg-dark-secondary transition"
+                      className="px-3 py-1 bg-iron-light text-gray-300 text-sm rounded hover:bg-iron-mid transition"
                     >
                       {t('cancel')}
                     </button>
@@ -459,7 +459,7 @@ export const Rankings: React.FC = () => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="mt-8 text-center p-8 bg-dark-secondary rounded-lg border border-dark-tertiary"
+          className="mt-8 text-center p-8 bg-iron-mid rounded-lg border border-iron-light"
         >
           <Trophy className="w-12 h-12 text-gray-600 mx-auto mb-4" />
           <p className="text-gray-400 text-lg">{t('create_fighter_to_rank')}</p>

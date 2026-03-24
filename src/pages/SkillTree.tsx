@@ -54,13 +54,13 @@ const DOMAIN_THEME: Record<SkillDomain, {
   },
   defense: {
     label: 'Defense',
-    color: '#00ff41',
-    colorClass: 'text-green-400',
-    bgClass: 'bg-green-500/10',
-    borderClass: 'border-green-500/60',
-    glowStyle: '0 0 12px #00ff41, 0 0 24px #00ff4166',
-    ringStyle: '0 0 0 2px #00ff41, 0 0 16px #00ff4180',
-    tabGrad: 'from-green-500 to-green-700',
+    color: '#6B9E80',
+    colorClass: 'text-emerald-600',
+    bgClass: 'bg-emerald-900/10',
+    borderClass: 'border-emerald-700/60',
+    glowStyle: '0 0 12px #6B9E80, 0 0 24px #6B9E8066',
+    ringStyle: '0 0 0 2px #6B9E80, 0 0 16px #6B9E8080',
+    tabGrad: 'from-emerald-700 to-emerald-900',
   },
 };
 
@@ -550,12 +550,12 @@ const SkillDetailPanel: React.FC<SkillDetailProps> = ({
                       key={req.attribute}
                       className="px-3 py-2 rounded-lg text-xs"
                       style={{
-                        background: met ? 'rgba(0,255,65,0.08)' : 'rgba(255,50,50,0.08)',
-                        border: `1px solid ${met ? '#00ff4130' : '#ff323230'}`,
+                        background: met ? 'rgba(201,168,76,0.08)' : 'rgba(200,50,50,0.08)',
+                        border: `1px solid ${met ? '#C9A84C30' : '#C0404030'}`,
                       }}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-1.5 font-semibold" style={{ color: met ? '#00ff41' : '#ff5555' }}>
+                        <span className="flex items-center gap-1.5 font-semibold" style={{ color: met ? '#C9A84C' : '#C07070' }}>
                           {met
                             ? <CheckCircle size={12} />
                             : <XCircle size={12} />}
@@ -564,7 +564,7 @@ const SkillDetailPanel: React.FC<SkillDetailProps> = ({
                         {/* Format: current/required (pct%) */}
                         <span
                           className="font-black tabular-nums text-sm"
-                          style={{ color: met ? '#00ff41' : '#ff5555' }}
+                          style={{ color: met ? '#C9A84C' : '#C07070' }}
                         >
                           {current}<span className="font-normal text-gray-600">/{req.value}</span>
                           {!met && (
@@ -764,9 +764,9 @@ export const SkillTree: React.FC = () => {
   const domainTabs: SkillDomain[] = ['striking', 'wrestling', 'bjj', 'defense'];
 
   return (
-    <div className="min-h-screen bg-dark-bg text-white pb-20">
+    <div className="min-h-screen bg-iron-dark text-white pb-20">
       {/* ── Top bar ─────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-30 bg-dark-bg/95 backdrop-blur-sm border-b border-white/5">
+      <div className="sticky top-0 z-30 bg-iron-dark/95 backdrop-blur-sm border-b border-white/5">
         <div className="max-w-3xl mx-auto px-4">
 
           {/* Header */}
@@ -970,7 +970,7 @@ export const SkillTree: React.FC = () => {
             className="fixed top-6 left-1/2 z-[100] -translate-x-1/2 px-5 py-3 rounded-2xl text-sm font-bold flex items-center gap-2.5 shadow-2xl pointer-events-none"
             style={
               notify.success
-                ? { background: 'rgba(0,20,5,0.95)', border: '1.5px solid #00ff41', color: '#00ff41', boxShadow: '0 0 24px #00ff4180' }
+                ? { background: 'rgba(30,22,5,0.95)', border: '1.5px solid #C9A84C', color: '#C9A84C', boxShadow: '0 0 24px #C9A84C80' }
                 : { background: 'rgba(20,5,5,0.95)', border: '1.5px solid #ff4444', color: '#ff6666', boxShadow: '0 0 24px #ff444460' }
             }
           >

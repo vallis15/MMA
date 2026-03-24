@@ -58,7 +58,7 @@ export const Registration: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-bg via-dark-secondary to-dark-bg flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-iron-dark via-iron-mid to-iron-dark flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -70,7 +70,7 @@ export const Registration: React.FC = () => {
           <motion.div
             initial={{ y: -20 }}
             animate={{ y: 0 }}
-            className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-green to-green-400 mb-2"
+            className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-forge-gold to-yellow-500 mb-2"
           >
             {t('mma_manager')}
           </motion.div>
@@ -82,7 +82,7 @@ export const Registration: React.FC = () => {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="bg-dark-secondary border border-neon-green/20 rounded-lg p-8 backdrop-blur-sm"
+          className="bg-iron-mid border border-forge-gold/20 rounded-lg p-8 backdrop-blur-sm"
         >
           {!success ? (
             <form onSubmit={handleSignUp} className="space-y-4">
@@ -90,13 +90,13 @@ export const Registration: React.FC = () => {
               <div>
                 <label className="block text-sm font-semibold text-gray-300 mb-2">{t('email')}</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 w-5 h-5 text-neon-green" />
+                  <Mail className="absolute left-3 top-3 w-5 h-5 text-forge-gold" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder={t('placeholder_email_short')}
-                    className="w-full bg-dark-tertiary border border-dark-tertiary focus:border-neon-green pl-10 pr-4 py-2 rounded-lg text-white placeholder-gray-500 focus:outline-none transition"
+                    className="w-full bg-iron-light border border-iron-light focus:border-forge-gold pl-10 pr-4 py-2 rounded-lg text-white placeholder-gray-500 focus:outline-none transition"
                   />
                 </div>
               </div>
@@ -105,13 +105,13 @@ export const Registration: React.FC = () => {
               <div>
                 <label className="block text-sm font-semibold text-gray-300 mb-2">{t('password')}</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 w-5 h-5 text-neon-green" />
+                  <Lock className="absolute left-3 top-3 w-5 h-5 text-forge-gold" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={t('placeholder_min_8_chars')}
-                    className="w-full bg-dark-tertiary border border-dark-tertiary focus:border-neon-green pl-10 pr-4 py-2 rounded-lg text-white placeholder-gray-500 focus:outline-none transition"
+                    className="w-full bg-iron-light border border-iron-light focus:border-forge-gold pl-10 pr-4 py-2 rounded-lg text-white placeholder-gray-500 focus:outline-none transition"
                   />
                 </div>
               </div>
@@ -120,13 +120,13 @@ export const Registration: React.FC = () => {
               <div>
                 <label className="block text-sm font-semibold text-gray-300 mb-2">{t('confirm_password')}</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 w-5 h-5 text-neon-green" />
+                  <Lock className="absolute left-3 top-3 w-5 h-5 text-forge-gold" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder={t('placeholder_confirm_password')}
-                    className="w-full bg-dark-tertiary border border-dark-tertiary focus:border-neon-green pl-10 pr-4 py-2 rounded-lg text-white placeholder-gray-500 focus:outline-none transition"
+                    className="w-full bg-iron-light border border-iron-light focus:border-forge-gold pl-10 pr-4 py-2 rounded-lg text-white placeholder-gray-500 focus:outline-none transition"
                   />
                 </div>
               </div>
@@ -147,7 +147,7 @@ export const Registration: React.FC = () => {
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2 p-3 bg-alert-red/20 border border-alert-red/50 rounded-lg text-alert-red text-sm"
+                  className="flex items-center gap-2 p-3 bg-red-900/20 border border-red-900/50 rounded-lg text-red-400 text-sm"
                 >
                   <AlertCircle className="w-4 h-4" />
                   {error}
@@ -160,7 +160,7 @@ export const Registration: React.FC = () => {
                 whileTap={{ scale: 0.98 }}
                 type="submit"
                 disabled={loading}
-                className="w-full py-2 px-4 bg-gradient-to-r from-neon-green to-green-400 text-dark-bg font-bold rounded-lg hover:shadow-lg hover:shadow-neon-green/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-2 px-4 bg-gradient-to-r from-forge-gold to-yellow-500 text-iron-dark font-bold rounded-lg hover:shadow-lg hover:shadow-forge-gold/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -178,7 +178,7 @@ export const Registration: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/login')}
-                  className="text-neon-green hover:underline font-semibold"
+                  className="text-forge-gold hover:underline font-semibold"
                 >
                   {t('login_here')}
                 </button>
@@ -190,12 +190,12 @@ export const Registration: React.FC = () => {
               animate={{ opacity: 1, scale: 1 }}
               className="text-center"
             >
-              <CheckCircle className="w-16 h-16 text-neon-green mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-neon-green mb-2">{t('account_created')}</h2>
+              <CheckCircle className="w-16 h-16 text-forge-gold mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-forge-gold mb-2">{t('account_created')}</h2>
               <p className="text-gray-400 mb-4">
                 {t('check_email_confirm')}
               </p>
-              <div className="w-8 h-8 border-4 border-neon-green/20 border-t-neon-green rounded-full animate-spin mx-auto" />
+              <div className="w-8 h-8 border-4 border-forge-gold/20 border-t-forge-gold rounded-full animate-spin mx-auto" />
             </motion.div>
           )}
         </motion.div>

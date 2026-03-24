@@ -98,7 +98,7 @@ const IndexCard: React.FC<IndexCardProps> = ({
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.45, delay }}
     whileHover={{ y: -3, transition: { duration: 0.2 } }}
-    className={`flex items-center gap-4 p-5 rounded-2xl border bg-dark-secondary/70 backdrop-blur-sm ${borderClass}`}
+    className={`flex items-center gap-4 p-5 rounded-2xl border bg-iron-mid/70 backdrop-blur-sm ${borderClass}`}
     style={{ boxShadow: `0 0 20px ${glowColor}18` }}
   >
     <Ring value={value} color={ringColor} glowColor={glowColor} />
@@ -150,7 +150,7 @@ const EnergyBanner: React.FC<EnergyBannerProps> = ({ current, max, delay = 0.2 }
       initial={{ opacity: 0, y: -12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
-      className={`rounded-2xl border ${borderColor} bg-dark-secondary/80 backdrop-blur-sm p-5`}
+      className={`rounded-2xl border ${borderColor} bg-iron-mid/80 backdrop-blur-sm p-5`}
       style={{ boxShadow: `0 0 32px ${glowColor}` }}
     >
       <div className="flex items-center justify-between mb-3">
@@ -247,7 +247,7 @@ const MasteredTechniques: React.FC<MasteredTechniquesProps> = ({ unlockedIds, de
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay }}
-      className="rounded-2xl border border-gray-700/50 bg-dark-secondary/70 p-5"
+      className="rounded-2xl border border-gray-700/50 bg-iron-mid/70 p-5"
     >
       <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400 flex items-center gap-2 mb-4">
         <BookOpen size={13} className="text-purple-400" />
@@ -376,10 +376,10 @@ export const Dashboard: React.FC = () => {
           {announcement && showAnnouncement && (
             <motion.div
               initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }}
-              className="glass-card-premium p-4 border-l-4 border-alert-red/80 rounded-xl flex items-start gap-4"
+              className="glass-card-premium p-4 border-l-4 border-red-800/80 rounded-xl flex items-start gap-4"
             >
               <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 2, repeat: Infinity }}>
-                <Bell className="w-5 h-5 text-alert-red flex-shrink-0 mt-0.5" />
+                <Bell className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
               </motion.div>
               <div className="flex-1 min-w-0">
                 <p className="text-white font-bold uppercase tracking-wider text-xs mb-1">{t('global_announcement')}</p>
@@ -397,10 +397,10 @@ export const Dashboard: React.FC = () => {
             {/* ── Fighter Hero Header ─────────────────────────────── */}
             <motion.div
               initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-              className="relative overflow-hidden rounded-2xl border border-neon-green/20 bg-gradient-to-br from-dark-secondary via-dark-tertiary to-dark-secondary p-6 md:p-8"
-              style={{ boxShadow: '0 0 50px rgba(0,255,65,0.05)' }}
+              className="relative overflow-hidden rounded-2xl border border-forge-gold/20 bg-gradient-to-br from-iron-mid via-iron-light to-iron-mid p-6 md:p-8"
+              style={{ boxShadow: '0 0 50px rgba(201,168,76,0.04)' }}
             >
-              <div className="absolute -top-16 -right-16 w-56 h-56 bg-neon-green/5 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -top-16 -right-16 w-56 h-56 bg-forge-gold/5 rounded-full blur-3xl pointer-events-none" />
 
               {/* ── Admin reset button (hidden in corner, admin-only) ── */}
               {isAdmin && (
@@ -446,7 +446,7 @@ export const Dashboard: React.FC = () => {
                         className="drop-shadow-[0_0_24px_rgba(0,255,65,0.12)]"
                       />
                       {/* OVR pill pinned below the figure */}
-                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-neon-green text-dark-primary text-[10px] font-black px-2 py-0.5 rounded-md leading-none whitespace-nowrap z-10">
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-forge-gold text-dark-primary text-[10px] font-black px-2 py-0.5 rounded-md leading-none whitespace-nowrap z-10">
                         OVR {overallRating}
                       </div>
                     </>
@@ -454,7 +454,7 @@ export const Dashboard: React.FC = () => {
                     /* Fallback octagon letter avatar */
                     <div className="relative">
                       <div
-                        className="w-20 h-20 flex items-center justify-center text-3xl font-black bg-dark-tertiary border-2 border-neon-green/50 text-neon-green"
+                        className="w-20 h-20 flex items-center justify-center text-3xl font-black bg-iron-light border-2 border-forge-gold/50 text-forge-gold"
                         style={{
                           clipPath: 'polygon(30% 0%,70% 0%,100% 30%,100% 70%,70% 100%,30% 100%,0% 70%,0% 30%)',
                           boxShadow: '0 0 24px rgba(0,255,65,0.25)',
@@ -462,7 +462,7 @@ export const Dashboard: React.FC = () => {
                       >
                         {fighter.name[0]?.toUpperCase() ?? '?'}
                       </div>
-                      <div className="absolute -bottom-2 -right-2 bg-neon-green text-dark-primary text-[10px] font-black px-1.5 py-0.5 rounded-md leading-none">
+                      <div className="absolute -bottom-2 -right-2 bg-forge-gold text-dark-primary text-[10px] font-black px-1.5 py-0.5 rounded-md leading-none">
                         {overallRating}
                       </div>
                     </div>
@@ -481,14 +481,14 @@ export const Dashboard: React.FC = () => {
                     )}
                   </h1>
                   {fighter.nickname ? (
-                    <p className="text-alert-red font-bold italic text-sm mb-4">&ldquo;{fighter.nickname}&rdquo;</p>
+                    <p className="text-red-400 font-bold italic text-sm mb-4">&ldquo;{fighter.nickname}&rdquo;</p>
                   ) : (
                     <p className="text-gray-600 italic text-sm mb-4">No nickname set</p>
                   )}
                   <div className="flex flex-wrap gap-4">
                     {[
-                      { label: 'Wins', val: fighter.record.wins, cls: 'text-neon-green' },
-                      { label: 'Losses', val: fighter.record.losses, cls: 'text-alert-red' },
+                      { label: 'Wins', val: fighter.record.wins, cls: 'text-forge-gold' },
+                      { label: 'Losses', val: fighter.record.losses, cls: 'text-red-400' },
                       { label: 'Draws', val: fighter.record.draws, cls: 'text-gray-400' },
                       { label: 'Rep', val: fighter.reputation, cls: 'text-purple-400' },
                     ].map(({ label, val, cls }) => (
@@ -502,10 +502,10 @@ export const Dashboard: React.FC = () => {
 
                 {/* Win Rate badge */}
                 <div className="hidden md:flex flex-col items-center gap-1 flex-shrink-0">
-                  <div className="flex items-center gap-2 bg-dark-tertiary px-4 py-2 rounded-full border border-neon-green/30">
-                    <Trophy size={14} className="text-neon-green" />
+                  <div className="flex items-center gap-2 bg-iron-light px-4 py-2 rounded-full border border-forge-gold/30">
+                    <Trophy size={14} className="text-forge-gold" />
                     <span className="text-gray-400 text-xs uppercase tracking-wider">Win Rate</span>
-                    <span className="font-black text-neon-green text-sm">{winRate}%</span>
+                    <span className="font-black text-forge-gold text-sm">{winRate}%</span>
                   </div>
                   <div className="flex items-center gap-1 text-gray-600 text-[10px] uppercase tracking-wider">
                     <TrendingUp size={10} />
@@ -527,29 +527,29 @@ export const Dashboard: React.FC = () => {
               <IndexCard
                 label="Striking" value={indices.striking} delay={0.05}
                 icon={<Swords size={16} />}
-                ringColor="#ef4444" glowColor="#ef4444"
-                borderClass="border-red-500/30" textClass="text-red-400"
+                ringColor="#C9A84C" glowColor="#C9A84C"
+                borderClass="border-amber-600/30" textClass="text-amber-500"
                 subLabel="10 striking attributes"
               />
               <IndexCard
                 label="Grappling" value={indices.grappling} delay={0.12}
                 icon={<Shield size={16} />}
-                ringColor="#3b82f6" glowColor="#3b82f6"
-                borderClass="border-blue-500/30" textClass="text-blue-400"
+                ringColor="#7B8FA5" glowColor="#7B8FA5"
+                borderClass="border-slate-500/30" textClass="text-slate-400"
                 subLabel="8 wrestling attributes"
               />
               <IndexCard
                 label="BJJ" value={indices.bjj} delay={0.19}
                 icon={<Atom size={16} />}
-                ringColor="#a855f7" glowColor="#a855f7"
-                borderClass="border-purple-500/30" textClass="text-purple-400"
+                ringColor="#A07830" glowColor="#A07830"
+                borderClass="border-amber-800/30" textClass="text-amber-600"
                 subLabel="6 BJJ attributes"
               />
               <IndexCard
                 label="Physicality" value={indices.physical} delay={0.26}
                 icon={<Brain size={16} />}
-                ringColor="#10b981" glowColor="#10b981"
-                borderClass="border-emerald-500/30" textClass="text-emerald-400"
+                ringColor="#8B6A5C" glowColor="#8B6A5C"
+                borderClass="border-orange-900/30" textClass="text-orange-800"
                 subLabel="6 physical / mental attributes"
               />
             </div>
@@ -569,18 +569,18 @@ export const Dashboard: React.FC = () => {
                 whileHover={{ scale: 1.02, boxShadow: '0 0 30px rgba(0,255,65,0.2)' }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/profile')}
-                className="flex-1 flex items-center justify-between px-6 py-4 rounded-xl bg-gradient-to-r from-neon-green/10 to-emerald-500/10 border border-neon-green/30 hover:border-neon-green/60 transition-all group"
+                className="flex-1 flex items-center justify-between px-6 py-4 rounded-xl bg-gradient-to-r from-forge-gold/10 to-emerald-500/10 border border-forge-gold/30 hover:border-forge-gold/60 transition-all group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-neon-green/10 border border-neon-green/30 flex items-center justify-center">
-                    <TrendingUp size={16} className="text-neon-green" />
+                  <div className="w-8 h-8 rounded-lg bg-forge-gold/10 border border-forge-gold/30 flex items-center justify-center">
+                    <TrendingUp size={16} className="text-forge-gold" />
                   </div>
                   <div className="text-left">
-                    <div className="text-sm font-bold text-neon-green uppercase tracking-wider">Fighter Profile</div>
+                    <div className="text-sm font-bold text-forge-gold uppercase tracking-wider">Fighter Profile</div>
                     <div className="text-xs text-gray-500">View all 30 detailed attributes</div>
                   </div>
                 </div>
-                <ChevronRight size={18} className="text-neon-green/50 group-hover:text-neon-green group-hover:translate-x-1 transition-all" />
+                <ChevronRight size={18} className="text-forge-gold/50 group-hover:text-forge-gold group-hover:translate-x-1 transition-all" />
               </motion.button>
 
               <motion.button
@@ -606,17 +606,17 @@ export const Dashboard: React.FC = () => {
           // ── No fighter yet ─────────────────────────────────────────
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            className="glass-card-premium rounded-2xl p-12 text-center border-2 border-dashed border-neon-green/40"
+            className="glass-card-premium rounded-2xl p-12 text-center border-2 border-dashed border-forge-gold/40"
           >
             <motion.div className="text-6xl mb-6" animate={{ y: [0, -10, 0] }} transition={{ duration: 3, repeat: Infinity }}>
               🥋
             </motion.div>
-            <h3 className="text-3xl font-oswald font-bold text-neon-green mb-3 uppercase tracking-wider">{t('no_fighter_yet')}</h3>
+            <h3 className="text-3xl font-oswald font-bold text-forge-gold mb-3 uppercase tracking-wider">{t('no_fighter_yet')}</h3>
             <p className="text-gray-400 mb-8 uppercase tracking-widest text-sm">{t('create_fighter_prompt')}</p>
             <motion.button
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
               onClick={() => setShowCreateForm(true)}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-neon-green to-emerald-400 text-dark-bg font-bold px-8 py-3 rounded-lg hover:shadow-2xl hover:shadow-neon-green/50 transition-all uppercase tracking-wider text-sm"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-forge-gold to-emerald-400 text-iron-dark font-bold px-8 py-3 rounded-lg hover:shadow-2xl hover:shadow-forge-gold/50 transition-all uppercase tracking-wider text-sm"
             >
               <Plus size={20} />
               {t('create_fighter')}
@@ -635,7 +635,7 @@ export const Dashboard: React.FC = () => {
                 initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
                 className="glass-card-premium rounded-2xl p-8 w-full max-w-md shadow-2xl"
               >
-                <h3 className="section-header text-neon-green mb-8 text-2xl">{t('create_new_fighter')}</h3>
+                <h3 className="section-header text-forge-gold mb-8 text-2xl">{t('create_new_fighter')}</h3>
                 <form onSubmit={handleCreateFighter} className="space-y-5">
                   <div>
                     <label className="block text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wider">{t('fighter_name')}</label>
@@ -643,7 +643,7 @@ export const Dashboard: React.FC = () => {
                       type="text" value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder={t('placeholder_name')}
-                      className="w-full bg-dark-tertiary/50 border border-neon-green/30 focus:border-neon-green rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-all"
+                      className="w-full bg-iron-light/50 border border-forge-gold/30 focus:border-forge-gold rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-all"
                       required
                     />
                   </div>
@@ -653,18 +653,18 @@ export const Dashboard: React.FC = () => {
                       type="text" value={formData.nickname}
                       onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
                       placeholder={t('placeholder_nickname')}
-                      className="w-full bg-dark-tertiary/50 border border-neon-green/30 focus:border-neon-green rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-all"
+                      className="w-full bg-iron-light/50 border border-forge-gold/30 focus:border-forge-gold rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-all"
                       required
                     />
                   </div>
                   <div className="flex gap-3 pt-4">
                     <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} type="submit"
-                      className="flex-1 bg-gradient-to-r from-neon-green to-emerald-400 text-dark-bg font-bold py-3 rounded-lg hover:shadow-lg hover:shadow-neon-green/50 transition-all uppercase tracking-wider text-sm">
+                      className="flex-1 bg-gradient-to-r from-forge-gold to-emerald-400 text-iron-dark font-bold py-3 rounded-lg hover:shadow-lg hover:shadow-forge-gold/50 transition-all uppercase tracking-wider text-sm">
                       {t('create')}
                     </motion.button>
                     <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} type="button"
                       onClick={() => setShowCreateForm(false)}
-                      className="flex-1 bg-dark-tertiary/50 text-gray-300 font-bold py-3 rounded-lg border border-dark-tertiary hover:border-alert-red/50 transition-all uppercase tracking-wider text-sm">
+                      className="flex-1 bg-iron-light/50 text-gray-300 font-bold py-3 rounded-lg border border-iron-light hover:border-red-800/50 transition-all uppercase tracking-wider text-sm">
                       {t('cancel')}
                     </motion.button>
                   </div>

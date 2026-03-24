@@ -40,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard', onTab
       {/* Mobile Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-4 left-4 z-50 p-2 bg-dark-tertiary hover:bg-dark-secondary rounded-lg transition-colors lg:hidden"
+        className="fixed top-4 left-4 z-50 p-2 bg-iron-light hover:bg-iron-mid rounded-lg transition-colors lg:hidden"
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
@@ -50,28 +50,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard', onTab
         initial={{ x: -300 }}
         animate={{ x: isOpen ? 0 : -300 }}
         transition={{ duration: 0.3 }}
-        className="fixed left-0 top-0 h-screen w-64 z-40 lg:relative lg:translate-x-0 flex flex-col glass-card-premium border-r-2 border-neon-green/20"
+        className="fixed left-0 top-0 h-screen w-64 z-40 lg:relative lg:translate-x-0 flex flex-col glass-card-premium border-r border-steel/20 texture-brushed-steel"
       >
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="p-6 border-b border-neon-green/20"
+          className="p-6 border-b border-steel/15 arena-floodlight"
         >
           <div className="flex items-center gap-3">
             {/* Octagon Logo */}
             <div
-              className="w-10 h-10 border-2 border-neon-green flex items-center justify-center font-bold text-neon-green text-xs"
+              className="w-10 h-10 border-2 border-forge-gold flex items-center justify-center font-bold text-forge-gold text-xs"
               style={{
                 clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)',
-                boxShadow: '0 0 15px rgba(0, 255, 65, 0.3)',
+                boxShadow: '0 0 12px rgba(201,168,76,0.25)',
+                background: 'rgba(201,168,76,0.06)',
               }}
             >
               MMA
             </div>
             <div>
-              <h1 className="text-lg font-oswald font-bold text-neon-green glow-electric uppercase tracking-wider">
+              <h1 className="text-lg font-montserrat font-bold text-forge-gold glow-gold uppercase tracking-wider">
                 MMA Manager
               </h1>
               <p className="text-xs text-gray-400 uppercase tracking-widest">Fight System</p>
@@ -96,21 +97,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard', onTab
                 whileTap={{ scale: 0.98 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group relative overflow-hidden ${
                   isActive
-                    ? 'bg-neon-green/20 border border-neon-green text-neon-green font-semibold border-glow-electric'
-                    : 'text-gray-300 hover:bg-dark-tertiary/50 border border-transparent hover:border-neon-green/30'
+                    ? 'bg-forge-gold/15 border border-forge-gold/70 text-forge-gold font-semibold border-glow-electric'
+                    : 'text-gray-300 hover:bg-iron-light/50 border border-transparent hover:border-steel/25'
                 }`}
               >
                 {/* Glow background on active */}
                 {isActive && (
                   <motion.div
                     layoutId="activeTab"
-                    className="absolute inset-0 bg-neon-green/10 -z-10"
+                    className="absolute inset-0 bg-forge-gold/8 -z-10"
                     initial={false}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   />
                 )}
 
-                <Icon size={20} className="group-hover:text-neon-green transition-colors" />
+                <Icon size={20} className="group-hover:text-forge-gold transition-colors" />
                 <div className="text-left">
                   <div className="font-semibold uppercase text-xs tracking-wider">{t(item.id)}</div>
                   <div className="text-xs opacity-60 group-hover:opacity-80 transition">{t(`${item.id}_description`)}</div>
@@ -118,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard', onTab
 
                 {/* Right border glow */}
                 {isActive && (
-                  <div className="absolute right-0 top-0 bottom-0 w-1 bg-gradient-to-b from-neon-green to-emerald-500 shadow-lg shadow-neon-green/50" />
+                  <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-forge-gold to-burnished shadow-sm shadow-forge-gold/30" />
                 )}
               </motion.button>
             );
@@ -130,13 +131,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard', onTab
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="p-4 border-t border-neon-green/20 bg-dark-tertiary/30 space-y-3"
+          className="p-4 border-t border-steel/15 bg-iron-light/30 space-y-3"
         >
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-alert-red/30 to-orange-600/30 border border-alert-red/50 text-alert-red rounded-lg hover:from-alert-red/50 hover:to-orange-600/50 transition-all duration-300 font-semibold uppercase text-xs tracking-wider group"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-oxblood/25 to-red-950/25 border border-oxblood/40 text-oxblood rounded-lg hover:from-oxblood/40 hover:to-red-950/40 transition-all duration-300 font-semibold uppercase text-xs tracking-wider group"
           >
             <LogOut size={16} className="group-hover:animate-pulse" />
             {t('logout')}

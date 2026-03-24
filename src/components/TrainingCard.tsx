@@ -19,7 +19,7 @@ export const TrainingCard: React.FC<TrainingCardProps> = ({ drill, onTrainComple
   const [showStatGain, setShowStatGain] = useState(false);
 
   const canTrain = fighter && fighter.currentEnergy >= drill.energyCost;
-  const energyColor = canTrain ? 'text-neon-green' : 'text-alert-red';
+  const energyColor = canTrain ? 'text-forge-gold' : 'text-red-400';
 
   const handleTrain = async () => {
     if (!canTrain) {
@@ -50,8 +50,8 @@ export const TrainingCard: React.FC<TrainingCardProps> = ({ drill, onTrainComple
     <motion.div
       whileHover={{ y: canTrain ? -8 : 0, scale: canTrain ? 1.02 : 1 }}
       whileTap={{ scale: 0.98 }}
-      className={`relative bg-dark-secondary border-2 rounded-lg p-6 transition-all ${
-        canTrain ? 'border-neon-green/60 hover:border-neon-green cursor-pointer' : 'border-gray-600/40 opacity-75'
+      className={`relative bg-iron-mid border-2 rounded-lg p-6 transition-all ${
+        canTrain ? 'border-forge-gold/60 hover:border-forge-gold cursor-pointer' : 'border-gray-600/40 opacity-75'
       }`}
     >
       {/* Icon */}
@@ -62,7 +62,7 @@ export const TrainingCard: React.FC<TrainingCardProps> = ({ drill, onTrainComple
       <p className="text-sm text-gray-300 mb-4">{t(drill.description)}</p>
 
       {/* Stats Gained */}
-      <div className="bg-dark-tertiary rounded p-3 mb-4 space-y-2">
+      <div className="bg-iron-light rounded p-3 mb-4 space-y-2">
         {drill.benefits.map((benefit, idx) => (
           <div key={idx} className="flex items-center justify-between text-sm">
             <span className="text-gray-300">
@@ -71,7 +71,7 @@ export const TrainingCard: React.FC<TrainingCardProps> = ({ drill, onTrainComple
                 : benefit.stat.charAt(0).toUpperCase() + benefit.stat.slice(1)
               }
             </span>
-            <span className="text-neon-green font-bold">
+            <span className="text-forge-gold font-bold">
               +{benefit.amount.toFixed(1)}
             </span>
           </div>
@@ -94,9 +94,9 @@ export const TrainingCard: React.FC<TrainingCardProps> = ({ drill, onTrainComple
         disabled={!canTrain || isTraining}
         className={`w-full py-2 px-4 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${
           isTraining
-            ? 'bg-yellow-600 text-dark-bg'
+            ? 'bg-yellow-600 text-iron-dark'
             : canTrain
-              ? 'bg-neon-green text-dark-bg hover:bg-green-400'
+              ? 'bg-forge-gold text-iron-dark hover:bg-green-400'
               : 'bg-gray-700 text-gray-500 cursor-not-allowed'
         }`}
       >
@@ -127,7 +127,7 @@ export const TrainingCard: React.FC<TrainingCardProps> = ({ drill, onTrainComple
               initial={{ opacity: 0, y: 0 }}
               animate={{ opacity: 0, y: -50 }}
               transition={{ duration: 1, delay: idx * 0.2 }}
-              className="absolute top-6 right-6 text-neon-green font-bold text-lg pointer-events-none"
+              className="absolute top-6 right-6 text-forge-gold font-bold text-lg pointer-events-none"
             >
               +{benefit.amount.toFixed(1)}
             </motion.div>

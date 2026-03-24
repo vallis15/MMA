@@ -51,10 +51,10 @@ export const EnergyBar: React.FC = () => {
     <motion.div
       variants={pulseVariants}
       animate="pulse"
-      className="bg-dark-secondary border border-yellow-500/30 rounded-lg p-6 shadow-lg"
+      className="bg-iron-mid border border-yellow-500/30 rounded-lg p-6 shadow-lg"
     >
       <div className="flex items-center gap-2 mb-4">
-        <Heart size={24} className="text-alert-red animate-pulse" />
+        <Heart size={24} className="text-red-400 animate-pulse" />
         <h3 className="text-lg font-bold text-yellow-400">Energy</h3>
         <div className="flex-1" />
         <motion.span
@@ -67,7 +67,7 @@ export const EnergyBar: React.FC = () => {
       </div>
 
       {/* Energy Bar */}
-      <div className="relative h-3 bg-dark-tertiary rounded-full overflow-hidden border border-yellow-500/50 mb-3">
+      <div className="relative h-3 bg-iron-light rounded-full overflow-hidden border border-yellow-500/50 mb-3">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${percentage}%` }}
@@ -93,7 +93,7 @@ export const EnergyBar: React.FC = () => {
       </div>
 
       {/* Progress indicator for next regen */}
-      <div className="relative h-1 bg-dark-tertiary rounded-full overflow-hidden border border-yellow-300/30">
+      <div className="relative h-1 bg-iron-light rounded-full overflow-hidden border border-yellow-300/30">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${((10 - timeUntilNextRegen) / 10) * 100}%` }}

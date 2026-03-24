@@ -8,16 +8,16 @@ const getNotificationStyles = (type: NotificationType) => {
     case 'success':
       return {
         bg: 'bg-green-900/90',
-        border: 'border-neon-green',
-        icon: <CheckCircle size={20} className="text-neon-green" />,
-        text: 'text-neon-green',
+        border: 'border-forge-gold',
+        icon: <CheckCircle size={20} className="text-forge-gold" />,
+        text: 'text-forge-gold',
       };
     case 'error':
       return {
         bg: 'bg-red-900/90',
-        border: 'border-alert-red',
-        icon: <AlertCircle size={20} className="text-alert-red" />,
-        text: 'text-alert-red',
+        border: 'border-red-800',
+        icon: <AlertCircle size={20} className="text-red-400" />,
+        text: 'text-red-400',
       };
     case 'warning':
       return {

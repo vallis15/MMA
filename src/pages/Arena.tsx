@@ -750,13 +750,13 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
       >
         <div className="text-center flex-1">
           <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">{t('round')}</p>
-          <p className="text-4xl font-bold text-neon-green">{currentRound}/3</p>
+          <p className="text-4xl font-bold text-forge-gold">{currentRound}/3</p>
         </div>
 
         <div className="text-center flex-1 border-x border-gray-700 px-8">
           <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">{t('time')}</p>
           <motion.div
-            className="font-mono text-5xl font-bold text-alert-red glow-crimson"
+            className="font-mono text-5xl font-bold text-red-400"
             animate={{ scale: timeRemaining <= 10 ? [1, 1.05, 1] : 1 }}
             transition={{ duration: 0.5, repeat: timeRemaining <= 10 ? Infinity : 0 }}
           >
@@ -808,9 +808,9 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
             transition={{ duration: 0.35 }}
             className="rounded-2xl px-6 py-4 border border-gray-700/60 bg-gray-900/30 flex items-center gap-4"
           >
-            <div className="w-3 h-3 rounded-full bg-neon-green flex-shrink-0" />
+            <div className="w-3 h-3 rounded-full bg-forge-gold flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-neon-green font-bold uppercase tracking-widest text-sm">
+              <p className="text-forge-gold font-bold uppercase tracking-widest text-sm">
                 STAND-UP — striking range
               </p>
               <p className="text-gray-500 text-xs mt-0.5">fighters on their feet</p>
@@ -955,18 +955,18 @@ const BattleScreen: React.FC<BattleScreenProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <div className="text-center">
                 <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">{t('your_damage')}</p>
-                <p className="text-2xl font-bold text-neon-green">{roundStats.playerDamage}</p>
+                <p className="text-2xl font-bold text-forge-gold">{roundStats.playerDamage}</p>
                 <p className="text-xs text-gray-400 mt-0.5">({roundStats.playerHits} {t('hits')})</p>
                 <p className="text-[10px] text-gray-600 mt-1">
-                  Total: <span className="text-neon-green/60">{totalStats.playerDamage} dmg / {totalStats.playerHits} hits</span>
+                  Total: <span className="text-forge-gold/55">{totalStats.playerDamage} dmg / {totalStats.playerHits} hits</span>
                 </p>
               </div>
               <div className="text-center">
                 <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">{t('opponent_damage')}</p>
-                <p className="text-2xl font-bold text-alert-red">{roundStats.opponentDamage}</p>
+                <p className="text-2xl font-bold text-red-400">{roundStats.opponentDamage}</p>
                 <p className="text-xs text-gray-400 mt-0.5">({roundStats.opponentHits} {t('hits')})</p>
                 <p className="text-[10px] text-gray-600 mt-1">
-                  Total: <span className="text-alert-red/60">{totalStats.opponentDamage} dmg / {totalStats.opponentHits} hits</span>
+                  Total: <span className="text-red-400/55">{totalStats.opponentDamage} dmg / {totalStats.opponentHits} hits</span>
                 </p>
               </div>
             </div>
@@ -1232,7 +1232,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ result, roundStats, totalSt
 
       <h1
         className="page-header text-6xl mb-4"
-        style={{ color: isVictory ? '#00ff41' : isDraw ? '#fbbf24' : '#dc143c' }}
+        style={{ color: isVictory ? '#C9A84C' : isDraw ? '#fbbf24' : '#8B2020' }}
       >
         {isVictory ? t('victory').toUpperCase() : isDraw ? t('draw').toUpperCase() : t('defeat').toUpperCase()}
       </h1>
@@ -1242,13 +1242,13 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ result, roundStats, totalSt
       <div className="grid grid-cols-2 gap-8 mb-10 bg-gray-900/40 p-8 rounded-lg">
         <div>
           <p className="text-gray-400 uppercase tracking-wider text-sm mb-3">{t('your_damage')}</p>
-          <p className="text-4xl font-bold text-neon-green">{totalStats.playerDamage}</p>
+          <p className="text-4xl font-bold text-forge-gold">{totalStats.playerDamage}</p>
           <p className="text-sm text-gray-500 mt-2">({totalStats.playerHits} {t('hits')} total)</p>
           <p className="text-xs text-gray-600 mt-1">Last round: {roundStats.playerDamage} dmg / {roundStats.playerHits} hits</p>
         </div>
         <div>
           <p className="text-gray-400 uppercase tracking-wider text-sm mb-3">{t('opponent_damage')}</p>
-          <p className="text-4xl font-bold text-alert-red">{totalStats.opponentDamage}</p>
+          <p className="text-4xl font-bold text-red-400">{totalStats.opponentDamage}</p>
           <p className="text-sm text-gray-500 mt-2">({totalStats.opponentHits} {t('hits')} total)</p>
           <p className="text-xs text-gray-600 mt-1">Last round: {roundStats.opponentDamage} dmg / {roundStats.opponentHits} hits</p>
         </div>
@@ -1258,7 +1258,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ result, roundStats, totalSt
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={onReset}
-        className="px-10 py-4 bg-gradient-to-r from-neon-green to-emerald-400 text-black font-bold uppercase tracking-wider rounded-lg hover:shadow-xl hover:shadow-neon-green/50 transition-all text-lg"
+        className="px-10 py-4 bg-gradient-to-r from-forge-gold to-yellow-500 text-iron-dark font-bold uppercase tracking-wider rounded-lg hover:shadow-xl hover:shadow-forge-gold/40 transition-all text-lg"
       >
         {t('return_to_arena')}
       </motion.button>
@@ -1297,9 +1297,9 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center gap-4 mb-4">
           <motion.div animate={{ rotate: [0, 15, -15, 0] }} transition={{ duration: 2, repeat: Infinity }}>
-            <Zap size={44} className="text-alert-red glow-crimson" />
+            <Zap size={44} className="text-red-500" />
           </motion.div>
-          <h1 className="page-header text-alert-red glow-crimson text-6xl">{t('pvp_arena').toUpperCase()}</h1>
+          <h1 className="page-header text-red-400 text-6xl">{t('pvp_arena').toUpperCase()}</h1>
         </div>
         <p className="text-gray-400 text-lg uppercase tracking-widest font-light">
           {canFight
@@ -1317,7 +1317,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
           animate={{ opacity: 1, y: 0 }}
           className="glass-card-premium rounded-2xl p-12 text-center border-2 border-dashed"
           style={{
-            borderColor: !fighter || fighter.name === 'Undefined' ? '#dc143c' : '#fbbf24',
+            borderColor: !fighter || fighter.name === 'Undefined' ? '#8B2020' : '#C9A84C',
           }}
         >
           <motion.div
@@ -1330,7 +1330,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
           <h3
             className="section-header text-4xl mb-4"
             style={{
-              color: !fighter || fighter.name === 'Undefined' ? '#dc143c' : '#fbbf24',
+              color: !fighter || fighter.name === 'Undefined' ? '#8B2020' : '#C9A84C',
             }}
           >
             {!fighter || fighter.name === 'Undefined' ? t('no_fighter') : t('low_energy')}
@@ -1348,10 +1348,10 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass-card-premium rounded-2xl p-8 text-center border-2 border-alert-red"
+          className="glass-card-premium rounded-2xl p-8 text-center border-2 border-red-800"
         >
           <div className="text-5xl mb-4">⚠️</div>
-          <h3 className="section-header text-alert-red text-2xl mb-3">{t('matchmaking_error')}</h3>
+          <h3 className="section-header text-red-400 text-2xl mb-3">{t('matchmaking_error')}</h3>
           <p className="text-gray-400">{error}</p>
         </motion.div>
       )}
@@ -1367,7 +1367,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-              className="w-16 h-16 border-4 border-neon-green/20 border-t-neon-green rounded-full mx-auto mb-4"
+              className="w-16 h-16 border-4 border-forge-gold/20 border-t-forge-gold rounded-full mx-auto mb-4"
             />
             <p className="text-gray-400 uppercase tracking-wider text-sm">{t('finding_opponents')}</p>
           </div>
@@ -1381,9 +1381,9 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="glass-card-premium rounded-2xl p-8 border-l-4 border-alert-red"
+            className="glass-card-premium rounded-2xl p-8 border-l-4 border-red-800"
           >
-            <h3 className="section-header text-alert-red text-2xl mb-6 text-center">{t('choose_opponent')}</h3>
+            <h3 className="section-header text-red-400 text-2xl mb-6 text-center">{t('choose_opponent')}</h3>
             <div className="grid grid-cols-3 gap-8 items-center">
               <div className="text-center">
                 <p className="text-gray-400 text-xs uppercase tracking-widest mb-3">{t('your_fighter')}</p>
@@ -1394,7 +1394,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
                 >
                   👊
                 </motion.div>
-                <p className="text-xl font-bold text-neon-green glow-electric">{fighter?.name}</p>
+                <p className="text-xl font-bold text-forge-gold">{fighter?.name}</p>
                 <p className="text-xs text-gray-500 mt-2">
                   {fighter?.record.wins}W-{fighter?.record.losses}L-{fighter?.record.draws}D
                 </p>
@@ -1404,7 +1404,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
                 <motion.div
                   animate={{ scale: [1, 1.2, 1] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
-                  className="text-6xl font-black text-alert-red glow-crimson"
+                  className="text-6xl font-black text-red-500"
                 >
                   VS
                 </motion.div>
@@ -1421,7 +1421,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
                 >
                   🥊
                 </motion.div>
-                <p className="text-xl font-bold text-alert-red">
+                <p className="text-xl font-bold text-red-400">
                   {selectedOpponent?.name || t('select_opponent')}
                 </p>
               </div>
@@ -1444,7 +1444,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
                 <motion.div
                   onClick={() => onSelectOpponent(opp)}
                   className={`cursor-pointer transition-all ${
-                    selectedOpponent?.id === opp.id ? 'ring-4 ring-neon-green rounded-2xl' : ''
+                    selectedOpponent?.id === opp.id ? 'ring-4 ring-forge-gold rounded-2xl' : ''
                   }`}
                   whileHover={{ scale: 1.03 }}
                 >
@@ -1458,7 +1458,7 @@ const SetupScreen: React.FC<SetupScreenProps> = ({
                     onClick={onStartBattle}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="w-full mt-4 py-4 bg-gradient-to-r from-neon-green to-emerald-400 text-black font-bold uppercase tracking-wider rounded-lg hover:shadow-xl hover:shadow-neon-green/60 transition-all text-lg"
+                    className="w-full mt-4 py-4 bg-gradient-to-r from-forge-gold to-yellow-500 text-iron-dark font-bold uppercase tracking-wider rounded-lg hover:shadow-xl hover:shadow-forge-gold/50 transition-all text-lg"
                   >
                     ⚡ {t('start_fight').toUpperCase()}
                   </motion.button>

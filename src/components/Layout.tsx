@@ -33,17 +33,18 @@ const containerVariants = {
 
 export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-dark-bg via-dark-secondary to-dark-bg relative overflow-hidden">
-      {/* Animated Background Elements */}
+    <div className="flex min-h-screen bg-gradient-to-br from-iron-dark via-iron-mid to-iron-dark relative overflow-hidden">
+      {/* Animated Background Grid — Blueprint / Structural */}
       <motion.div
-        className="fixed inset-0 opacity-5 pointer-events-none"
+        className="fixed inset-0 pointer-events-none"
         style={{
-          backgroundImage: `linear-gradient(rgba(0, 255, 65, 0.1) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(0, 255, 65, 0.1) 1px, transparent 1px)`,
-          backgroundSize: '50px 50px',
+          backgroundImage: `linear-gradient(rgba(123,143,165,0.055) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(123,143,165,0.055) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+          opacity: 0.6,
         }}
-        animate={{ backgroundPosition: ['0px 0px', '50px 50px'] }}
-        transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+        animate={{ backgroundPosition: ['0px 0px', '60px 60px'] }}
+        transition={{ duration: 35, repeat: Infinity, ease: 'linear' }}
       />
 
       {/* Language Switcher - Fixed Top Right */}

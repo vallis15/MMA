@@ -30,8 +30,8 @@ export const LanguageSwitcher: React.FC = () => {
             whileTap={{ scale: 0.95 }}
             className={`px-3 py-1.5 rounded-md font-semibold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 ${
               language === lang.code
-                ? 'bg-neon-green text-dark-bg shadow-lg'
-                : 'text-gray-400 hover:text-gray-200 hover:bg-dark-tertiary'
+                ? 'bg-forge-gold text-iron-dark shadow-lg'
+                : 'text-gray-400 hover:text-gray-200 hover:bg-iron-light'
             }`}
           >
             <span className="text-base">{lang.flag}</span>

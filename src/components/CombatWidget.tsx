@@ -127,24 +127,24 @@ export const CombatWidget: React.FC = () => {
           <div
             className="rounded-2xl overflow-hidden"
             style={{
-              background: 'linear-gradient(135deg, rgba(6,6,16,0.97) 0%, rgba(12,12,28,0.97) 100%)',
+              background: 'linear-gradient(135deg, rgba(9,9,11,0.97) 0%, rgba(13,14,20,0.97) 100%)',
               border: battleResult
                 ? battleResult.winner === 'player'
-                  ? '1.5px solid rgba(0,255,65,0.6)'
+                  ? '1.5px solid rgba(201,168,76,0.55)'
                   : battleResult.winner === 'draw'
-                    ? '1.5px solid rgba(251,191,36,0.6)'
-                    : '1.5px solid rgba(220,20,60,0.6)'
-                : '1.5px solid rgba(0,229,255,0.25)',
+                    ? '1.5px solid rgba(251,191,36,0.55)'
+                    : '1.5px solid rgba(139,32,32,0.55)'
+                : '1.5px solid rgba(123,143,165,0.22)',
               boxShadow: battleResult
-                ? '0 4px 40px rgba(0,229,255,0.12)'
-                : '0 4px 32px rgba(0,229,255,0.08)',
+                ? '0 4px 40px rgba(201,168,76,0.1)'
+                : '0 4px 32px rgba(123,143,165,0.07)',
             }}
           >
             {/* ── Header bar ── */}
             <div
               className="flex items-center justify-between px-3 py-2"
               style={{
-                background: battleResult ? 'rgba(0,0,0,0.5)' : 'rgba(0,229,255,0.04)',
+                background: battleResult ? 'rgba(0,0,0,0.5)' : 'rgba(123,143,165,0.04)',
                 borderBottom: '1px solid rgba(255,255,255,0.05)',
               }}
             >
@@ -155,12 +155,12 @@ export const CombatWidget: React.FC = () => {
                     className="w-2 h-2 rounded-full bg-red-500"
                     animate={{ opacity: [1, 0.3, 1] }}
                     transition={{ duration: 0.8, repeat: Infinity }}
-                    style={{ boxShadow: '0 0 6px #ff1744' }}
+                    style={{ boxShadow: '0 0 6px #8B2020' }}
                   />
                 ) : (
-                  <Swords size={10} className="text-cyan-400" />
+                  <Swords size={10} className="text-steel/80" />
                 )}
-                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-cyan-400/80">
+                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-steel/70">
                   {battleResult ? 'fight finished' : `live · round ${currentRound}/3`}
                 </span>
               </div>
@@ -172,9 +172,9 @@ export const CombatWidget: React.FC = () => {
                 onClick={handleGoToArena}
                 className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest"
                 style={{
-                  background: battleResult ? 'rgba(0,255,65,0.12)' : 'rgba(0,229,255,0.08)',
-                  border: battleResult ? '1px solid rgba(0,255,65,0.35)' : '1px solid rgba(0,229,255,0.2)',
-                  color: battleResult ? '#00ff41' : '#00e5ff',
+                  background: battleResult ? 'rgba(201,168,76,0.12)' : 'rgba(123,143,165,0.08)',
+                  border: battleResult ? '1px solid rgba(201,168,76,0.35)' : '1px solid rgba(123,143,165,0.2)',
+                  color: battleResult ? '#C9A84C' : '#7B8FA5',
                 }}
               >
                 {battleResult ? (
@@ -193,17 +193,17 @@ export const CombatWidget: React.FC = () => {
                 className="px-3 py-1.5 text-center"
                 style={{
                   background: battleResult.winner === 'player'
-                    ? 'rgba(0,255,65,0.07)'
+                    ? 'rgba(201,168,76,0.07)'
                     : battleResult.winner === 'draw'
                       ? 'rgba(251,191,36,0.07)'
-                      : 'rgba(220,20,60,0.07)',
+                      : 'rgba(139,32,32,0.07)',
                   borderBottom: '1px solid rgba(255,255,255,0.04)',
                 }}
               >
                 <p
                   className="text-[11px] font-black uppercase tracking-widest"
                   style={{
-                    color: battleResult.winner === 'player' ? '#00ff41' : battleResult.winner === 'draw' ? '#fbbf24' : '#dc143c',
+                    color: battleResult.winner === 'player' ? '#C9A84C' : battleResult.winner === 'draw' ? '#fbbf24' : '#8B2020',
                   }}
                 >
                   {battleResult.winner === 'player' ? '🏆 VICTORY' : battleResult.winner === 'draw' ? '🤝 DRAW' : '😔 DEFEAT'}
@@ -218,8 +218,8 @@ export const CombatWidget: React.FC = () => {
               <MiniHpBar
                 label="You"
                 hs={playerHS}
-                color="#00e5ff"
-                glowColor="#00e5ff"
+                color="#C9A84C"
+                glowColor="#C9A84C"
                 align="left"
               />
 
@@ -232,8 +232,8 @@ export const CombatWidget: React.FC = () => {
               <MiniHpBar
                 label={selectedOpponent.name}
                 hs={opponentHS}
-                color="#ff1744"
-                glowColor="#ff4444"
+                color="#8B2020"
+                glowColor="#C97070"
                 align="right"
               />
             </div>
@@ -244,16 +244,16 @@ export const CombatWidget: React.FC = () => {
                 className="mx-3 mb-2.5 px-2 py-1.5 rounded-lg"
                 style={{
                   background: lastEntry.actor === 'player'
-                    ? 'rgba(74,222,128,0.05)'
+                    ? 'rgba(201,168,76,0.05)'
                     : lastEntry.actor === 'opponent'
-                      ? 'rgba(248,113,113,0.05)'
-                      : 'rgba(96,165,250,0.04)',
+                      ? 'rgba(200,100,100,0.05)'
+                      : 'rgba(123,143,165,0.04)',
                   border: `1px solid ${
                     lastEntry.actor === 'player'
-                      ? 'rgba(74,222,128,0.15)'
+                      ? 'rgba(201,168,76,0.14)'
                       : lastEntry.actor === 'opponent'
-                        ? 'rgba(248,113,113,0.15)'
-                        : 'rgba(96,165,250,0.1)'
+                        ? 'rgba(200,100,100,0.14)'
+                        : 'rgba(123,143,165,0.1)'
                   }`,
                 }}
               >
